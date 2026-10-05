@@ -1,0 +1,44 @@
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+/**
+ * Creates a Supabase client meant to run on the SERVER
+ * (Server Components, Server Actions, Route Handlers).
+ *
+ * Supabase keeps track of who's logged in using cookies. On the
+ * server, there's no "browser" to hold those cookies in memory —
+ * so this client reads/writes them through Next.js's `cookies()`
+ * helper instead. That's the whole reason this can't just be the
+ * same file as client.ts.
+ *
+ * Call this fresh on every request (don't cache/reuse the instance
+ * across requests) since it's tied to that request's cookies.
+ */
+export async function createClient() {
+    const cookieStore = await cookies();
+
+    return createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return cookieStore.getAll();
+                },
+                setAll(cookiesToSet) {
+                    try {
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            cookieStore.set(name, value, options as CookieOptions);
+                        });
+                    } catch {
+                        // setAll is called from a Server Component in some cases,
+                        // where Next.js doesn't allow writing cookies. That's fine —
+                        // middleware.ts (below) is responsible for actually refreshing
+                        // the session cookie on those requests. This try/catch just
+                        // stops that expected case from crashing the render.
+                    }
+                },
+            },
+        }
+    );
+}
