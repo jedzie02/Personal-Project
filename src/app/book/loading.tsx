@@ -1,52 +1,38 @@
-/**
- * loading.tsx is a Next.js file convention, not something we import
- * anywhere — placing this file in the same folder as book/page.tsx
- * automatically wraps that page in a React Suspense boundary. While
- * BookPage is still awaiting data on the server, Next.js streams
- * THIS component to the browser immediately. Once the real data is
- * ready, this gets swapped out for the actual page content.
- */
+import { Skeleton } from "@/components/ui/skeleton";
+import { BookingGridSkeleton } from "@/components/booking/BookingGridSkeleton";
+
 export default function BookLoading() {
     return (
-        <div className="min-h-screen bg-gray-950 text-white">
-            <div className="max-w-6xl mx-auto px-4 pt-6 pb-4">
-                {/* Title skeleton */}
-                <div className="flex items-center justify-between mb-6">
-                    <div className="h-7 w-40 animate-pulse rounded bg-white/10" />
-                    <div className="h-5 w-28 animate-pulse rounded bg-white/5" />
-                </div>
-
-                {/* Date selector skeleton */}
-                <div className="flex items-center gap-1.5 pb-2">
-                    {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-                        <div
-                            key={i}
-                            className="min-w-[72px] h-[68px] animate-pulse rounded-xl bg-white/5"
-                        />
-                    ))}
-                </div>
-            </div>
-
-            {/* Grid skeleton */}
-            <div className="max-w-6xl mx-auto px-4 pb-10">
-                <div className="rounded-xl border border-white/10 bg-gray-950/60 p-4">
-                    {/* Header row */}
-                    <div className="flex gap-2 mb-4">
-                        <div className="w-[72px]" />
-                        <div className="flex-1 h-8 animate-pulse rounded bg-white/5" />
-                        <div className="flex-1 h-8 animate-pulse rounded bg-white/5" />
-                        <div className="flex-1 h-8 animate-pulse rounded bg-white/5" />
+        <div className="min-h-screen bg-slate-50/50 py-10 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-6xl mx-auto space-y-6">
+                {/* Header Skeleton */}
+                <div className="flex items-center justify-between pb-2">
+                    <div className="space-y-1.5">
+                        <Skeleton className="h-7 w-44 rounded-lg bg-slate-200" />
+                        <Skeleton className="h-4 w-64 rounded-md bg-slate-100" />
                     </div>
-                    {/* Row skeletons */}
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                        <div key={i} className="flex gap-2 mb-2">
-                            <div className="w-[72px] h-12 animate-pulse rounded bg-white/5" />
-                            <div className="flex-1 h-12 animate-pulse rounded bg-white/[0.03]" />
-                            <div className="flex-1 h-12 animate-pulse rounded bg-white/[0.03]" />
-                            <div className="flex-1 h-12 animate-pulse rounded bg-white/[0.03]" />
-                        </div>
-                    ))}
+                    <Skeleton className="h-9 w-28 rounded-full bg-slate-200" />
                 </div>
+
+                {/* Date Selector Skeleton */}
+                <div className="flex w-full items-stretch gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-xs">
+                    <div className="grid flex-1 grid-cols-7 gap-2">
+                        {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                            <div
+                                key={i}
+                                className="flex flex-col items-center justify-center rounded-xl p-3 border border-gray-100 bg-gray-50/60 gap-1.5"
+                            >
+                                <Skeleton className="h-3 w-8 bg-slate-200" />
+                                <Skeleton className="h-6 w-7 bg-slate-300" />
+                                <Skeleton className="h-3 w-6 bg-slate-200" />
+                            </div>
+                        ))}
+                    </div>
+                    <Skeleton className="w-24 shrink-0 rounded-xl bg-slate-100 border border-gray-200" />
+                </div>
+
+                {/* Grid Skeleton */}
+                <BookingGridSkeleton />
             </div>
         </div>
     );
