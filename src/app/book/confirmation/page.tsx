@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getBookingById } from "@/lib/services/booking.service";
+import { getBookingById, getBookingsForCustomer } from "@/lib/services/booking.service";
+import { getCurrentProfile } from "@/lib/services/auth.server";
 import { formatTime } from "@/lib/utils/date";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +28,17 @@ export default async function BookingConfirmationPage({
   searchParams: Promise<{ bookingId?: string }>;
 }) {
   const { bookingId } = await searchParams;
-  const booking = bookingId ? await getBookingById(bookingId) : null;
+  let booking = bookingId ? await getBookingById(bookingId) : null;
+
+  if (!booking) {
+    const profile = await getCurrentProfile();
+    if (profile) {
+      const customerBookings = await getBookingsForCustomer(profile.id);
+      if (customerBookings.length > 0) {
+        booking = customerBookings[0];
+      }
+    }
+  }
 
   if (!booking) {
     return (

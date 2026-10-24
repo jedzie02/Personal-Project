@@ -21,10 +21,28 @@ export interface CreateCheckoutSessionInput {
     customerEmail: string | null;
 }
 
+function getSiteUrl(): string {
+    const customUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    if (customUrl) {
+        let trimmed = customUrl.trim().replace(/\/+$/, "");
+        if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+            trimmed = `https://${trimmed}`;
+        }
+        return trimmed;
+    }
+
+    const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL || process.env.VERCEL_URL;
+    if (vercelUrl) {
+        return `https://${vercelUrl.trim().replace(/\/+$/, "")}`;
+    }
+
+    return "http://localhost:3000";
+}
+
 export async function createCheckoutSession(
     input: CreateCheckoutSessionInput
 ): Promise<CheckoutResult> {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const siteUrl = getSiteUrl();
 
     try {
         const session = await stripe.checkout.sessions.create({

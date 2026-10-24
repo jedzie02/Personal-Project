@@ -608,7 +608,7 @@ function ConfirmStep({
             </form>
 
             <p className="mt-3 text-xs text-slate-400">
-                Confirming creates a pending booking. You&apos;ll be redirected to payment.
+                Confirming reserves your court slot immediately. Payment can be settled at the venue.
             </p>
         </div>
     );
