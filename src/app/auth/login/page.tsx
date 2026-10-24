@@ -35,7 +35,8 @@ function LoginContent() {
 
             // 2. Strict Error Handling: block incorrect passwords and halt execution immediately
             if (authError || !data.user) {
-                setError("Invalid email or password. Please verify your credentials and try again.")
+                console.error("Supabase Auth Error:", authError);
+                setError(authError?.message || "Invalid email or password. Please verify your credentials and try again.")
                 setLoading(false)
                 return
             }

@@ -37,6 +37,8 @@ function normalizeUrl(rawUrl?: string): string {
     if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
         url = `https://${url}`;
     }
+    url = url.replace(/\/rest\/v1\/?$/, "");
+    url = url.replace(/\/+$/, "");
     return url;
 }
 
