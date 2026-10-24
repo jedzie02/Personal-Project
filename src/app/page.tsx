@@ -63,21 +63,35 @@ export default async function LandingPage({ searchParams }: PageProps) {
                 {/* 1. Home / Hero Section (Top) */}
                 <section className="flex flex-col items-center justify-center text-center px-4 py-24 sm:px-6 lg:px-8">
                     <div className="max-w-3xl mx-auto space-y-8">
-                        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-gray-900">
+                        <h1
+                            className="animate-hero-rise text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-gray-900"
+                            style={{ animationDelay: "0ms" }}
+                        >
                             Effortless booking for your next{" "}
                             <span className="text-blue-600">pickleball match</span>
                         </h1>
-                        <p className="max-w-2xl mx-auto text-xl text-gray-600">
+                        <p
+                            className="animate-hero-rise max-w-2xl mx-auto text-xl text-gray-600"
+                            style={{ animationDelay: "120ms" }}
+                        >
                             Reserve courts in real time with live hourly rates. Check open slots, pick your schedule, and get right onto the court.
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
-                            <a href="#book-a-court">
+                            <a
+                                href="#book-a-court"
+                                className="animate-hero-rise"
+                                style={{ animationDelay: "240ms" }}
+                            >
                                 <Button className="w-full sm:w-auto text-xl px-12 py-7 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:scale-105 hover:shadow-xl transition-all duration-300 cursor-pointer">
                                     Book a Court
                                 </Button>
                             </a>
-                            <a href="#about">
+                            <a
+                                href="#about"
+                                className="animate-hero-rise"
+                                style={{ animationDelay: "320ms" }}
+                            >
                                 <Button
                                     variant="outline"
                                     className="w-full sm:w-auto text-xl px-12 py-7 rounded-full border-gray-300 text-gray-700 hover:border-blue-600 hover:text-blue-600 transition-all duration-300 cursor-pointer"
@@ -105,19 +119,20 @@ export default async function LandingPage({ searchParams }: PageProps) {
                             {/* Live Court Status Overview */}
                             {courts.length > 0 && (
                                 <div className="flex flex-wrap items-center justify-center gap-2.5 pb-2">
-                                    {courts.map((court) => {
+                                    {courts.map((court, idx) => {
                                         const isAvailable = court.status === "Available";
                                         const isMaintenance = court.status === "Maintenance";
                                         return (
                                             <div
                                                 key={court.id}
-                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                                                className={`animate-pill-pop flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
                                                     isAvailable
                                                         ? "bg-white border-slate-200 text-slate-800 shadow-xs"
                                                         : isMaintenance
                                                         ? "opacity-60 cursor-not-allowed bg-amber-50 border-amber-200 text-amber-800"
                                                         : "opacity-50 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-600"
                                                 }`}
+                                                style={{ animationDelay: `${idx * 60}ms` }}
                                             >
                                                 <span
                                                     className={`size-2 rounded-full ${
@@ -208,10 +223,11 @@ export default async function LandingPage({ searchParams }: PageProps) {
                                     title: "Instant Booking",
                                     body: "Check live court availability and lock in your reservation in seconds with transparent hourly rates in Philippine Pesos (₱).",
                                 },
-                            ].map(({ icon, title, body }) => (
+                            ].map(({ icon, title, body }, idx) => (
                                 <div
                                     key={title}
-                                    className="flex flex-col items-center text-center gap-4 p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+                                    className="animate-card-reveal flex flex-col items-center text-center gap-4 p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+                                    style={{ animationDelay: `${idx * 80}ms` }}
                                 >
                                     <div className="flex items-center justify-center size-14 rounded-xl bg-blue-50">
                                         {icon}
