@@ -6,7 +6,7 @@ describe("canCancelBooking", () => {
     // call below. Without this, these tests would compare against the
     // REAL current time — meaning a test that passes today could start
     // failing next month for no reason related to a real bug.
-    const now = new Date("2026-01-01T10:00:00");
+    const now = new Date("2026-01-01T10:00:00+08:00");
 
     it("allows cancelling a booking well outside the cutoff window", () => {
         // Booking is the next day — far more than CANCELLATION_CUTOFF_HOURS away.

@@ -6,15 +6,9 @@ import DateSelector from "@/components/booking/DateSelector";
 import BookingGrid from "@/components/booking/BookingGrid";
 import { getBookingGridForDate } from "@/lib/services/booking-grid.service";
 import { createClient } from "@/lib/supabase/server";
+import { getManilaNow } from "@/lib/utils/date";
 
 export const dynamic = "force-dynamic";
-
-function todayISO() {
-    const d = new Date();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${d.getFullYear()}-${m}-${day}`;
-}
 
 type PageProps = {
     searchParams?: Promise<{ date?: string; error?: string }>;
@@ -22,7 +16,7 @@ type PageProps = {
 
 export default async function LandingPage({ searchParams }: PageProps) {
     const params = searchParams ? await searchParams : {};
-    const today = todayISO();
+    const today = getManilaNow().todayISO;
     const date = params?.date || today;
     const error = params?.error;
 

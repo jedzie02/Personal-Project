@@ -1,5 +1,6 @@
 import { getActiveCourts } from "@/lib/services/court.service";
 import { createClient } from "@/lib/supabase/server";
+import { getManilaNow } from "@/lib/utils/date";
 
 /**
  * A single cell in the booking grid — represents what's happening
@@ -151,11 +152,9 @@ export async function getBookingGridForDate(
     const closeTime = "00:00";
     const hours = generateHourSlots(openTime, closeTime);
 
-    // Figure out which hours are "passed" (in the past)
-    const now = new Date();
-    const todayISO = now.toISOString().split("T")[0];
-    const currentHour = now.getHours();
-    const isToday = date === todayISO;
+    // Figure out which hours are "passed" (in the past) in Philippine Time (UTC+8)
+    const { todayISO, currentHour } = getManilaNow();
+    const isPast = (hourNum: number) => date < todayISO || (date === todayISO && hourNum < currentHour);
 
     // Build the grid: grid[hourIndex][courtIndex]
     const grid: GridCell[][] = hours.map((hour, _hourIdx) => {
@@ -188,7 +187,7 @@ export async function getBookingGridForDate(
             }
 
             // 2. Check if this hour is in the past
-            if (isToday && hourNum < currentHour) {
+            if (isPast(hourNum)) {
                 if (booking) {
                     if (booking.status === "completed") {
                         return {

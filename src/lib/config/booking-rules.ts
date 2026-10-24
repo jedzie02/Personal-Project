@@ -30,7 +30,8 @@ export function canCancelBooking(
     startTime: string,
     now: Date = new Date()
 ): boolean {
-    const startsAt = new Date(`${bookingDate}T${startTime}`);
+    const timeFormatted = startTime.length === 5 ? `${startTime}:00` : startTime;
+    const startsAt = new Date(`${bookingDate}T${timeFormatted}+08:00`);
     const cutoffMs = CANCELLATION_CUTOFF_HOURS * 60 * 60 * 1000;
     return startsAt.getTime() - now.getTime() >= cutoffMs;
 }

@@ -1,6 +1,7 @@
 import { getAllCourts } from "@/lib/services/court.service";
 import { getAllBookings } from "@/lib/services/booking.service";
 import { ScheduleTimeline } from "@/components/admin/ScheduleTimeline";
+import { getManilaNow } from "@/lib/utils/date";
 
 export default async function AdminSchedulePage({
   searchParams,
@@ -8,7 +9,7 @@ export default async function AdminSchedulePage({
   searchParams?: Promise<{ date?: string }>;
 }) {
   const params = searchParams ? await searchParams : {};
-  const today = new Date().toISOString().split("T")[0];
+  const today = getManilaNow().todayISO;
   const date = params?.date || today;
 
   const [courtsData, bookingsData] = await Promise.all([

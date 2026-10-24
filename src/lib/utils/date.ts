@@ -99,3 +99,32 @@ export function generateTimeSlots(
 
     return slots;
 }
+
+/**
+ * Returns today's ISO date string ("YYYY-MM-DD") and current hour (0-23)
+ * in Philippine Time (Asia/Manila, UTC+8).
+ * Works consistently across local development, Vercel Serverless Functions, and any host.
+ */
+export function getManilaNow(date: Date = new Date()): {
+    todayISO: string;
+    currentHour: number;
+} {
+    const todayISO = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Manila",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).format(date);
+
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Manila",
+        hour: "numeric",
+        hourCycle: "h23",
+    }).formatToParts(date);
+    const currentHour = parseInt(
+        parts.find((p) => p.type === "hour")?.value ?? "0",
+        10
+    );
+
+    return { todayISO, currentHour };
+}

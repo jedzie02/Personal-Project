@@ -154,7 +154,8 @@ export async function createBooking(
         return { success: false, error: "Price must be greater than zero." };
     }
 
-    const slotStart = new Date(`${input.bookingDate}T${input.startTime}`);
+    const timeFormatted = input.startTime.length === 5 ? `${input.startTime}:00` : input.startTime;
+    const slotStart = new Date(`${input.bookingDate}T${timeFormatted}+08:00`);
     if (Number.isNaN(slotStart.getTime())) {
         return { success: false, error: "Invalid date or time." };
     }
