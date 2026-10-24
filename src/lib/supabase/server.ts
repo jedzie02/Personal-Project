@@ -14,11 +14,25 @@ import { cookies } from "next/headers";
  * Call this fresh on every request (don't cache/reuse the instance
  * across requests) since it's tied to that request's cookies.
  */
+function normalizeUrl(rawUrl?: string): string {
+    if (!rawUrl) return "";
+    let url = rawUrl.trim().replace(/^["']|["']$/g, "").trim();
+    if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+        url = `https://${url}`;
+    }
+    return url;
+}
+
+function normalizeKey(rawKey?: string): string {
+    if (!rawKey) return "";
+    return rawKey.trim().replace(/^["']|["']$/g, "").trim();
+}
+
 export async function createClient() {
     const cookieStore = await cookies();
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const url = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const key = normalizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
     if (!url || !key) {
         throw new Error(

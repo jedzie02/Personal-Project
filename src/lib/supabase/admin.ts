@@ -18,10 +18,33 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
  * If this key leaked to the client, anyone could read/write your
  * entire database, bypassing every policy we've written so far.
  */
+function normalizeUrl(rawUrl?: string): string {
+    if (!rawUrl) return "";
+    let url = rawUrl.trim().replace(/^["']|["']$/g, "").trim();
+    if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+        url = `https://${url}`;
+    }
+    return url;
+}
+
+function normalizeKey(rawKey?: string): string {
+    if (!rawKey) return "";
+    return rawKey.trim().replace(/^["']|["']$/g, "").trim();
+}
+
 export function createAdminClient() {
+    const url = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const key = normalizeKey(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+    if (!url || !key) {
+        throw new Error(
+            "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in environment."
+        );
+    }
+
     return createSupabaseClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        url,
+        key,
         {
             auth: {
                 autoRefreshToken: false,

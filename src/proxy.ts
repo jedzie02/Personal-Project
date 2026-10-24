@@ -31,6 +31,20 @@ import type { NextRequest } from "next/server";
  * request/response objects, so we build a Supabase client that reads
  * and writes cookies through those instead.
  */
+function normalizeUrl(rawUrl?: string): string {
+    if (!rawUrl) return "";
+    let url = rawUrl.trim().replace(/^["']|["']$/g, "").trim();
+    if (url && !url.startsWith("http://") && !url.startsWith("https://")) {
+        url = `https://${url}`;
+    }
+    return url;
+}
+
+function normalizeKey(rawKey?: string): string {
+    if (!rawKey) return "";
+    return rawKey.trim().replace(/^["']|["']$/g, "").trim();
+}
+
 export async function proxy(request: NextRequest) {
     // Start with a "pass-through" response that carries the original
     // request forward. We hold onto this variable (let, not const)
@@ -38,8 +52,8 @@ export async function proxy(request: NextRequest) {
     // with a new response that has updated cookie headers.
     let supabaseResponse = NextResponse.next({ request });
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+    const supabaseAnonKey = normalizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
     if (!supabaseUrl || !supabaseAnonKey) {
         console.error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in middleware.");
