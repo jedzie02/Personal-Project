@@ -37,6 +37,7 @@ interface BookingRow {
     end_time: string;
     status: string;
     payment_status?: string;
+    payment_method?: string;
     total_price: number;
     cancelled_reason: string | null;
     created_at: string;
@@ -55,6 +56,7 @@ function mapBooking(row: BookingRow): Booking {
         endTime: row.end_time,
         status: row.status as Booking["status"],
         paymentStatus: (row.payment_status as Booking["paymentStatus"]) || (row.status === "confirmed" ? "succeeded" : "pending"),
+        paymentMethod: row.payment_method || "Cash walk in",
         totalPrice: Number(row.total_price),
         cancelledReason: row.cancelled_reason,
         createdAt: row.created_at,
@@ -68,7 +70,7 @@ function mapBooking(row: BookingRow): Booking {
 // above, instead of us running a second query per booking to look up
 // the court's name.
 const BOOKING_SELECT = `
-  id, court_id, booking_date, start_time, end_time, status, payment_status,
+  id, court_id, booking_date, start_time, end_time, status, payment_status, payment_method,
   total_price, cancelled_reason, created_at, customer_id,
   courts ( name ),
   profiles ( full_name, email )
@@ -136,6 +138,7 @@ export interface CreateBookingInput {
      */
     markAsConfirmed?: boolean;
     paymentStatus?: "pending" | "succeeded" | "failed" | "refunded";
+    paymentMethod?: string;
 }
 
 export async function createBooking(
@@ -211,6 +214,7 @@ export async function createBooking(
             total_price: input.totalPrice,
             status: input.markAsConfirmed ? "confirmed" : "pending",
             payment_status: input.paymentStatus || (input.markAsConfirmed ? "succeeded" : "pending"),
+            payment_method: input.paymentMethod || "Cash walk in",
         })
         .select("id")
         .single();

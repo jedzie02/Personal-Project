@@ -27,6 +27,7 @@ export async function confirmBookingAction(prevState: unknown, formData: FormDat
     const start = formData.get("start") as string;
     const end = formData.get("end") as string;
     const totalPrice = Number(formData.get("totalPrice"));
+    const paymentMethod = (formData.get("paymentMethod") as string) || "Cash walk in";
 
     // This is the FR-3.4 server-side re-validation: even though the
     // slot looked available when the review page rendered, someone
@@ -41,6 +42,7 @@ export async function confirmBookingAction(prevState: unknown, formData: FormDat
         totalPrice,
         markAsConfirmed: true,
         paymentStatus: "pending",
+        paymentMethod,
     });
 
     if (!result.success || !result.bookingId) {

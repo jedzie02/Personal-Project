@@ -64,6 +64,7 @@ alter table if exists public.bookings add column if not exists start_time text;
 alter table if exists public.bookings add column if not exists end_time text;
 alter table if exists public.bookings add column if not exists total_price numeric(10, 2) default 25.00;
 alter table if exists public.bookings add column if not exists payment_status text default 'pending';
+alter table if exists public.bookings add column if not exists payment_method text default 'Cash walk in';
 alter table if exists public.bookings add column if not exists status text default 'pending';
 alter table if exists public.bookings add column if not exists cancelled_reason text;
 

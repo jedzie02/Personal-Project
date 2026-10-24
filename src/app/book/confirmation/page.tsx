@@ -16,10 +16,13 @@ import {
   Clock,
   MapPin,
   Sparkles,
-  ChevronRight,
   Receipt,
   ArrowRight,
-  ShieldCheck,
+  Home,
+  CreditCard,
+  QrCode,
+  Banknote,
+  Hash,
 } from "lucide-react";
 
 export default async function BookingConfirmationPage({
@@ -50,16 +53,64 @@ export default async function BookingConfirmationPage({
         <p className="mt-2 text-sm text-slate-500">
           We couldn&apos;t locate that reservation record. If you just confirmed, please give it a moment and refresh.
         </p>
-        <Link href="/#book-a-court" className="mt-5 inline-block">
+        <Link href="/" className="mt-5 inline-block">
           <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6">
-            Explore Open Courts
+            Return to Home Schedule
           </Button>
         </Link>
       </div>
     );
   }
 
-  const isConfirmed = booking.status === "confirmed" || booking.status === "completed";
+  const paymentMethod = booking.paymentMethod || "Cash walk in";
+
+  // Context-sensitive payment instruction
+  const getPaymentInstruction = () => {
+    const lower = paymentMethod.toLowerCase();
+    if (lower.includes("gcash") || lower.includes("qr")) {
+      return {
+        title: "GCash QR Payment",
+        icon: QrCode,
+        message: "Please present your GCash payment reference or QR confirmation at the counter upon arrival.",
+        bgColor: "bg-blue-50/70",
+        borderColor: "border-blue-200",
+        textColor: "text-blue-900",
+        accentColor: "text-blue-700",
+      };
+    }
+    if (lower.includes("card") || lower.includes("credit")) {
+      return {
+        title: "Credit Card Payment",
+        icon: CreditCard,
+        message: "Your credit card transaction is recorded. Please check in with your booking reference at the front desk.",
+        bgColor: "bg-emerald-50/70",
+        borderColor: "border-emerald-200",
+        textColor: "text-emerald-950",
+        accentColor: "text-emerald-700",
+      };
+    }
+    return {
+      title: "Cash Walk-In Payment",
+      icon: Banknote,
+      message: "Please settle your cash payment at the reception counter before entering the court.",
+      bgColor: "bg-amber-50/70",
+      borderColor: "border-amber-200",
+      textColor: "text-amber-950",
+      accentColor: "text-amber-700",
+    };
+  };
+
+  const instruction = getPaymentInstruction();
+  const InstructionIcon = instruction.icon;
+
+  const getMethodBadgeIcon = () => {
+    const lower = paymentMethod.toLowerCase();
+    if (lower.includes("gcash") || lower.includes("qr")) return QrCode;
+    if (lower.includes("card")) return CreditCard;
+    return Banknote;
+  };
+
+  const MethodBadgeIcon = getMethodBadgeIcon();
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 bg-slate-50/50">
@@ -70,11 +121,17 @@ export default async function BookingConfirmationPage({
             <CheckCircle2 className="size-7" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Court Reserved!
+            Booking Confirmed!
           </h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Your court reservation is locked in. Get ready for your match!
+          <p className="text-xs text-slate-600 mt-1">
+            Your court reservation is locked in. Here is your receipt summary.
           </p>
+
+          {/* Reference ID Badge */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 text-xs text-slate-600 mt-3 shadow-2xs font-mono">
+            <Hash className="size-3 text-slate-400" />
+            <span>Ref: #{booking.id.slice(0, 8).toUpperCase()}</span>
+          </div>
         </div>
 
         {/* Reservation Breakdown */}
@@ -103,6 +160,17 @@ export default async function BookingConfirmationPage({
               </span>
             </div>
 
+            {/* Payment Method in Breakdown */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <MethodBadgeIcon className="size-3.5 text-blue-600" /> Payment Method
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white border border-slate-200 text-slate-800">
+                <MethodBadgeIcon className="size-3 text-slate-500" />
+                {paymentMethod}
+              </span>
+            </div>
+
             <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-200/80">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <Receipt className="size-3.5 text-emerald-600" /> Total Fee
@@ -113,30 +181,40 @@ export default async function BookingConfirmationPage({
             </div>
           </div>
 
-          {/* First-Timer Venue Tips */}
-          <div className="p-3.5 rounded-xl border border-blue-100 bg-blue-50/60 text-xs text-blue-900 space-y-1">
-            <div className="font-semibold flex items-center gap-1 text-blue-700">
-              <Sparkles className="size-3.5" /> What to know before match time:
+          {/* Context-Sensitive Payment Instruction Box */}
+          <div className={`p-4 rounded-xl border ${instruction.borderColor} ${instruction.bgColor} ${instruction.textColor} space-y-1`}>
+            <div className={`font-semibold flex items-center gap-1.5 text-xs ${instruction.accentColor}`}>
+              <InstructionIcon className="size-4" /> {instruction.title}
             </div>
-            <ul className="list-disc list-inside space-y-0.5 text-slate-600 pl-1">
-              <li>Please arrive 10 minutes early to warm up and check in at the desk.</li>
-              <li>Paddles and balls are available for complimentary rental at the venue.</li>
-              <li>Non-marking athletic court shoes are required on all indoor courts.</li>
+            <p className="text-xs leading-relaxed opacity-95">
+              {instruction.message}
+            </p>
+          </div>
+
+          {/* Venue Notice */}
+          <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/80 text-xs text-slate-600 space-y-1">
+            <div className="font-semibold flex items-center gap-1 text-slate-700">
+              <Sparkles className="size-3.5 text-blue-600" /> Quick reminders:
+            </div>
+            <ul className="list-disc list-inside space-y-0.5 pl-1">
+              <li>Please arrive 10 minutes prior to warm up and check in.</li>
+              <li>Paddles and balls are available at the front counter.</li>
+              <li>Non-marking athletic court shoes are required on all courts.</li>
             </ul>
           </div>
         </CardContent>
 
         {/* Clear Action Progression */}
         <CardFooter className="p-6 pt-0 flex flex-col sm:flex-row items-center gap-2.5">
-          <Link href="/bookings" className="w-full sm:flex-1">
-            <Button className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer">
-              View My Bookings <ArrowRight className="size-4 ml-1.5" />
+          <Link href="/" className="w-full sm:flex-1">
+            <Button className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer flex items-center justify-center gap-1.5">
+              <Home className="size-4" /> Return to Home Schedule
             </Button>
           </Link>
 
-          <Link href="/#book-a-court" className="w-full sm:w-auto">
-            <Button variant="outline" className="w-full rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer">
-              Book Another
+          <Link href="/bookings" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer flex items-center justify-center gap-1.5">
+              View My Bookings <ArrowRight className="size-3.5" />
             </Button>
           </Link>
         </CardFooter>

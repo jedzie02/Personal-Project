@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useActionState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, CheckCircle2, Clock, Calendar, MapPin, DollarSign, CalendarCheck, ChevronRight, Loader2, ShieldCheck } from "lucide-react";
+import { Lock, CheckCircle2, Clock, Calendar, MapPin, DollarSign, CalendarCheck, ChevronRight, Loader2, ShieldCheck, CreditCard, QrCode, Banknote } from "lucide-react";
 import type { BookingGridData, GridCell } from "@/lib/services/booking-grid.service";
 import { PRICE_PER_HOUR } from "@/lib/config/booking-rules";
 import { confirmBookingAction } from "@/app/book/actions";
@@ -119,7 +119,10 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
         };
     }, []);
 
-    // 1. First-time booking guide banner state
+    // 1. Payment method selector state
+    const [paymentMethod, setPaymentMethod] = useState<"Credit Card" | "GCash QR" | "Cash walk in">("GCash QR");
+
+    // 2. First-time booking guide banner state
     const [showGuide, setShowGuide] = useState(false);
     useEffect(() => {
         try {
@@ -153,6 +156,9 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                         courtName: parsed.courtName,
                         hour: parsed.hour,
                     });
+                    if (parsed.paymentMethod) {
+                        setPaymentMethod(parsed.paymentMethod);
+                    }
                     setModalStep("preview");
                 }
                 sessionStorage.removeItem("paddlix_pending_slot");
@@ -165,11 +171,13 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
     // Open slot preview directly without abrupt redirection
     const handleSelectSlot = (slot: SelectedSlot) => {
         setSelectedSlot(slot);
+        setPaymentMethod("GCash QR");
         setModalStep("preview");
     };
 
     const handleClose = () => {
         setSelectedSlot(null);
+        setPaymentMethod("GCash QR");
         setModalStep("preview");
     };
 
@@ -391,8 +399,40 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                                             <DollarSign className="w-3.5 h-3.5 text-blue-500" /> Rate
                                         </span>
                                         <span className="text-sm font-bold text-blue-600">
-                                            ₱{hourlyRate.toFixed(2)}
+                                            ₱{hourlyRate.toFixed(2)}/hr
                                         </span>
+                                    </div>
+
+                                    {/* Payment Method Selector */}
+                                    <div className="pt-3 border-t border-slate-100 mt-2.5 text-left">
+                                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                                            Payment Method
+                                        </label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[
+                                                { id: "Credit Card", label: "Credit Card", icon: CreditCard },
+                                                { id: "GCash QR", label: "GCash QR", icon: QrCode },
+                                                { id: "Cash walk in", label: "Cash walk in", icon: Banknote },
+                                            ].map((method) => {
+                                                const Icon = method.icon;
+                                                const isSelected = paymentMethod === method.id;
+                                                return (
+                                                    <button
+                                                        key={method.id}
+                                                        type="button"
+                                                        onClick={() => setPaymentMethod(method.id as any)}
+                                                        className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                                                            isSelected
+                                                                ? "border-blue-600 bg-blue-50/70 text-blue-700 font-semibold shadow-xs"
+                                                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                                                        }`}
+                                                    >
+                                                        <Icon className={`w-4 h-4 mb-1.5 ${isSelected ? "text-blue-600" : "text-slate-500"}`} />
+                                                        <span className="text-xs leading-tight">{method.label}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -414,6 +454,7 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                                                                 courtName: selectedSlot.courtName,
                                                                 hour: selectedSlot.hour,
                                                                 date,
+                                                                paymentMethod,
                                                             })
                                                         );
                                                     } catch {
@@ -436,6 +477,7 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                                                                 courtName: selectedSlot.courtName,
                                                                 hour: selectedSlot.hour,
                                                                 date,
+                                                                paymentMethod,
                                                             })
                                                         );
                                                     } catch {
@@ -460,7 +502,11 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                                         </button>
                                         <button
                                             type="button"
-                                            onClick={() => setModalStep("confirm")}
+                                            onClick={() => {
+                                                const timeSlot = `${formatAMPM(selectedSlot.hour)} - ${formatAMPM(endTime)}`;
+                                                const url = `/confirm-booking?courtId=${encodeURIComponent(selectedSlot.courtId)}&courtName=${encodeURIComponent(selectedSlot.courtName)}&timeSlot=${encodeURIComponent(timeSlot)}&rate=${hourlyRate}&paymentMethod=${encodeURIComponent(paymentMethod)}&date=${encodeURIComponent(date)}&start=${encodeURIComponent(selectedSlot.hour)}&end=${encodeURIComponent(endTime)}`;
+                                                router.push(url);
+                                            }}
                                             className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm text-center cursor-pointer flex items-center justify-center gap-1.5"
                                         >
                                             Book Slot
