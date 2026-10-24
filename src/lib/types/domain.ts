@@ -23,11 +23,15 @@ export interface AuthResult {
     error?: string;
 }
 
+export type CourtStatus = "Available" | "Not Available" | "Maintenance";
+
 export interface Court {
     id: string;
     name: string;
     description: string | null;
     isActive: boolean;
+    status: CourtStatus;
+    hourlyRate?: number;
     createdAt: string;
 }
 
@@ -57,6 +61,8 @@ export interface Booking {
     startTime: string; // "HH:MM"
     endTime: string; // "HH:MM"
     status: BookingStatus;
+    paymentStatus?: "pending" | "succeeded" | "failed" | "refunded";
+    paymentMethod?: "card" | "cash" | string;
     totalPrice: number;
     cancelledReason: string | null;
     createdAt: string;
@@ -90,6 +96,7 @@ export interface CheckoutResult extends ServiceResult {
 export interface DashboardStats {
     todaysBookingsCount: number;
     todaysRevenue: number;
+    todaysUncollected?: number;
     upcomingBookingsCount: number;
     activeCourtsCount: number;
 }
@@ -99,6 +106,7 @@ export interface CustomerSummary {
     fullName: string | null;
     email: string | null;
     bookingCount: number;
+    totalSpend?: number;
 }
 
 export interface Payment {

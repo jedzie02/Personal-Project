@@ -6,15 +6,23 @@ import { getCurrentProfile } from "@/lib/services/auth.server";
 import { getCourtById } from "@/lib/services/court.service";
 import { createCheckoutSession } from "@/lib/services/payment.service";
 
-export async function confirmBookingAction(formData: FormData) {
+export async function confirmBookingAction(prevState: unknown, formData: FormData) {
     // Re-check login here too, not just on the review page. The review
     // page's check stops a logged-out person from ever SEEING this
     // form, but this is the actual write — it needs its own guard,
     // since a page redirect doesn't stop someone from POSTing directly.
     const profile = await getCurrentProfile();
     if (!profile) {
-        redirect("/auth/login");
+        const courtId = formData.get("courtId") as string;
+        const date = formData.get("date") as string;
+        const start = formData.get("start") as string;
+        const end = formData.get("end") as string;
+        const returnUrl = `/book?date=${date}`;
+        redirect(
+            `/auth/login?message=${encodeURIComponent("Log in to finish booking your court")}&redirectTo=${encodeURIComponent(returnUrl)}`
+        );
     }
+
 
     const courtId = formData.get("courtId") as string;
     const date = formData.get("date") as string;

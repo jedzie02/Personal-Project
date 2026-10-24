@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T09:50:00.000Z",
+  "title": "Design System: Paddlix",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Matchpoint Blue",
+        "canonical": "#2563eb",
+        "tonalRamp": [
+          "#172554",
+          "#1e3a8a",
+          "#1e40af",
+          "#1d4ed8",
+          "#2563eb",
+          "#3b82f6",
+          "#60a5fa",
+          "#eff6ff"
+        ]
+      },
+      "operational-success": {
+        "role": "secondary",
+        "displayName": "Court Turf Emerald",
+        "canonical": "#059669",
+        "tonalRamp": [
+          "#022c22",
+          "#064e3b",
+          "#065f46",
+          "#047857",
+          "#059669",
+          "#10b981",
+          "#34d399",
+          "#ecfdf5"
+        ]
+      },
+      "operational-warning": {
+        "role": "tertiary",
+        "displayName": "Caution Amber",
+        "canonical": "#f59e0b",
+        "tonalRamp": [
+          "#451a03",
+          "#78350f",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fef3c7"
+        ]
+      },
+      "neutral-bg": {
+        "role": "neutral",
+        "displayName": "Pure Court White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0f172a",
+          "#1e293b",
+          "#334155",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#e2e8f0",
+          "#ffffff"
+        ]
+      },
+      "neutral-text": {
+        "role": "neutral",
+        "displayName": "Ink Slate",
+        "canonical": "#0f172a",
+        "tonalRamp": [
+          "#020617",
+          "#0f172a",
+          "#1e293b",
+          "#334155",
+          "#475569",
+          "#64748b",
+          "#94a3b8",
+          "#f8fafc"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero landing title and primary product statement."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Major section titles across customer booking and marketing."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card headings, modal headers, and court labels."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Standard instructional copy, modal descriptions, and user profile data."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Table headers, status pills, and numeric column indicators."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ambient-subtle",
+        "value": "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)",
+        "purpose": "Rest state for cards, containers, and pills."
+      },
+      {
+        "name": "interactive-lift",
+        "value": "0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04)",
+        "purpose": "Hover and focused elevation for cards and action buttons."
+      },
+      {
+        "name": "modal-overlay",
+        "value": "0 25px 50px -12px rgba(0, 0, 0, 0.15)",
+        "purpose": "Elevated modal dialogs, sheets, and popovers."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Standard interactive transitions for button hover and state toggles."
+      },
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Micro-interactions like button color shifts and badge states."
+      },
+      {
+        "name": "duration-normal",
+        "value": "300ms",
+        "purpose": "Card hover lifts, modal entries, and sidebar slideouts."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "High-intent primary customer conversion trigger for court bookings and slot confirmations.",
+      "html": "<button class=\"ds-btn-primary\">Book a court</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; font-family: Poppins, sans-serif; font-size: 16px; font-weight: 600; color: #ffffff; background-color: #2563eb; border: none; border-radius: 9999px; padding: 14px 32px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline: none; } .ds-btn-primary:hover { background-color: #1d4ed8; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3); } .ds-btn-primary:focus-visible { ring: 3px solid rgba(59, 130, 246, 0.5); }"
+    },
+    {
+      "name": "Outline Action Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary exploratory trigger for information and modal cancellations.",
+      "html": "<button class=\"ds-btn-outline\">Learn more</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; font-family: Poppins, sans-serif; font-size: 16px; font-weight: 500; color: #334155; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 9999px; padding: 14px 32px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline: none; } .ds-btn-outline:hover { border-color: #2563eb; color: #2563eb; background-color: #eff6ff; } .ds-btn-outline:focus-visible { ring: 3px solid rgba(59, 130, 246, 0.3); }"
+    },
+    {
+      "name": "Available Court Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-available",
+      "description": "Live indicator pill confirming open court status and current hourly rate in PHP.",
+      "html": "<div class=\"ds-badge-available\"><span class=\"ds-badge-dot-emerald\"></span><span class=\"ds-badge-name\">Court 1</span><span class=\"ds-badge-rate\">₱25/hr</span><span class=\"ds-badge-status\">Available</span></div>",
+      "css": ".ds-badge-available { display: inline-flex; align-items: center; gap: 8px; font-family: Poppins, sans-serif; font-size: 12px; font-weight: 500; color: #1e293b; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 9999px; padding: 6px 14px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); } .ds-badge-dot-emerald { width: 8px; height: 8px; border-radius: 9999px; background-color: #10b981; } .ds-badge-name { font-weight: 600; color: #0f172a; } .ds-badge-rate { font-weight: 700; color: #2563eb; } .ds-badge-status { color: #64748b; font-size: 11px; }"
+    },
+    {
+      "name": "Maintenance Warning Badge",
+      "kind": "chip",
+      "refersTo": "badge-maintenance",
+      "description": "Advisory badge signaling court closure or operational maintenance.",
+      "html": "<div class=\"ds-badge-maintenance\"><span class=\"ds-badge-dot-amber\"></span><span class=\"ds-badge-label\">Maintenance</span></div>",
+      "css": ".ds-badge-maintenance { display: inline-flex; align-items: center; gap: 6px; font-family: Poppins, sans-serif; font-size: 12px; font-weight: 600; color: #92400e; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 9999px; padding: 4px 12px; } .ds-badge-dot-amber { width: 6px; height: 6px; border-radius: 9999px; background-color: #f59e0b; }"
+    },
+    {
+      "name": "Booking Matrix Slot Cell",
+      "kind": "custom",
+      "refersTo": "cell-available",
+      "description": "Interactive time slot card inside the multi-court booking matrix.",
+      "html": "<div class=\"ds-slot-cell\"><div class=\"ds-slot-time\">09:00 AM</div><div class=\"ds-slot-meta\"><span class=\"ds-slot-rate\">₱25</span><span class=\"ds-slot-tag\">Open</span></div></div>",
+      "css": ".ds-slot-cell { display: flex; flex-direction: column; justify-content: space-between; font-family: Poppins, sans-serif; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; min-width: 110px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); } .ds-slot-cell:hover { border-color: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12); transform: translateY(-1px); } .ds-slot-time { font-size: 13px; font-weight: 600; color: #0f172a; } .ds-slot-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; } .ds-slot-rate { font-size: 12px; font-weight: 700; color: #2563eb; } .ds-slot-tag { font-size: 10px; font-weight: 600; color: #059669; background-color: #ecfdf5; border-radius: 4px; padding: 2px 6px; }"
+    },
+    {
+      "name": "Surface Content Card",
+      "kind": "card",
+      "refersTo": "card-surface",
+      "description": "Standard white container card with hairline border for analytical widgets and operational tables.",
+      "html": "<div class=\"ds-card\"><h3 class=\"ds-card-title\">Court Schedule</h3><p class=\"ds-card-body\">Real-time schedule timeline for all 4 master courts.</p></div>",
+      "css": ".ds-card { font-family: Poppins, sans-serif; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 24px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04); } .ds-card-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; } .ds-card-body { font-size: 14px; color: #64748b; margin: 0; line-height: 1.5; }"
+    },
+    {
+      "name": "Text Input Field",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Clean, high-scanability input field for date selection, search, and admin rate adjustments.",
+      "html": "<input type=\"text\" class=\"ds-input\" placeholder=\"Hourly rate in ₱\" value=\"25\" />",
+      "css": ".ds-input { font-family: Poppins, sans-serif; font-size: 14px; color: #0f172a; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; width: 100%; box-sizing: border-box; outline: none; transition: border-color 0.15s, box-shadow 0.15s; } .ds-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Court Command",
+    "overview": "Paddlix balances athletic utility with crisp administrative precision. Drawing inspiration from live stadium scheduling, timing displays, and modern facility operations, the interface eliminates cognitive friction and decorative fluff. Every surface is engineered for immediate scanability: players can review hourly slot availability, inspect rates in Philippine Pesos (₱), and confirm reservations in seconds, while venue managers command court statuses, rate schedules, and customer ledgers with dense, tabular clarity.\n\nThe aesthetic philosophy centers on Athletic Pragmatism: dependable monochrome foundations, high-contrast typography, and tactical bursts of functional color. Pure white canvases, subtle slate backdrops, and hairline borders organize dense reservation data without crowding the eye.",
+    "keyCharacteristics": [
+      "Tactical Color Restraint: Cobalt action accents are reserved strictly for high-intent customer progression, while emerald, amber, and slate provide unambiguous operational court status cues.",
+      "Tonal Layering at Rest: Surfaces remain calm and flat by default; depth and shadows emerge intentionally to signal interactive states and active selections.",
+      "Crisp Form Language: Tactile pill-shaped interactive triggers juxtaposed against cleanly rounded structural cards and tabular grids.",
+      "Transparent Metric Hierarchy: Currency symbols (₱), hourly rates, and time slots enjoy top-level legibility across indoor and outdoor display lighting."
+    ],
+    "rules": [
+      {
+        "name": "The Purposeful Accent Rule",
+        "body": "Primary Matchpoint Blue is reserved strictly for high-intent customer actions (booking, slot confirmation, primary buttons). Administrative, stateful, and status displays use contextual neutrals and status indicators to eliminate visual competition.",
+        "section": "colors"
+      },
+      {
+        "name": "The Court Status Triad Rule",
+        "body": "Court status is encoded only into Emerald (Available), Amber (Maintenance), and Muted Slate (Unavailable/Not Active). These semantic assignments are immutable throughout customer and admin surfaces.",
+        "section": "colors"
+      },
+      {
+        "name": "The Metric Legibility Rule",
+        "body": "Hourly rates and financial amounts must always present the Philippine Peso currency glyph (₱) at identical weight and size as the integer amount, avoiding currency decoupling.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-At-Rest Rule",
+        "body": "Containers, booking cells, and dashboard cards rest flat on the canvas bounded by crisp hairline borders. Elevation shadows and micro-lift translations are reserved exclusively for interactive hover states and floating overlays.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do format all monetary amounts with the Philippine Peso glyph (₱) followed directly by the rate (e.g. ₱250/hr).",
+      "Do keep time slot displays in user-friendly 12-hour AM/PM format (e.g. 09:00 AM, 10:00 PM).",
+      "Do preserve the semantic meaning of status colors: emerald for available, amber for maintenance, slate for inactive/past.",
+      "Do pair icon glyphs with concise textual labels in administrative tables to maintain scanability.",
+      "Do maintain hairline borders (border-slate-200) as the primary visual separation mechanism between matrix cells."
+    ],
+    "donts": [
+      "Don't use Matchpoint Blue for informational or administrative statuses; reserve it for customer conversion actions.",
+      "Don't introduce heavy dark shadows or exaggerated bevels that compromise the flat athletic utility aesthetic.",
+      "Don't allow court rates or time slots to wrap onto multiple lines within grid cells.",
+      "Don't use generic red/green indicator colors without accompanying border and background tonal washes."
+    ]
+  }
+}

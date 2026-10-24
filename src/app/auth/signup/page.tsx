@@ -26,11 +26,11 @@ export default function RegisterPage() {
         e.preventDefault()
         setError(null)
         if (password !== confirmPassword) {
-            setError("Passwords do not match.")
+            setError("Passwords do not match. Please ensure both fields are identical.")
             return
         }
         if (password.length < 6) {
-            setError("Password must be at least 6 characters.")
+            setError("Password must be at least 6 characters long.")
             return
         }
         setLoading(true)
@@ -52,19 +52,27 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-background">
+        <div className="relative min-h-screen flex flex-col items-center justify-center px-4 bg-background">
+            {/* Home link */}
+            <Link
+                href="/"
+                className="absolute top-5 left-6 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                aria-label="Back to Home"
+            >
+                ← Home
+            </Link>
             {/* Logo */}
-            <div className="flex items-center gap-2 mb-8">
+            <Link href="/" className="flex items-center gap-2 mb-8 group" aria-label="Paddlix Home">
                 <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
                     <CircleDotDashed className="size-5" />
                 </div>
-                <span className="font-bold text-xl tracking-tight">Paddlix</span>
-            </div>
+                <span className="font-bold text-xl tracking-tight group-hover:text-blue-600 transition-colors">Paddlix</span>
+            </Link>
             <Card className="w-full max-w-sm shadow-lg border">
                 <CardHeader className="text-center pb-4">
-                    <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
+                    <CardTitle className="text-2xl font-bold tracking-tight">Create an Account</CardTitle>
                     <CardDescription className="text-muted-foreground">
-                        Sign up to start booking courts
+                        Sign up to reserve courts, view match schedules, and manage bookings
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -166,7 +174,7 @@ export default function RegisterPage() {
                             {loading ? (
                                 <>
                                     <Loader2 className="size-4 animate-spin" />
-                                    Creating account...
+                                    Creating Account...
                                 </>
                             ) : (
                                 "Create Account"

@@ -14,21 +14,24 @@ function toISO(d: Date) {
     return `${d.getFullYear()}-${m}-${day}`;
 }
 
-export default function DateSelector({ selectedDate }: { selectedDate: string }) {
+export default function DateSelector({
+    selectedDate,
+    today,
+}: {
+    selectedDate: string;
+    today?: string;
+}) {
     const router = useRouter();
     const [weekOffset, setWeekOffset] = useState(0);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = toISO(today);
+    const todayISO = today || toISO(new Date());
+    const [tYear, tMonth, tDay] = todayISO.split("-").map(Number);
 
     const days = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(today);
-        d.setDate(today.getDate() + weekOffset * 7 + i);
-        return d;
+        return new Date(tYear, tMonth - 1, tDay + weekOffset * 7 + i);
     });
 
-    const go = (iso: string) => router.push(`/book?date=${iso}`);
+    const go = (iso: string) => router.push(`/?date=${iso}#book-a-court`);
 
     return (
         <div className="flex w-full items-stretch gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
@@ -57,11 +60,11 @@ export default function DateSelector({ selectedDate }: { selectedDate: string })
                                     : "border border-gray-200 bg-gray-50 text-gray-900 hover:border-gray-300 hover:bg-gray-100"
                                 }`}
                         >
-                            <span className={`text-[10px] font-semibold tracking-wide ${isSelected ? "text-gray-900" : "text-gray-500"}`}>
+                            <span className={`text-xs font-semibold tracking-wide ${isSelected ? "text-gray-900" : "text-gray-500"}`}>
                                 {isToday ? "TODAY" : DAYS[d.getDay()]}
                             </span>
                             <span className="text-2xl font-extrabold leading-tight">{d.getDate()}</span>
-                            <span className={`text-[10px] ${isSelected ? "text-gray-900" : "text-gray-500"}`}>
+                            <span className={`text-xs ${isSelected ? "text-gray-900" : "text-gray-500"}`}>
                                 {MONTHS[d.getMonth()]}
                             </span>
                         </button>

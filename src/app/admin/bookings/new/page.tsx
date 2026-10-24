@@ -1,95 +1,193 @@
-import { getActiveCourts } from "@/lib/services/court.service";
-import { createBookingAction } from "@/app/admin/bookings/actions";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2, Banknote, Clock } from "lucide-react";
 
-export default async function NewBookingPage({
-    searchParams,
-}: {
-    searchParams: Promise<{ error?: string }>;
-}) {
-    const { error } = await searchParams;
-    const courts = await getActiveCourts();
+export default function NewBookingPage() {
+  const router = useRouter();
+  const [courts, setCourts] = useState<{ id: string; name: string; hourly_rate: number | null }[]>([]);
+  const [courtId, setCourtId] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [price, setPrice] = useState("25");
+  const [paymentOption, setPaymentOption] = useState<"cash_paid" | "pay_at_desk">("cash_paid");
+  const [submitting, setSubmitting] = useState(false);
 
-    return (
-        <div className="max-w-md">
-            <h1 className="text-2xl font-semibold">New manual booking</h1>
-            <p className="text-muted-foreground">
-                For walk-in or phone bookings. The customer must already have an
-                account — enter the email they signed up with.
-            </p>
+  // Fetch active courts for selector
+  useEffect(() => {
+    async function loadCourts() {
+      const { data } = await supabase
+        .from("courts")
+        .select("id, name, hourly_rate")
+        .eq("status", "Available")
+        .order("name", { ascending: true });
+      if (data && data.length > 0) {
+        setCourts(data);
+        setCourtId(data[0].id);
+        if (data[0].hourly_rate != null) {
+          setPrice(String(data[0].hourly_rate));
+        }
+      }
+    }
+    loadCourts();
+  }, []);
 
-            {error && (
-                <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-                    {error}
-                </p>
-            )}
+  const handleCourtChange = (id: string) => {
+    setCourtId(id);
+    const selected = courts.find((c) => c.id === id);
+    if (selected && selected.hourly_rate != null) {
+      setPrice(String(selected.hourly_rate));
+    }
+  };
 
-            <form action={createBookingAction} className="mt-6 flex flex-col gap-4">
-                <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="customerEmail">Customer email</Label>
-                    <Input
-                        id="customerEmail"
-                        name="customerEmail"
-                        type="email"
-                        required
-                    />
-                </div>
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!courtId || !startTime || !endTime) return;
 
-                <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="courtId">Court</Label>
-                    <select
-                        id="courtId"
-                        name="courtId"
-                        required
-                        className="rounded-md border px-3 py-2 text-sm"
-                    >
-                        {courts.map((c) => (
-                            <option key={c.id} value={c.id}>
-                                {c.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+    setSubmitting(true);
+    const [bookingDate, startH] = startTime.includes("T")
+      ? startTime.split("T")
+      : [new Date().toISOString().slice(0, 10), startTime];
+    const [, endH] = endTime.includes("T") ? endTime.split("T") : ["", endTime];
 
-                <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="bookingDate">Date</Label>
-                    <Input id="bookingDate" name="bookingDate" type="date" required />
-                </div>
+    const isPaid = paymentOption === "cash_paid";
+    const paymentStatus = isPaid ? "succeeded" : "pending";
+    const parsedPrice = parseFloat(price) || 25;
 
-                <div className="flex gap-3">
-                    <div className="flex flex-1 flex-col gap-1.5">
-                        <Label htmlFor="startTime">Start</Label>
-                        <Input id="startTime" name="startTime" type="time" required />
-                    </div>
-                    <div className="flex flex-1 flex-col gap-1.5">
-                        <Label htmlFor="endTime">End</Label>
-                        <Input id="endTime" name="endTime" type="time" required />
-                    </div>
-                </div>
+    const { data: newBooking, error } = await supabase
+      .from("bookings")
+      .insert({
+        court_id: courtId,
+        booking_date: bookingDate,
+        start_time: startH.slice(0, 5),
+        end_time: endH.slice(0, 5),
+        total_price: parsedPrice,
+        status: "confirmed",
+        payment_status: paymentStatus,
+      })
+      .select("id")
+      .single();
 
-                <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="totalPrice">Price</Label>
-                    <Input
-                        id="totalPrice"
-                        name="totalPrice"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        required
-                    />
-                </div>
+    if (!error && newBooking && isPaid) {
+      await supabase.from("payments").insert({
+        booking_id: newBooking.id,
+        amount: parsedPrice,
+        currency: "PHP",
+        status: "succeeded",
+      });
+    }
 
-                <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="markAsConfirmed" />
-                    Payment already handled (mark as confirmed instead of pending)
-                </label>
+    setSubmitting(false);
+    if (!error) {
+      router.push("/admin/bookings");
+      router.refresh();
+    } else {
+      alert(`Booking creation failed: ${error.message}`);
+    }
+  };
 
-                <Button type="submit" className="self-start">
-                    Create booking
-                </Button>
-            </form>
-        </div>
-    );
+  return (
+    <div className="max-w-xl mx-auto space-y-6">
+      <h1 className="text-2xl font-bold">Create Manual Booking</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>Reservation Details</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label>Select Court</Label>
+              <select
+                className="w-full border rounded-md p-2 text-sm"
+                value={courtId}
+                onChange={(e) => handleCourtChange(e.target.value)}
+              >
+                {courts.map((court) => (
+                  <option key={court.id} value={court.id}>
+                    {court.name} {court.hourly_rate != null ? `(₱${court.hourly_rate}/hr)` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Start Time</Label>
+              <Input
+                type="datetime-local"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label>End Time</Label>
+              <Input
+                type="datetime-local"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label>Price (₱)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="any"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label>Payment Collection</Label>
+              <div className="grid grid-cols-2 gap-3 mt-1.5">
+                <button
+                  type="button"
+                  onClick={() => setPaymentOption("cash_paid")}
+                  className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                    paymentOption === "cash_paid"
+                      ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200"
+                      : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  <div className="font-semibold text-sm flex items-center gap-1.5">
+                    <Banknote className="size-4 text-emerald-600" /> Cash Paid Now
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Collected at desk
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentOption("pay_at_desk")}
+                  className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                    paymentOption === "pay_at_desk"
+                      ? "border-amber-600 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200"
+                      : "border-slate-200 hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  <div className="font-semibold text-sm flex items-center gap-1.5">
+                    <Clock className="size-4 text-amber-600" /> Pay at Desk
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Collect upon player arrival
+                  </div>
+                </button>
+              </div>
+            </div>
+            <Button type="submit" disabled={submitting} className="w-full">
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Confirm Booking
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

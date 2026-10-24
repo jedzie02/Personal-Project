@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { login } from "@/lib/services/auth.service"
+import { supabase } from "@/lib/supabase"
 
 function LoginContent() {
     const router = useRouter()
@@ -25,34 +25,115 @@ function LoginContent() {
         e.preventDefault()
         setError(null)
         setLoading(true)
-        const result = await login(email, password)
-        if (!result.success) {
-            setError(result.error)
+
+        try {
+            // 1. Authenticate with Supabase Auth
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            })
+
+            // 2. Strict Error Handling: block incorrect passwords and halt execution immediately
+            if (authError || !data.user) {
+                setError("Invalid email or password. Please verify your credentials and try again.")
+                setLoading(false)
+                return
+            }
+
+            // 3. Success State: only update login state and redirect when data.user is present
+            localStorage.setItem("isLoggedIn", "true")
+            if (data.user.email) {
+                localStorage.setItem("userEmail", data.user.email)
+            }
+            const fullName =
+                data.user.user_metadata?.full_name ||
+                data.user.user_metadata?.name
+            if (fullName) {
+                localStorage.setItem("userName", fullName)
+            }
+            const phone =
+                data.user.user_metadata?.phone ||
+                data.user.phone
+            if (phone) {
+                localStorage.setItem("userPhone", phone)
+            }
+            document.cookie = "isLoggedIn=true; path=/"
+
+            // Role-based routing: fetch role from profiles table in Supabase
+            let userRole = data.user.user_metadata?.role
+
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("role")
+                .eq("id", data.user.id)
+                .maybeSingle()
+
+            if (profile?.role) {
+                userRole = profile.role
+            } else if (data.user.email) {
+                const { data: profileByEmail } = await supabase
+                    .from("profiles")
+                    .select("role")
+                    .eq("email", data.user.email)
+                    .maybeSingle()
+                if (profileByEmail?.role) {
+                    userRole = profileByEmail.role
+                }
+            }
+
+            // Fallback for admin email if role not explicitly in profiles row
+            if (!userRole && data.user.email?.toLowerCase().includes("admin")) {
+                userRole = "admin"
+            }
+
+            // Ensure profile exists in Supabase so server-side AdminLayout grants access
+            if (userRole === "admin") {
+                await supabase.from("profiles").upsert({
+                    id: data.user.id,
+                    email: data.user.email,
+                    full_name: fullName || data.user.email?.split("@")[0] || "Admin",
+                    role: "admin",
+                }, { onConflict: "id" })
+            }
+
+            if (userRole === "admin") {
+                window.location.href = "/admin/dashboard"
+            } else {
+                window.location.href = "/"
+            }
+        } catch (err: unknown) {
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : "An unexpected error occurred during login. Please try again."
+            setError(message)
+        } finally {
             setLoading(false)
-            return
         }
-        router.push(
-            result.role === "admin"
-                ? "/admin/dashboard"
-                : "/"
-        )
-        router.refresh()
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-background">
+        <div className="relative min-h-screen flex flex-col items-center justify-center px-4 bg-background">
+            {/* Home link */}
+            <Link
+                href="/"
+                className="absolute top-5 left-6 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                aria-label="Back to Home"
+            >
+                ← Home
+            </Link>
             {/* Logo */}
-            <div className="flex items-center gap-2 mb-8">
+            <Link href="/" className="flex items-center gap-2 mb-8 group" aria-label="Paddlix Home">
                 <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
                     <CircleDotDashed className="size-7 text-blue-600" />
                 </div>
-                <span className="font-bold text-xl tracking-tight">Paddlix</span>
-            </div>
+                <span className="font-bold text-xl tracking-tight group-hover:text-blue-600 transition-colors">Paddlix</span>
+            </Link>
             <Card className="w-full max-w-sm shadow-lg border">
                 <CardHeader className="text-center pb-4">
-                    <CardTitle className="text-2xl font-bold tracking-tight">Welcome back</CardTitle>
+                    <CardTitle className="text-2xl font-bold tracking-tight">Welcome Back</CardTitle>
                     <CardDescription className="text-muted-foreground">
-                        Sign in to your account to continue
+                        Sign in to your account to reserve courts and manage bookings
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -107,7 +188,7 @@ function LoginContent() {
                             {loading ? (
                                 <>
                                     <Loader2 className="size-4 animate-spin" />
-                                    Signing in...
+                                    Signing In...
                                 </>
                             ) : (
                                 "Sign In"

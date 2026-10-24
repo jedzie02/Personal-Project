@@ -41,7 +41,8 @@ export default async function BookReviewPage({
     }
 
     const hours = hoursBetween(start, end);
-    const totalPrice = hours * PRICE_PER_HOUR;
+    const hourlyRate = court.hourlyRate ?? PRICE_PER_HOUR;
+    const totalPrice = hours * hourlyRate;
 
     return (
         <div className="mx-auto max-w-md px-4 py-10">
@@ -64,11 +65,11 @@ export default async function BookReviewPage({
                 </div>
                 <div className="flex justify-between border-t pt-2 font-medium">
                     <span>Total</span>
-                    <span>${totalPrice.toFixed(2)}</span>
+                    <span>₱{totalPrice.toFixed(2)}</span>
                 </div>
             </div>
 
-            <form action={confirmBookingAction} className="mt-6">
+            <form action={confirmBookingAction.bind(null, null)} className="mt-6">
                 <input type="hidden" name="courtId" value={courtId} />
                 <input type="hidden" name="date" value={date} />
                 <input type="hidden" name="start" value={start} />
@@ -79,8 +80,7 @@ export default async function BookReviewPage({
                 </Button>
             </form>
             <p className="mt-2 text-xs text-muted-foreground">
-                Online payment isn&apos;t connected yet (that&apos;s Phase 8) — confirming now
-                creates a pending booking.
+                Payment is collected at the venue. Confirming reserves your slot.
             </p>
         </div>
     );

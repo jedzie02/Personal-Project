@@ -36,6 +36,7 @@ interface BookingRow {
     start_time: string;
     end_time: string;
     status: string;
+    payment_status?: string;
     total_price: number;
     cancelled_reason: string | null;
     created_at: string;
@@ -53,6 +54,7 @@ function mapBooking(row: BookingRow): Booking {
         startTime: row.start_time,
         endTime: row.end_time,
         status: row.status as Booking["status"],
+        paymentStatus: (row.payment_status as Booking["paymentStatus"]) || (row.status === "confirmed" ? "succeeded" : "pending"),
         totalPrice: Number(row.total_price),
         cancelledReason: row.cancelled_reason,
         createdAt: row.created_at,
@@ -66,7 +68,7 @@ function mapBooking(row: BookingRow): Booking {
 // above, instead of us running a second query per booking to look up
 // the court's name.
 const BOOKING_SELECT = `
-  id, court_id, booking_date, start_time, end_time, status,
+  id, court_id, booking_date, start_time, end_time, status, payment_status,
   total_price, cancelled_reason, created_at, customer_id,
   courts ( name ),
   profiles ( full_name, email )
@@ -133,6 +135,7 @@ export interface CreateBookingInput {
      * this function is called from.
      */
     markAsConfirmed?: boolean;
+    paymentStatus?: "pending" | "succeeded" | "failed" | "refunded";
 }
 
 export async function createBooking(
@@ -166,6 +169,22 @@ export async function createBooking(
 
     const supabase = await createClient();
 
+    // Court status gate: only "Available" courts can be booked.
+    // This blocks direct-POST attempts for maintenance/disabled courts.
+    const { data: courtRow } = await supabase
+        .from("courts")
+        .select("status, is_active")
+        .eq("id", input.courtId)
+        .single();
+
+    const courtStatus = courtRow?.status || (courtRow?.is_active ? "Available" : "Not Available");
+    if (courtStatus !== "Available") {
+        return {
+            success: false,
+            error: `This court is currently "${courtStatus}" and cannot be booked.`,
+        };
+    }
+
     const hasConflict = await checkOverlap(
         input.courtId,
         input.bookingDate,
@@ -190,6 +209,7 @@ export async function createBooking(
             end_time: input.endTime,
             total_price: input.totalPrice,
             status: input.markAsConfirmed ? "confirmed" : "pending",
+            payment_status: input.paymentStatus || (input.markAsConfirmed ? "succeeded" : "pending"),
         })
         .select("id")
         .single();
@@ -351,19 +371,16 @@ async function getActiveBookingsForDate(
  * if the venue's timezone differs from wherever this app is hosted.
  */
 export async function getAvailableSlotsForDate(date: string): Promise<AvailableSlot[]> {
-    const dayOfWeek = new Date(`${date}T00:00:00`).getDay();
-
-    const hours = await getOperatingHoursForDay(dayOfWeek);
-    if (!hours || hours.isClosed || !hours.openTime || !hours.closeTime) {
-        return [];
-    }
+    // All 7 days (Monday - Sunday) use the exact same 09:00 AM to 12:00 AM schedule
+    const openTime = "09:00";
+    const closeTime = "00:00";
 
     const [courts, activeBookings] = await Promise.all([
         getActiveCourts(),
         getActiveBookingsForDate(date),
     ]);
 
-    const slots = generateTimeSlots(hours.openTime, hours.closeTime, SLOT_DURATION_MINUTES);
+    const slots = generateTimeSlots(openTime, closeTime, SLOT_DURATION_MINUTES);
 
     return slots.map((slot) => {
         const availableCourts = courts.filter((court) => {

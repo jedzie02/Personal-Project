@@ -29,10 +29,15 @@ export function formatTime(time: string | null): string {
     return `${displayHour}:${minutes} ${period}`;
 }
 
-/** "14:30" (or "14:30:00") -> 870 (minutes since midnight). Makes time arithmetic simple. */
+/** "14:30" (or "14:30:00") -> 870 (minutes since midnight). Makes time arithmetic simple.
+ *  Special case: "00:00" / "00:00:00" is treated as 1440 (end-of-day midnight) so that
+ *  loops like `start + duration <= closeMinutes` work correctly when close = midnight.
+ */
 function timeToMinutes(time: string): number {
     const [h, m] = time.split(":").map(Number);
-    return h * 60 + m;
+    const total = h * 60 + m;
+    // 0 minutes = "00:00" = midnight close — treat as 1440 (24 × 60)
+    return total === 0 ? 1440 : total;
 }
 
 /** 870 -> "14:30". The reverse of timeToMinutes, for turning math back into a storable time string. */
@@ -84,9 +89,11 @@ export function generateTimeSlots(
         start + durationMinutes <= closeMinutes;
         start += durationMinutes
     ) {
+        // minutesToTime wraps 1440 back to "00:00" — that's the correct
+        // ISO representation of midnight as a time string.
         slots.push({
-            start: minutesToTime(start),
-            end: minutesToTime(start + durationMinutes),
+            start: minutesToTime(start % 1440),
+            end: minutesToTime((start + durationMinutes) % 1440),
         });
     }
 

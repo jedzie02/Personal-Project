@@ -52,3 +52,54 @@ export async function cancelBookingAction(bookingId: string, formData: FormData)
 
   revalidatePath("/admin/bookings");
 }
+
+export async function markBookingPaidInCashAction(bookingId: string) {
+  const { createClient } = await import("@/lib/supabase/server");
+  const supabase = await createClient();
+
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, total_price")
+    .eq("id", bookingId)
+    .single();
+
+  await supabase
+    .from("bookings")
+    .update({
+      payment_status: "succeeded",
+      status: "confirmed",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId);
+
+  if (booking) {
+    const { data: existingPayment } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("booking_id", bookingId)
+      .maybeSingle();
+
+    if (existingPayment) {
+      await supabase
+        .from("payments")
+        .update({ status: "succeeded", updated_at: new Date().toISOString() })
+        .eq("id", existingPayment.id);
+    } else {
+      await supabase.from("payments").insert({
+        booking_id: bookingId,
+        amount: booking.total_price,
+        currency: "PHP",
+        status: "succeeded",
+      });
+    }
+  }
+
+  revalidatePath("/admin/dashboard");
+  revalidatePath("/admin/bookings");
+  revalidatePath("/admin/payments");
+}
+
+export async function getActiveCourtsAction() {
+  const { getActiveCourts } = await import("@/lib/services/court.service");
+  return await getActiveCourts();
+}

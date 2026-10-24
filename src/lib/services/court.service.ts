@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Court, ServiceResult } from "@/lib/types/domain";
+import type { Court, CourtStatus, ServiceResult } from "@/lib/types/domain";
 
 /**
  * court.service.ts
@@ -17,6 +17,8 @@ function mapCourt(row: {
     name: string;
     description: string | null;
     is_active: boolean;
+    status: string | null;
+    hourly_rate?: number | null;
     created_at: string;
 }): Court {
     return {
@@ -24,6 +26,8 @@ function mapCourt(row: {
         name: row.name,
         description: row.description,
         isActive: row.is_active,
+        status: (row.status as CourtStatus) || (row.is_active ? "Available" : "Not Available"),
+        hourlyRate: row.hourly_rate != null ? Number(row.hourly_rate) : 25,
         createdAt: row.created_at,
     };
 }
@@ -37,8 +41,8 @@ export async function getActiveCourts(): Promise<Court[]> {
 
     const { data, error } = await supabase
         .from("courts")
-        .select("id, name, description, is_active, created_at")
-        .eq("is_active", true)
+        .select("id, name, description, is_active, status, hourly_rate, created_at")
+        .eq("status", "Available")
         .order("created_at", { ascending: true });
 
     if (error || !data) return [];
@@ -57,7 +61,7 @@ export async function getAllCourts(): Promise<Court[]> {
 
     const { data, error } = await supabase
         .from("courts")
-        .select("id, name, description, is_active, created_at")
+        .select("id, name, description, is_active, status, hourly_rate, created_at")
         .order("created_at", { ascending: true });
 
     if (error || !data) return [];
@@ -70,7 +74,7 @@ export async function getCourtById(id: string): Promise<Court | null> {
 
     const { data, error } = await supabase
         .from("courts")
-        .select("id, name, description, is_active, created_at")
+        .select("id, name, description, is_active, status, hourly_rate, created_at")
         .eq("id", id)
         .single();
 
@@ -81,13 +85,16 @@ export async function getCourtById(id: string): Promise<Court | null> {
 
 export async function createCourt(
     name: string,
-    description: string | null
+    description: string | null,
+    status: CourtStatus = "Available"
 ): Promise<ServiceResult> {
     const supabase = await createClient();
 
     const { error } = await supabase.from("courts").insert({
         name,
         description,
+        status,
+        is_active: status === "Available",
     });
 
     if (error) {
@@ -107,6 +114,28 @@ export async function updateCourt(
     const { error } = await supabase
         .from("courts")
         .update({ name, description })
+        .eq("id", id);
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+/**
+ * Sets a court's status to one of the three allowed values.
+ * Also keeps is_active in sync: only "Available" = active.
+ */
+export async function setCourtStatus(
+    id: string,
+    status: CourtStatus
+): Promise<ServiceResult> {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("courts")
+        .update({ status, is_active: status === "Available" })
         .eq("id", id);
 
     if (error) {

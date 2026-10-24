@@ -26,16 +26,23 @@ export async function getAllCustomersWithBookingCounts(): Promise<CustomerSummar
     // weekly schedule save back in Phase 4.
     return Promise.all(
         customers.map(async (customer) => {
-            const { count } = await supabase
+            const { data: bookings } = await supabase
                 .from("bookings")
-                .select("id", { count: "exact", head: true })
+                .select("id, total_price")
                 .eq("customer_id", customer.id);
+
+            const count = bookings?.length ?? 0;
+            const totalSpend = (bookings || []).reduce(
+                (sum, b) => sum + (Number(b.total_price) || 0),
+                0
+            );
 
             return {
                 id: customer.id,
                 fullName: customer.full_name,
                 email: customer.email,
-                bookingCount: count ?? 0,
+                bookingCount: count,
+                totalSpend,
             };
         })
     );

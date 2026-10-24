@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/services/auth.server";
-import { AppSidebar } from "@/components/ui/admin/app-sidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { Sidebar } from "@/components/admin/Sidebar";
 
 export default async function AdminLayout({
     children,
@@ -20,19 +18,13 @@ export default async function AdminLayout({
     }
 
     return (
-        <SidebarProvider>
-            <AppSidebar />
-            <div className="flex min-h-screen w-full flex-col">
-                <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-6 lg:h-[60px]">
-                    <SidebarTrigger />
-                    <div className="w-full flex-1">
-                        {/* Empty space for search or breadcrumbs later */}
-                    </div>
-                </header>
-                <main className="flex-1 p-6">
+        <div className="flex min-h-screen w-full bg-slate-50/50 dark:bg-slate-950">
+            <Sidebar />
+            <div className="flex min-h-screen flex-1 flex-col min-w-0">
+                <main className="flex-1 p-6 lg:p-8">
                     {children}
                 </main>
             </div>
-        </SidebarProvider>
+        </div>
     );
 }

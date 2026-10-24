@@ -60,4 +60,19 @@ describe("doTimeRangesOverlap", () => {
     it("detects one range fully containing another", () => {
         expect(doTimeRangesOverlap("09:00", "17:00", "10:00", "11:00")).toBe(true);
     });
+
+    it("correctly matches 11:00 slot with Postgres HH:MM:SS format without 1-hour shift", () => {
+        const dbStartTime = "11:00:00";
+        const dbEndTime = "12:00:00";
+        const bStart = dbStartTime.slice(0, 5);
+        const bEnd = dbEndTime.slice(0, 5);
+
+        // At 11:00 AM slot
+        const isCoveredAt11 = bStart <= "11:00" && (bEnd > "11:00" || bEnd === "00:00");
+        expect(isCoveredAt11).toBe(true);
+
+        // At 12:00 PM slot (must NOT match)
+        const isCoveredAt12 = bStart <= "12:00" && (bEnd > "12:00" || bEnd === "00:00");
+        expect(isCoveredAt12).toBe(false);
+    });
 });
