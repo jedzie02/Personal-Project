@@ -26,14 +26,23 @@ export default async function LandingPage({ searchParams }: PageProps) {
     const date = params?.date || today;
     const error = params?.error;
 
-    const supabase = await createClient();
-    const [{ data: rawCourts }, gridData] = await Promise.all([
-        supabase
-            .from("courts")
-            .select("id, name, status, is_active, hourly_rate")
-            .order("name", { ascending: true }),
-        getBookingGridForDate(date),
-    ]);
+    let rawCourts: any[] = [];
+    let gridData: any = null;
+
+    try {
+        const supabase = await createClient();
+        const [{ data }, grid] = await Promise.all([
+            supabase
+                .from("courts")
+                .select("id, name, status, is_active, hourly_rate")
+                .order("name", { ascending: true }),
+            getBookingGridForDate(date),
+        ]);
+        rawCourts = data || [];
+        gridData = grid;
+    } catch (err) {
+        console.error("Failed to load courts or schedule for landing page:", err);
+    }
 
     const courts = (rawCourts ?? []).map((c: any) => ({
         id: c.id,

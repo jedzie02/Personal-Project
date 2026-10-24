@@ -38,74 +38,71 @@ export async function proxy(request: NextRequest) {
     // with a new response that has updated cookie headers.
     let supabaseResponse = NextResponse.next({ request });
 
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                getAll() {
-                    return request.cookies.getAll();
-                },
-                setAll(cookiesToSet) {
-                    // Two places need updating:
-                    // 1. The request's cookies (so downstream Server
-                    //    Components see the refreshed token).
-                    // 2. The response's Set-Cookie headers (so the
-                    //    browser stores the refreshed token).
-                    cookiesToSet.forEach(({ name, value }) =>
-                        request.cookies.set(name, value)
-                    );
-                    supabaseResponse = NextResponse.next({ request });
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        supabaseResponse.cookies.set(name, value, options)
-                    );
-                },
-            },
-        }
-    );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    // --- Session refresh (always runs) ---
-    // IMPORTANT: Do NOT replace getUser() with getSession(). getUser()
-    // actually validates the token with the Supabase server; getSession()
-    // only reads from local storage and can be spoofed.
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
-
-    const pathname = request.nextUrl.pathname;
-
-    // --- Unauthenticated user trying to access /admin/* ---
-    if (!user && pathname.startsWith("/admin")) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/auth/login";
-        url.searchParams.set("redirectTo", pathname);
-        return NextResponse.redirect(url);
+    if (!supabaseUrl || !supabaseAnonKey) {
+        console.error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in middleware.");
+        return supabaseResponse;
     }
 
-    // --- Non-admin guard for /admin/* ---
-    // Only query the profile when the route actually needs a role check.
-    if (user && pathname.startsWith("/admin")) {
-        const { data: profile, error } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", user.id)
-            .single();
+    try {
+        const supabase = createServerClient(
+            supabaseUrl,
+            supabaseAnonKey,
+            {
+                cookies: {
+                    getAll() {
+                        return request.cookies.getAll();
+                    },
+                    setAll(cookiesToSet) {
+                        cookiesToSet.forEach(({ name, value }) =>
+                            request.cookies.set(name, value)
+                        );
+                        supabaseResponse = NextResponse.next({ request });
+                        cookiesToSet.forEach(({ name, value, options }) =>
+                            supabaseResponse.cookies.set(name, value, options)
+                        );
+                    },
+                },
+            }
+        );
 
-        const isAdmin = profile?.role === "admin";
+        // --- Session refresh (always runs) ---
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
 
-        console.log("========== ADMIN CHECK ==========");
-        console.log("User ID:", user.id);
-        console.log("Profile:", profile);
-        console.log("Profile error:", error);
-        console.log("Is Admin:", isAdmin);
-        console.log("=================================");
+        const pathname = request.nextUrl.pathname;
 
-        // Non-admin trying to access /admin/* → bounce to homepage
-        if (!isAdmin) {
+        // --- Unauthenticated user trying to access /admin/* ---
+        if (!user && pathname.startsWith("/admin")) {
             const url = request.nextUrl.clone();
-            url.pathname = "/";
+            url.pathname = "/auth/login";
+            url.searchParams.set("redirectTo", pathname);
             return NextResponse.redirect(url);
         }
+
+        // --- Non-admin guard for /admin/* ---
+        // Only query the profile when the route actually needs a role check.
+        if (user && pathname.startsWith("/admin")) {
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("role")
+                .eq("id", user.id)
+                .single();
+
+            const isAdmin = profile?.role === "admin";
+
+            // Non-admin trying to access /admin/* → bounce to homepage
+            if (!isAdmin) {
+                const url = request.nextUrl.clone();
+                url.pathname = "/";
+                return NextResponse.redirect(url);
+            }
+        }
+    } catch (err) {
+        console.error("Middleware auth verification failed:", err);
     }
 
     // Everything else: let the request through with refreshed cookies.
