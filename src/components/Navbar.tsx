@@ -256,17 +256,17 @@ export function Navbar() {
   }, [profile.fullName]);
 
   return (
-    <header className="flex items-center w-full px-6 py-4 bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className="flex items-center w-full px-4 sm:px-6 py-3 sm:py-4 bg-white border-b border-gray-200 sticky top-0 z-50">
       {/* Left: Brand */}
       <div className="flex-1 flex justify-start">
-        <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-tight text-gray-900">
-          <CircleDotDashed className="size-7 text-blue-600" />
+        <Link href="/" className="flex items-center gap-2 text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
+          <CircleDotDashed className="size-6 sm:size-7 text-blue-600" />
           <span>Paddlix</span>
         </Link>
       </div>
 
-      {/* Center: Navigation Links */}
-      <nav className="flex justify-center gap-6" aria-label="Primary navigation">
+      {/* Center: Navigation Links — hidden on mobile to prevent squeezing */}
+      <nav className="hidden sm:flex justify-center gap-6" aria-label="Primary navigation">
         <Link
           href="/"
           className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
@@ -408,14 +408,14 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Link href="/auth/login">
-              <Button variant="ghost" size="sm" className="text-sm font-medium text-gray-700 hover:text-blue-600">
+              <Button variant="ghost" size="sm" className="text-xs sm:text-sm font-medium text-gray-700 hover:text-blue-600 px-2 sm:px-3">
                 Sign in
               </Button>
             </Link>
             <Link href="/auth/signup">
-              <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700 rounded-full px-4 text-xs font-semibold shadow-xs">
+              <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700 rounded-full px-3 sm:px-4 text-xs font-semibold shadow-xs">
                 Sign up
               </Button>
             </Link>

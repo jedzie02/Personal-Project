@@ -74,7 +74,7 @@ export default async function AdminBookingsPage() {
           ) : (
             <div className="divide-y">
               {bookings.map((b) => (
-                <div key={b.id} className="py-3 flex justify-between items-center text-sm">
+                <div key={b.id} className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1.5 text-sm">
                   <div>
                     <div className="font-medium">
                       {b.courts?.name ?? "Court"} — {b.profiles?.full_name || b.profiles?.email || "Guest"}

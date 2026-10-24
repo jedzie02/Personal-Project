@@ -98,14 +98,14 @@ export default async function MyBookingsPage({
                             </div>
 
                             {canCancel && (
-                                <form action={cancelThisBooking} className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                                <form action={cancelThisBooking} className="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                     <input
                                         type="text"
                                         name="reason"
                                         placeholder="Reason for cancellation (optional)"
                                         className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
-                                    <Button variant="outline" size="sm" type="submit" className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 cursor-pointer">
+                                    <Button variant="outline" size="sm" type="submit" className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 cursor-pointer shrink-0">
                                         Cancel Reservation
                                     </Button>
                                 </form>
