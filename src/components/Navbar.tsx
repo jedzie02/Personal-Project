@@ -13,6 +13,7 @@ import {
   User,
   ChevronRight,
   Loader2,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,13 +26,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { supabase } from "@/lib/supabase";
+import { cancelOwnBookingClientAction } from "@/app/bookings/actions";
 
 interface BookingReservation {
   id: string;
   court: string;
   date: string;
   time: string;
-  status: "Confirmed" | "Pending";
+  status: "Confirmed" | "Pending" | "Cancelled";
 }
 
 interface UserProfile {
@@ -80,6 +82,8 @@ export function Navbar() {
   const [loadingBookings, setLoadingBookings] = useState(false);
   const [bookingsLoaded, setBookingsLoaded] = useState(false);
 
+  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
+
   // Lazy fetch user reservations on demand (only when dropdown is hovered or opened)
   const fetchUserBookings = useCallback(async (userId: string) => {
     if (bookingsLoaded || loadingBookings) return;
@@ -107,7 +111,7 @@ export function Navbar() {
               court: courtObj?.name ?? "Court",
               date: b.booking_date,
               time: b.start_time,
-              status: b.status === "confirmed" ? ("Confirmed" as const) : ("Pending" as const),
+              status: b.status === "confirmed" ? ("Confirmed" as const) : b.status === "cancelled" ? ("Cancelled" as const) : ("Pending" as const),
             };
           })
         );
@@ -121,6 +125,27 @@ export function Navbar() {
       setLoadingBookings(false);
     }
   }, [bookingsLoaded, loadingBookings]);
+
+  const handleCancelBooking = async (bookingId: string) => {
+    const confirmed = window.confirm("Are you sure you want to cancel this booking? If you change your mind, you can re-book any open court.");
+    if (!confirmed) return;
+
+    setCancellingBookingId(bookingId);
+    try {
+      const res = await cancelOwnBookingClientAction(bookingId, "Customer changed mind");
+      if (res.success) {
+        setBookings((prev) =>
+          prev.map((b) => (b.id === bookingId ? { ...b, status: "Cancelled" as const } : b))
+        );
+      } else {
+        alert(res.error || "Unable to cancel reservation");
+      }
+    } catch (err: any) {
+      alert(err?.message || "Failed to cancel reservation");
+    } finally {
+      setCancellingBookingId(null);
+    }
+  };
 
   // Check persisted authentication state on mount in a single batched pass
   useEffect(() => {
@@ -373,21 +398,53 @@ export function Navbar() {
                     bookings.map((booking) => (
                       <div
                         key={booking.id}
-                        className="p-2.5 rounded-xl border border-gray-100 bg-gray-50/80 hover:bg-gray-100/70 transition-colors flex items-center justify-between"
+                        className="p-2.5 rounded-xl border border-gray-100 bg-gray-50/80 hover:bg-gray-100/70 transition-colors flex flex-col gap-2"
                       >
-                        <div>
-                          <p className="text-xs font-bold text-gray-900 flex items-center gap-1">
-                            <MapPin className="size-3 text-blue-500" />
-                            {booking.court}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                            <Clock className="size-3 text-gray-400" />
-                            <span>{booking.date} - {booking.time}</span>
-                          </p>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-bold text-gray-900 flex items-center gap-1">
+                              <MapPin className="size-3 text-blue-500" />
+                              {booking.court}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                              <Clock className="size-3 text-gray-400" />
+                              <span>{booking.date} · {booking.time}</span>
+                            </p>
+                          </div>
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                              booking.status === "Confirmed"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/80"
+                                : booking.status === "Cancelled"
+                                ? "bg-slate-100 text-slate-500 border-slate-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200/80"
+                            }`}
+                          >
+                            {booking.status}
+                          </span>
                         </div>
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/80">
-                          {booking.status}
-                        </span>
+
+                        {booking.status !== "Cancelled" && (
+                          <div className="flex items-center justify-between pt-1.5 border-t border-gray-200/60 text-[11px]">
+                            <span className="text-gray-400">Changed your mind?</span>
+                            <button
+                              type="button"
+                              disabled={cancellingBookingId === booking.id}
+                              onClick={() => handleCancelBooking(booking.id)}
+                              className="text-red-600 hover:text-red-700 hover:underline font-semibold cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                            >
+                              {cancellingBookingId === booking.id ? (
+                                <>
+                                  <Loader2 className="size-3 animate-spin" /> Cancelling…
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="size-3" /> Cancel
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))
                   )}

@@ -3,8 +3,9 @@ import { getCurrentProfile } from "@/lib/services/auth.server";
 import { getBookingsForCustomer } from "@/lib/services/booking.service";
 import { cancelOwnBookingAction } from "@/app/bookings/actions";
 import { formatTime } from "@/lib/utils/date";
-import { CANCELLATION_CUTOFF_HOURS } from "@/lib/config/booking-rules";
+import { CANCELLATION_CUTOFF_HOURS, canCancelBooking } from "@/lib/config/booking-rules";
 import { Button } from "@/components/ui/button";
+import { Clock, XCircle } from "lucide-react";
 
 export default async function MyBookingsPage({
     searchParams,
@@ -68,7 +69,9 @@ export default async function MyBookingsPage({
 
                 {bookings.map((booking) => {
                     const cancelThisBooking = cancelOwnBookingAction.bind(null, booking.id);
-                    const canCancel = booking.status === "pending" || booking.status === "confirmed";
+                    const isCancellableStatus = booking.status === "pending" || booking.status === "confirmed";
+                    const canCancel = isCancellableStatus && canCancelBooking(booking.bookingDate, booking.startTime);
+                    const isPastCutoff = isCancellableStatus && !canCancel;
 
                     return (
                         <div key={booking.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -102,13 +105,26 @@ export default async function MyBookingsPage({
                                     <input
                                         type="text"
                                         name="reason"
-                                        placeholder="Reason for cancellation (optional)"
-                                        className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        defaultValue="Changed my mind"
+                                        placeholder="Reason for cancellation (e.g. Changed my mind)"
+                                        className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700"
                                     />
-                                    <Button variant="outline" size="sm" type="submit" className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 cursor-pointer shrink-0">
-                                        Cancel Reservation
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        type="submit"
+                                        className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 cursor-pointer shrink-0 font-medium flex items-center gap-1"
+                                    >
+                                        <XCircle className="size-3.5" /> Cancel Reservation
                                     </Button>
                                 </form>
+                            )}
+
+                            {isPastCutoff && (
+                                <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center gap-1.5 text-[11px] text-amber-700">
+                                    <Clock className="size-3 shrink-0" />
+                                    <span>Cancellation window closed (starts in under {CANCELLATION_CUTOFF_HOURS} hours).</span>
+                                </div>
                             )}
 
                             {booking.status === "cancelled" && (
