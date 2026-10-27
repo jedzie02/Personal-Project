@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Banknote } from "lucide-react";
+import { Banknote, QrCode, CheckCircle2 } from "lucide-react";
 
 const STATUS_STYLES: Record<Booking["status"], string> = {
   pending: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
@@ -45,6 +45,7 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
           const collectCashForThisBooking = markBookingPaidInCashAction.bind(null, b.id);
           const canCancel = b.status === "pending" || b.status === "confirmed";
           const needsPayment = b.paymentStatus !== "succeeded" && b.status !== "cancelled";
+          const isGCash = b.paymentMethod?.toLowerCase().includes("gcash") || b.paymentMethod?.toLowerCase().includes("qr");
 
           return (
             <TableRow key={b.id} className="align-top">
@@ -69,13 +70,31 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
               </TableCell>
               <TableCell>
                 {b.paymentStatus === "succeeded" ? (
-                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                    {b.paymentMethod === "card" ? "Paid (Card)" : "Paid (Cash)"}
-                  </Badge>
+                  <div className="space-y-1">
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                      {b.paymentMethod === "card" ? "Paid (Card)" : isGCash ? "Paid (GCash)" : "Paid (Cash)"}
+                    </Badge>
+                    {b.paymentReference && (
+                      <div className="text-[11px] font-mono text-slate-500">
+                        Ref: #{b.paymentReference}
+                      </div>
+                    )}
+                  </div>
                 ) : b.paymentStatus === "pending" ? (
-                  <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                    Pay at Desk
-                  </Badge>
+                  <div className="space-y-1">
+                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">
+                      {isGCash ? "GCash Pending" : "Pay at Desk"}
+                    </Badge>
+                    {b.paymentReference ? (
+                      <div className="text-[10px] font-mono font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60 inline-flex items-center gap-1">
+                        <QrCode className="size-2.5" /> Ref: {b.paymentReference}
+                      </div>
+                    ) : (
+                      <div className="text-[10px] text-muted-foreground">
+                        {b.paymentMethod}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <Badge variant="outline" className="bg-slate-100 text-slate-700">
                     {b.paymentStatus || "Unpaid"}
@@ -90,9 +109,21 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
                       <Button
                         size="sm"
                         type="submit"
-                        className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer font-medium"
+                        className={`h-7 text-xs text-white cursor-pointer font-medium ${
+                          isGCash
+                            ? "bg-blue-600 hover:bg-blue-700"
+                            : "bg-emerald-600 hover:bg-emerald-700"
+                        }`}
                       >
-                        <Banknote className="size-3 mr-1" /> Collect Cash
+                        {isGCash ? (
+                          <>
+                            <CheckCircle2 className="size-3 mr-1" /> Verify GCash
+                          </>
+                        ) : (
+                          <>
+                            <Banknote className="size-3 mr-1" /> Collect Cash
+                          </>
+                        )}
                       </Button>
                     </form>
                   )}

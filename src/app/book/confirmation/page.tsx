@@ -3,6 +3,7 @@ import { getBookingById, getBookingsForCustomer } from "@/lib/services/booking.s
 import { getCurrentProfile } from "@/lib/services/auth.server";
 import { formatTime } from "@/lib/utils/date";
 import { Button } from "@/components/ui/button";
+import { GCashPaymentCard } from "@/components/booking/GCashPaymentCard";
 import {
   Card,
   CardContent,
@@ -63,6 +64,7 @@ export default async function BookingConfirmationPage({
   }
 
   const paymentMethod = booking.paymentMethod || "Cash walk in";
+  const isGCash = paymentMethod.toLowerCase().includes("gcash") || paymentMethod.toLowerCase().includes("qr");
 
   // Context-sensitive payment instruction
   const getPaymentInstruction = () => {
@@ -171,6 +173,17 @@ export default async function BookingConfirmationPage({
               </span>
             </div>
 
+            {booking.paymentReference && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                  <Hash className="size-3.5 text-blue-600" /> GCash Ref #
+                </span>
+                <span className="font-mono text-xs font-semibold text-slate-900 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                  {booking.paymentReference}
+                </span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-200/80">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <Receipt className="size-3.5 text-emerald-600" /> Total Fee
@@ -181,15 +194,23 @@ export default async function BookingConfirmationPage({
             </div>
           </div>
 
-          {/* Context-Sensitive Payment Instruction Box */}
-          <div className={`p-4 rounded-xl border ${instruction.borderColor} ${instruction.bgColor} ${instruction.textColor} space-y-1`}>
-            <div className={`font-semibold flex items-center gap-1.5 text-xs ${instruction.accentColor}`}>
-              <InstructionIcon className="size-4" /> {instruction.title}
+          {/* Context-Sensitive Payment Instruction / GCash QR Card */}
+          {isGCash ? (
+            <GCashPaymentCard
+              bookingId={booking.id}
+              totalPrice={Number(booking.totalPrice)}
+              initialReference={booking.paymentReference}
+            />
+          ) : (
+            <div className={`p-4 rounded-xl border ${instruction.borderColor} ${instruction.bgColor} ${instruction.textColor} space-y-1`}>
+              <div className={`font-semibold flex items-center gap-1.5 text-xs ${instruction.accentColor}`}>
+                <InstructionIcon className="size-4" /> {instruction.title}
+              </div>
+              <p className="text-xs leading-relaxed opacity-95">
+                {instruction.message}
+              </p>
             </div>
-            <p className="text-xs leading-relaxed opacity-95">
-              {instruction.message}
-            </p>
-          </div>
+          )}
 
           {/* Venue Notice */}
           <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/80 text-xs text-slate-600 space-y-1">

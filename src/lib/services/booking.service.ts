@@ -38,12 +38,23 @@ interface BookingRow {
     status: string;
     payment_status?: string;
     payment_method?: string;
+    payment_reference?: string | null;
     total_price: number;
     cancelled_reason: string | null;
     created_at: string;
 }
 
 function mapBooking(row: BookingRow): Booking {
+    let paymentRef = row.payment_reference || null;
+    let paymentMethod = row.payment_method || "Cash walk in";
+
+    // Extract reference if encoded in paymentMethod fallback format "GCash QR (Ref: XXXXX)"
+    if (!paymentRef && paymentMethod.includes("Ref:")) {
+        const parts = paymentMethod.split("Ref:");
+        paymentRef = parts[1]?.replace(/[()]/g, "").trim() || null;
+        paymentMethod = "GCash QR";
+    }
+
     return {
         id: row.id,
         courtId: row.court_id,
@@ -56,7 +67,8 @@ function mapBooking(row: BookingRow): Booking {
         endTime: row.end_time,
         status: row.status as Booking["status"],
         paymentStatus: (row.payment_status as Booking["paymentStatus"]) || (row.status === "confirmed" ? "succeeded" : "pending"),
-        paymentMethod: row.payment_method || "Cash walk in",
+        paymentMethod,
+        paymentReference: paymentRef,
         totalPrice: Number(row.total_price),
         cancelledReason: row.cancelled_reason,
         createdAt: row.created_at,
@@ -260,6 +272,41 @@ export async function cancelBooking(
     return { success: true };
 }
 
+export async function updateBookingPaymentReference(
+    bookingId: string,
+    referenceNo: string
+): Promise<ServiceResult> {
+    const supabase = await createClient();
+    const cleanRef = referenceNo.trim();
+
+    // 1. Try updating direct payment_reference column
+    const { error } = await supabase
+        .from("bookings")
+        .update({
+            payment_reference: cleanRef,
+            updated_at: new Date().toISOString(),
+        })
+        .eq("id", bookingId);
+
+    // 2. If column doesn't exist in Supabase yet (Postgres code 42703), fallback to encoding in payment_method
+    if (error) {
+        const fallback = await supabase
+            .from("bookings")
+            .update({
+                payment_method: `GCash QR (Ref: ${cleanRef})`,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", bookingId);
+
+        if (fallback.error) {
+            return { success: false, error: fallback.error.message };
+        }
+    }
+
+    return { success: true };
+}
+
+
 /**
  * Admin bookings list with optional filters (FR-8.1). Every filter
  * is optional — .eq()/.ilike() calls are only added to the query
@@ -296,7 +343,9 @@ export async function getAllBookings(
         results = results.filter(
             (b) =>
                 b.customerName?.toLowerCase().includes(term) ||
-                b.customerEmail?.toLowerCase().includes(term)
+                b.customerEmail?.toLowerCase().includes(term) ||
+                b.paymentReference?.toLowerCase().includes(term) ||
+                b.id.toLowerCase().includes(term)
         );
     }
 

@@ -45,12 +45,13 @@ export default async function AdminBookingsPage() {
       end_time,
       total_price,
       status,
+      payment_method,
       courts ( name ),
       profiles!customer_id ( full_name, email )
     `)
     .order("start_time", { ascending: false });
 
-  const bookings = (data as unknown as BookingRow[]) || [];
+  const bookings = (data as unknown as (BookingRow & { payment_method?: string })[]) || [];
 
   return (
     <div className="space-y-6">
@@ -73,24 +74,36 @@ export default async function AdminBookingsPage() {
             <p className="text-muted-foreground text-sm">No bookings recorded yet.</p>
           ) : (
             <div className="divide-y">
-              {bookings.map((b) => (
-                <div key={b.id} className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1.5 text-sm">
-                  <div>
-                    <div className="font-medium">
-                      {b.courts?.name ?? "Court"} — {b.profiles?.full_name || b.profiles?.email || "Guest"}
+              {bookings.map((b) => {
+                const isGCash = b.payment_method?.toLowerCase().includes("gcash") || b.payment_method?.toLowerCase().includes("qr");
+                const refMatch = b.payment_method?.includes("Ref:") ? b.payment_method.split("Ref:")[1]?.replace(/[()]/g, "").trim() : null;
+
+                return (
+                  <div key={b.id} className="py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1.5 text-sm">
+                    <div>
+                      <div className="font-medium flex items-center gap-2">
+                        <span>{b.courts?.name ?? "Court"} — {b.profiles?.full_name || b.profiles?.email || "Guest"}</span>
+                        {refMatch && (
+                          <span className="text-[10px] font-mono bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200">
+                            Ref: {refMatch}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-muted-foreground text-xs flex items-center gap-2 mt-0.5">
+                        <span>{formatBookingTime(b)}</span>
+                        <span>•</span>
+                        <span className="font-medium text-slate-700">{b.payment_method || "Cash walk in"}</span>
+                      </div>
                     </div>
-                    <div className="text-muted-foreground text-xs">
-                      {formatBookingTime(b)}
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold">₱{b.total_price}</span>
+                      <Badge variant={b.status === "confirmed" ? "default" : "outline"}>
+                        {b.status}
+                      </Badge>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold">₱{b.total_price}</span>
-                    <Badge variant={b.status === "confirmed" ? "default" : "outline"}>
-                      {b.status}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

@@ -53,6 +53,10 @@ export async function cancelBookingAction(bookingId: string, formData: FormData)
   revalidatePath("/admin/bookings");
 }
 
+export async function markBookingPaidAction(bookingId: string) {
+  return markBookingPaidInCashAction(bookingId);
+}
+
 export async function markBookingPaidInCashAction(bookingId: string) {
   const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();

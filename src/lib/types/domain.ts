@@ -63,6 +63,7 @@ export interface Booking {
     status: BookingStatus;
     paymentStatus?: "pending" | "succeeded" | "failed" | "refunded";
     paymentMethod?: "card" | "cash" | string;
+    paymentReference?: string | null;
     totalPrice: number;
     cancelledReason: string | null;
     createdAt: string;
@@ -73,7 +74,7 @@ export interface BookingFilters {
     dateTo?: string;
     courtId?: string;
     status?: BookingStatus;
-    customerSearch?: string; // matches name or email
+    customerSearch?: string; // matches name, email, or GCash payment reference
 }
 
 export interface AvailableSlot {
