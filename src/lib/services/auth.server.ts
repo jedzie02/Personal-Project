@@ -37,19 +37,44 @@ export async function getCurrentProfile() {
             user.user_metadata?.role === "admin" ||
             user.email?.toLowerCase().includes("admin")
 
-        return {
+        const profileData = {
             id: user.id,
-            first_name: user.user_metadata?.full_name?.split(" ")[0] || "Admin",
-            full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Admin User",
+            first_name: user.user_metadata?.full_name?.split(" ")[0] || (isAdmin ? "Admin" : "Customer"),
+            full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || (isAdmin ? "Admin User" : "Customer User"),
             email: user.email,
             phone: user.phone || user.user_metadata?.phone || null,
-            role: isAdmin ? "admin" : "customer",
+            role: (isAdmin ? "admin" : "customer") as "admin" | "customer",
             created_at: user.created_at,
+        }
+
+        // Persist profile into public.profiles for live querying
+        try {
+            await supabase.from("profiles").upsert(profileData, { onConflict: "id" })
+        } catch {
+            // Ignore write errors if session lacks permission
+        }
+
+        return profileData
+    }
+
+    const derivedFullName = user.user_metadata?.full_name || user.email?.split("@")[0] || null;
+    const isGeneric = !profile.full_name || profile.full_name === "Customer" || profile.full_name === "Customer User";
+    const resolvedFullName = isGeneric && derivedFullName ? derivedFullName : (profile.full_name || derivedFullName);
+
+    if (isGeneric && derivedFullName) {
+        try {
+            await supabase
+                .from("profiles")
+                .update({ full_name: resolvedFullName, email: user.email ?? profile.email })
+                .eq("id", profile.id);
+        } catch {
+            // ignore
         }
     }
 
     return {
         ...profile,
+        full_name: resolvedFullName,
         email: user.email ?? profile.email,
     }
 }

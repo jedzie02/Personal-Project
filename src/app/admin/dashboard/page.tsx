@@ -31,7 +31,9 @@ import {
     CheckCircle2,
     Banknote,
     CreditCard,
+    ArrowRight,
 } from "lucide-react";
+import Link from "next/link";
 
 const STATUS_STYLES: Record<string, string> = {
     confirmed: "bg-green-100 text-green-800 hover:bg-green-100",
@@ -40,10 +42,12 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const PAYMENT_BADGES: Record<string, { label: string; cls: string }> = {
-    succeeded_card: { label: "Paid (Card)", cls: "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100" },
-    succeeded_cash: { label: "Paid (Cash)", cls: "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100" },
-    pending_cash:   { label: "Pay at Desk", cls: "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100" },
-    pending_card:   { label: "Awaiting Card", cls: "bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100" },
+    succeeded_card:  { label: "Paid (Card)", cls: "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100" },
+    succeeded_cash:  { label: "Paid (Cash)", cls: "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100" },
+    succeeded_gcash: { label: "Paid (GCash)", cls: "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100" },
+    pending_cash:    { label: "Pay at Desk", cls: "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100" },
+    pending_card:    { label: "Awaiting Card", cls: "bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100" },
+    pending_gcash:   { label: "GCash Pending", cls: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100" },
 };
 
 const ALERT_STYLES: Record<string, { cls: string; Icon: React.ElementType }> = {
@@ -239,12 +243,20 @@ export default async function AdminDashboardPage() {
                 </Card>
             </div>
 
-            {/* Row 3 — Today's Bookings (live data) */}
+            {/* Row 3 — Today's Bookings (clean overview, actions moved to Bookings page) */}
             <div>
-                <h2 className="text-lg font-semibold mb-3">Today&apos;s Bookings</h2>
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-lg font-semibold">Today&apos;s Bookings</h2>
+                    <Link
+                        href="/admin/bookings"
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1"
+                    >
+                        View & Manage All Bookings <ArrowRight className="size-3" />
+                    </Link>
+                </div>
                 <Card className="shadow-sm">
                     <CardContent className="p-0">
-                        <BookingsTable bookings={todaysBookings} />
+                        <BookingsTable bookings={todaysBookings} showActions={false} />
                     </CardContent>
                 </Card>
             </div>

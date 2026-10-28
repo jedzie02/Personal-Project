@@ -119,6 +119,8 @@ export interface Payment {
     bookingDate: string;
     amount: number;
     currency: string;
+    method?: string;
+    paymentReference?: string | null;
     status: "pending" | "succeeded" | "failed" | "refunded";
     createdAt: string;
 }

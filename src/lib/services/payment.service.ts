@@ -1,7 +1,19 @@
 import { stripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCustomerDisplayName } from "@/lib/services/customer.service";
 import type { CheckoutResult, Payment } from "@/lib/types/domain";
+
+async function getDbClient() {
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+            return createAdminClient();
+        } catch {
+            // fallback
+        }
+    }
+    return await createClient();
+}
 
 /**
  * payment.service.ts
@@ -107,99 +119,244 @@ export async function createCheckoutSession(
     }
 }
 
-// Raw shape from the nested join below — payments joined to bookings,
-// which is itself joined to courts and profiles. Two levels deep.
 interface PaymentRow {
     id: string;
     booking_id: string;
     amount: number;
     currency: string;
+    method?: string;
     status: string;
     created_at: string;
     bookings: {
         booking_date: string;
+        payment_method?: string;
+        payment_reference?: string | null;
         courts: { name: string } | null;
         profiles: { full_name: string | null; email: string | null } | null;
     } | null;
 }
 
 /**
- * Admin payments list (FR-10.1). Same "follow the foreign key"
- * join syntax as booking.service.ts, just nested one level deeper:
- * payments -> bookings -> courts / profiles. Reading it inside-out:
- * for each payment, also fetch its booking, and for that booking,
- * also fetch its court name and customer info.
+ * Admin payments list (FR-10.1). Reads real payments and live bookings.
  */
 export async function getAllPayments(): Promise<Payment[]> {
-    const supabase = await createClient();
+    const supabase = await getDbClient();
 
-    const { data, error } = await supabase
+    // 1. Fetch real recorded payment records from public.payments
+    const { data: paymentsData } = await supabase
         .from("payments")
-        .select(
-            `
-      id, booking_id, amount, currency, status, created_at,
-      bookings (
-        booking_date,
-        courts ( name ),
-        profiles ( full_name, email )
-      )
-      `
-        )
+        .select(`
+            id, booking_id, amount, currency, status, method, created_at, stripe_checkout_session_id
+        `)
         .order("created_at", { ascending: false });
 
-    if (!error && data && data.length > 0) {
-        return (data as unknown as PaymentRow[]).map((row) => ({
-            id: row.id,
-            bookingId: row.booking_id,
-            courtName: row.bookings?.courts?.name ?? "Court",
-            customerName: row.bookings?.profiles?.full_name ?? null,
-            customerEmail: row.bookings?.profiles?.email ?? null,
-            bookingDate: row.bookings?.booking_date ?? "",
-            amount: Number(row.amount),
-            currency: row.currency || "PHP",
-            status: row.status as Payment["status"],
-            createdAt: row.created_at,
-        }));
-    }
-
-    // Live fallback: pull from live bookings in Supabase
+    // 2. Fetch live bookings to unify all ledger charges
     const { data: bookingRows } = await supabase
         .from("bookings")
-        .select(
-            `id, booking_date, total_price, status, created_at,
-             courts ( name ),
-             profiles ( full_name, email )`
-        )
+        .select(`
+            id, customer_id, court_id, booking_date, start_time, end_time, total_price, status, payment_status, payment_method, created_at,
+            courts ( name )
+        `)
         .order("created_at", { ascending: false });
 
-    if (bookingRows && bookingRows.length > 0) {
-        return (bookingRows as unknown as Array<{
-            id: string;
-            booking_date: string;
-            total_price: number;
-            status: string;
-            created_at: string;
-            courts: { name: string } | { name: string }[] | null;
-            profiles: { full_name: string | null; email: string | null } | { full_name: string | null; email: string | null }[] | null;
-        }>).map((b) => {
-            const court = Array.isArray(b.courts) ? b.courts[0] : b.courts;
-            const profile = Array.isArray(b.profiles) ? b.profiles[0] : b.profiles;
-            return {
-                id: `pay-${b.id.slice(0, 8)}`,
-                bookingId: b.id,
-                courtName: court?.name ?? "Court",
-                customerName: profile?.full_name ?? "Guest Player",
-                customerEmail: profile?.email ?? "player@pickle.com",
-                bookingDate: b.booking_date,
-                amount: Number(b.total_price),
-                currency: "PHP",
-                status: (b.status === "confirmed" || b.status === "completed" ? "succeeded" : "pending") as Payment["status"],
-                createdAt: b.created_at,
-            };
+    // 3. Resolve customer profiles for all bookings
+    const customerIds = Array.from(
+        new Set(
+            (bookingRows || [])
+                .map((row) => row.customer_id)
+                .filter(Boolean)
+        )
+    );
+
+    const profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+    if (customerIds.length > 0) {
+        const { data: profileRows } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", customerIds);
+
+        for (const p of profileRows || []) {
+            profileMap.set(p.id, { full_name: p.full_name, email: p.email });
+        }
+    }
+
+    const bookingMap = new Map<string, any>();
+    for (const b of bookingRows || []) {
+        bookingMap.set(b.id, b);
+    }
+
+    const resultPayments: Payment[] = [];
+    const seenBookingIds = new Set<string>();
+
+    // Add entries from public.payments
+    for (const p of paymentsData || []) {
+        seenBookingIds.add(p.booking_id);
+        const b = bookingMap.get(p.booking_id);
+        const courtObj = Array.isArray(b?.courts) ? b.courts[0] : b?.courts;
+        const profile = b?.customer_id ? profileMap.get(b.customer_id) : null;
+        const customerName = getCustomerDisplayName(profile?.full_name, b?.customer_id, profile?.email);
+
+        let method = p.method || b?.payment_method || "Cash";
+        let paymentReference: string | null = null;
+        if (method.includes("Ref:")) {
+            const parts = method.split("Ref:");
+            paymentReference = parts[1]?.replace(/[()]/g, "").trim() || null;
+            method = "GCash QR";
+        }
+
+        resultPayments.push({
+            id: p.id,
+            bookingId: p.booking_id,
+            courtName: courtObj?.name ?? "Court",
+            customerName,
+            customerEmail: profile?.email ?? null,
+            bookingDate: b?.booking_date ?? "",
+            amount: Number(p.amount),
+            currency: p.currency || "PHP",
+            method,
+            paymentReference,
+            status: p.status as Payment["status"],
+            createdAt: p.created_at,
         });
     }
 
-    return [];
+    // Add bookings that don't have a record in public.payments yet (e.g. Cash walk-in, GCash QR, manual bookings)
+    for (const b of bookingRows || []) {
+        if (seenBookingIds.has(b.id)) continue;
+        const courtObj = Array.isArray(b.courts) ? b.courts[0] : b.courts;
+        const profile = b.customer_id ? profileMap.get(b.customer_id) : null;
+        const customerName = getCustomerDisplayName(profile?.full_name, b.customer_id, profile?.email);
+        const isPaid = b.payment_status === "succeeded" || (!b.payment_status && (b.status === "confirmed" || b.status === "completed"));
+        const isRefunded = b.payment_status === "refunded";
+        const isFailed = b.payment_status === "failed";
+        const status: Payment["status"] = isRefunded
+            ? "refunded"
+            : isFailed
+            ? "failed"
+            : isPaid
+            ? "succeeded"
+            : "pending";
+
+        let method = b.payment_method || "Cash walk in";
+        let paymentReference: string | null = null;
+        if (method.includes("Ref:")) {
+            const parts = method.split("Ref:");
+            paymentReference = parts[1]?.replace(/[()]/g, "").trim() || null;
+            method = "GCash QR";
+        }
+
+        resultPayments.push({
+            id: b.id,
+            bookingId: b.id,
+            courtName: courtObj?.name ?? "Court",
+            customerName,
+            customerEmail: profile?.email ?? null,
+            bookingDate: b.booking_date,
+            amount: Number(b.total_price),
+            currency: "PHP",
+            method,
+            paymentReference,
+            status,
+            createdAt: b.created_at,
+        });
+    }
+
+    // Sort newest first
+    return resultPayments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+/**
+ * Marks a payment as refunded in both public.bookings and public.payments.
+ */
+export async function refundPayment(
+    paymentId: string,
+    bookingId?: string
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await getDbClient();
+    const targetBookingId = bookingId || paymentId;
+
+    // 1. Update booking
+    await supabase
+        .from("bookings")
+        .update({
+            payment_status: "refunded",
+            status: "cancelled",
+            cancelled_reason: "Refunded by administrator",
+            updated_at: new Date().toISOString(),
+        })
+        .eq("id", targetBookingId);
+
+    // 2. Update or insert in public.payments
+    const { data: existingPayment } = await supabase
+        .from("payments")
+        .select("id")
+        .or(`id.eq.${paymentId},booking_id.eq.${targetBookingId}`)
+        .maybeSingle();
+
+    if (existingPayment) {
+        await supabase
+            .from("payments")
+            .update({ status: "refunded" })
+            .eq("id", existingPayment.id);
+    } else {
+        await supabase
+            .from("payments")
+            .insert({
+                booking_id: targetBookingId,
+                status: "refunded",
+                currency: "PHP",
+            });
+    }
+
+    return { success: true };
+}
+
+/**
+ * Marks a pending payment as paid in cash.
+ */
+export async function markPaymentPaidInCash(
+    paymentId: string,
+    bookingId?: string
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await getDbClient();
+    const targetBookingId = bookingId || paymentId;
+
+    await supabase
+        .from("bookings")
+        .update({
+            payment_status: "succeeded",
+            status: "confirmed",
+            payment_method: "Cash (Paid at Counter)",
+            updated_at: new Date().toISOString(),
+        })
+        .eq("id", targetBookingId);
+
+    const { data: existingPayment } = await supabase
+        .from("payments")
+        .select("id")
+        .or(`id.eq.${paymentId},booking_id.eq.${targetBookingId}`)
+        .maybeSingle();
+
+    if (existingPayment) {
+        await supabase
+            .from("payments")
+            .update({
+                status: "succeeded",
+                method: "Cash",
+            })
+            .eq("id", existingPayment.id);
+    } else {
+        await supabase
+            .from("payments")
+            .insert({
+                booking_id: targetBookingId,
+                status: "succeeded",
+                method: "Cash",
+                currency: "PHP",
+            });
+    }
+
+    return { success: true };
 }
 
 /**

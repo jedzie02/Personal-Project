@@ -16,6 +16,8 @@ export default function NewBookingPage() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [price, setPrice] = useState("25");
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [paymentOption, setPaymentOption] = useState<"cash_paid" | "pay_at_desk">("cash_paid");
   const [submitting, setSubmitting] = useState(false);
 
@@ -60,17 +62,47 @@ export default function NewBookingPage() {
     const paymentStatus = isPaid ? "succeeded" : "pending";
     const parsedPrice = parseFloat(price) || 25;
 
+    let targetCustomerId: string | null = null;
+    if (customerEmail.trim()) {
+      const email = customerEmail.trim();
+      const name = customerName.trim() || email.split("@")[0];
+
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (existing) {
+        targetCustomerId = existing.id;
+      } else {
+        const { data: created } = await supabase
+          .from("profiles")
+          .insert({
+            email,
+            full_name: name,
+            role: "customer",
+          })
+          .select("id")
+          .single();
+        if (created) targetCustomerId = created.id;
+      }
+    }
+
+    const bookingPayload: Record<string, any> = {
+      court_id: courtId,
+      customer_id: targetCustomerId,
+      booking_date: bookingDate,
+      start_time: startH.slice(0, 5),
+      end_time: endH.slice(0, 5),
+      total_price: parsedPrice,
+      status: "confirmed",
+      payment_status: paymentStatus,
+    };
+
     const { data: newBooking, error } = await supabase
       .from("bookings")
-      .insert({
-        court_id: courtId,
-        booking_date: bookingDate,
-        start_time: startH.slice(0, 5),
-        end_time: endH.slice(0, 5),
-        total_price: parsedPrice,
-        status: "confirmed",
-        payment_status: paymentStatus,
-      })
+      .insert(bookingPayload)
       .select("id")
       .single();
 
@@ -101,6 +133,26 @@ export default function NewBookingPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label>Customer Name</Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. John Doe"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Customer Email</Label>
+                <Input
+                  type="email"
+                  placeholder="e.g. john@example.com"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                />
+              </div>
+            </div>
             <div>
               <Label>Select Court</Label>
               <select

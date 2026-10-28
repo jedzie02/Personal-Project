@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -15,9 +15,11 @@ import {
     Loader2,
     ArrowLeft,
     AlertCircle,
+    User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/lib/supabase";
 import { submitConfirmBooking } from "./actions";
 
 export default function ConfirmBookingClient() {
@@ -36,6 +38,28 @@ export default function ConfirmBookingClient() {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [userProfile, setUserProfile] = useState<{ name: string; email: string } | null>(null);
+
+    useEffect(() => {
+        async function loadUser() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    const name =
+                        user.user_metadata?.full_name ||
+                        user.user_metadata?.name ||
+                        (typeof window !== "undefined" ? localStorage.getItem("userName") : null) ||
+                        user.email?.split("@")[0] ||
+                        "Customer";
+                    const email = user.email || (typeof window !== "undefined" ? localStorage.getItem("userEmail") : null) || "";
+                    setUserProfile({ name, email });
+                }
+            } catch {
+                // Ignore background auth error
+            }
+        }
+        loadUser();
+    }, []);
 
     const getPaymentIcon = () => {
         if (paymentMethod === "Credit Card") return CreditCard;
@@ -55,6 +79,25 @@ export default function ConfirmBookingClient() {
         setError(null);
 
         try {
+            // Retrieve authenticated user
+            const { data: { user } } = await supabase.auth.getUser();
+
+            if (!user) {
+                const currentUrl = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/confirm-booking";
+                router.push(
+                    `/auth/login?message=${encodeURIComponent("Please log in to finalize your booking")}&redirectTo=${encodeURIComponent(currentUrl)}`
+                );
+                return;
+            }
+
+            const customerName =
+                user.user_metadata?.full_name ||
+                user.user_metadata?.name ||
+                (typeof window !== "undefined" ? localStorage.getItem("userName") : null) ||
+                user.email?.split("@")[0] ||
+                "Customer";
+            const customerEmail = user.email || (typeof window !== "undefined" ? localStorage.getItem("userEmail") : null) || null;
+
             const res = await submitConfirmBooking({
                 courtId,
                 courtName,
@@ -64,6 +107,9 @@ export default function ConfirmBookingClient() {
                 end,
                 rate,
                 paymentMethod,
+                userId: user.id,
+                userEmail: customerEmail ?? undefined,
+                userName: customerName,
             });
 
             if (res.needsLogin) {
@@ -121,6 +167,21 @@ export default function ConfirmBookingClient() {
                     )}
 
                     <div className="rounded-xl border border-slate-100 bg-slate-50/80 p-4 divide-y divide-slate-100 space-y-2.5">
+                        {/* 0. Customer Account */}
+                        {userProfile && (
+                            <div className="flex items-center justify-between pb-1">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5 text-blue-600" /> Player
+                                </span>
+                                <div className="text-right">
+                                    <div className="text-sm font-bold text-gray-900">{userProfile.name}</div>
+                                    {userProfile.email && (
+                                        <div className="text-xs text-slate-500">{userProfile.email}</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* 1. Court Name */}
                         <div className="flex items-center justify-between pb-1">
                             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">

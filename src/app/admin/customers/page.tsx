@@ -19,7 +19,7 @@ import {
 import { Search, UserCircle } from "lucide-react";
 import type { CustomerSummary } from "@/lib/types/domain";
 
-// Derive a membership tier from booking count (mock logic — replace with DB column when available)
+// Dynamically derive membership tier from live booking count
 function getMembershipTier(count: number): { label: string; cls: string } {
     if (count >= 20) return { label: "VIP Member",     cls: "bg-purple-100 text-purple-800 hover:bg-purple-100" };
     if (count >= 5)  return { label: "Regular Member", cls: "bg-blue-100 text-blue-800 hover:bg-blue-100"       };

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type {
     AvailableSlot,
     Booking,
@@ -14,6 +15,18 @@ import {
     CANCELLATION_CUTOFF_HOURS,
     canCancelBooking,
 } from "@/lib/config/booking-rules";
+import { getCustomerDisplayName } from "@/lib/services/customer.service";
+
+async function getDbClient() {
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+            return createAdminClient();
+        } catch {
+            // fallback
+        }
+    }
+    return await createClient();
+}
 
 /**
  * booking.service.ts
@@ -44,7 +57,10 @@ interface BookingRow {
     created_at: string;
 }
 
-function mapBooking(row: BookingRow): Booking {
+function mapBooking(
+    row: BookingRow,
+    profileMap?: Map<string, { full_name: string | null; email: string | null }>
+): Booking {
     let paymentRef = row.payment_reference || null;
     let paymentMethod = row.payment_method || "Cash walk in";
 
@@ -55,13 +71,20 @@ function mapBooking(row: BookingRow): Booking {
         paymentMethod = "GCash QR";
     }
 
+    const effectiveCustomerId = row.customer_id || null;
+    const directProfile = row.customer_id && profileMap ? profileMap.get(row.customer_id) : null;
+    const profile = directProfile || row.profiles;
+
+    const customerName = getCustomerDisplayName(profile?.full_name, effectiveCustomerId, profile?.email);
+    const customerEmail = profile?.email || null;
+
     return {
         id: row.id,
         courtId: row.court_id,
         courtName: row.courts?.name ?? "Unknown court",
-        customerId: row.customer_id,
-        customerName: row.profiles?.full_name ?? null,
-        customerEmail: row.profiles?.email ?? null,
+        customerId: effectiveCustomerId ?? "",
+        customerName,
+        customerEmail,
         bookingDate: row.booking_date,
         startTime: row.start_time,
         endTime: row.end_time,
@@ -75,12 +98,7 @@ function mapBooking(row: BookingRow): Booking {
     };
 }
 
-// The columns/joins shared by every query in this file. `courts(name)`
-// and `profiles(full_name, email)` are Supabase's shorthand for a SQL
-// JOIN — "also pull in the related row from that table, following the
-// foreign key." This is what lets mapBooking() read row.courts.name
-// above, instead of us running a second query per booking to look up
-// the court's name.
+// The columns/joins shared by every query in this file.
 const BOOKING_SELECT = `
   id, court_id, booking_date, start_time, end_time, status, payment_status, payment_method,
   total_price, cancelled_reason, created_at, customer_id,
@@ -142,6 +160,8 @@ export interface CreateBookingInput {
     startTime: string;
     endTime: string;
     totalPrice: number;
+    customerName?: string;
+    customerEmail?: string;
     /**
      * True only when an admin explicitly confirms payment was handled
      * outside the system (cash, etc.) — per PR-6, this must be a
@@ -185,6 +205,48 @@ export async function createBooking(
 
     const supabase = await createClient();
 
+    // Ensure customer profile row exists in public.profiles with valid name and email
+    if (input.customerId) {
+        try {
+            const { data: existingProfile } = await supabase
+                .from("profiles")
+                .select("id, full_name, email")
+                .eq("id", input.customerId)
+                .maybeSingle();
+
+            const currentName = existingProfile?.full_name?.trim();
+            const currentEmail = existingProfile?.email?.trim();
+            const isGeneric =
+                !currentName ||
+                currentName.toLowerCase() === "customer" ||
+                currentName.toLowerCase() === "customer user";
+
+            const nameToSet =
+                input.customerName ||
+                (!isGeneric && currentName ? currentName : input.customerEmail?.split("@")[0] || "Customer");
+            const emailToSet = input.customerEmail || currentEmail;
+
+            if (!existingProfile) {
+                await supabase.from("profiles").insert({
+                    id: input.customerId,
+                    full_name: nameToSet,
+                    email: emailToSet,
+                    role: "customer",
+                });
+            } else if (isGeneric || !currentEmail) {
+                await supabase
+                    .from("profiles")
+                    .update({
+                        full_name: nameToSet,
+                        email: emailToSet,
+                    })
+                    .eq("id", input.customerId);
+            }
+        } catch {
+            // ignore if permissions prevent direct upsert
+        }
+    }
+
     // Court status gate: only "Available" courts can be booked.
     // This blocks direct-POST attempts for maintenance/disabled courts.
     const { data: courtRow } = await supabase
@@ -215,19 +277,21 @@ export async function createBooking(
         };
     }
 
+    const bookingPayload: Record<string, any> = {
+        court_id: input.courtId,
+        customer_id: input.customerId,
+        booking_date: input.bookingDate,
+        start_time: input.startTime,
+        end_time: input.endTime,
+        total_price: input.totalPrice,
+        status: input.markAsConfirmed ? "confirmed" : "pending",
+        payment_status: input.paymentStatus || (input.markAsConfirmed ? "succeeded" : "pending"),
+        payment_method: input.paymentMethod || "Cash walk in",
+    };
+
     const { data, error } = await supabase
         .from("bookings")
-        .insert({
-            court_id: input.courtId,
-            customer_id: input.customerId,
-            booking_date: input.bookingDate,
-            start_time: input.startTime,
-            end_time: input.endTime,
-            total_price: input.totalPrice,
-            status: input.markAsConfirmed ? "confirmed" : "pending",
-            payment_status: input.paymentStatus || (input.markAsConfirmed ? "succeeded" : "pending"),
-            payment_method: input.paymentMethod || "Cash walk in",
-        })
+        .insert(bookingPayload)
         .select("id")
         .single();
 
@@ -244,7 +308,11 @@ export async function createBooking(
                 error: "This court is already booked for part of that time range.",
             };
         }
-        return { success: false, error: error.message };
+        return { success: false, error: error?.message || "Booking creation failed." };
+    }
+
+    if (!data) {
+        return { success: false, error: "No booking record returned." };
     }
 
     return { success: true, bookingId: data.id };
@@ -315,7 +383,7 @@ export async function updateBookingPaymentReference(
 export async function getAllBookings(
     filters: BookingFilters = {}
 ): Promise<Booking[]> {
-    const supabase = await createClient();
+    const supabase = await getDbClient();
 
     let query = supabase
         .from("bookings")
@@ -328,11 +396,54 @@ export async function getAllBookings(
     if (filters.courtId) query = query.eq("court_id", filters.courtId);
     if (filters.status) query = query.eq("status", filters.status);
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+    let rawBookings: any[] | null = data;
 
-    if (error || !data) return [];
+    // Resilient fallback if relationship join had PostgREST ambiguity
+    if (error || !rawBookings) {
+        let fallbackQuery = supabase
+            .from("bookings")
+            .select(`
+                id, court_id, booking_date, start_time, end_time, status, payment_status, payment_method,
+                total_price, cancelled_reason, created_at, customer_id,
+                courts ( name )
+            `)
+            .order("booking_date", { ascending: false })
+            .order("start_time", { ascending: false });
 
-    let results = (data as unknown as BookingRow[]).map(mapBooking);
+        if (filters.dateFrom) fallbackQuery = fallbackQuery.gte("booking_date", filters.dateFrom);
+        if (filters.dateTo) fallbackQuery = fallbackQuery.lte("booking_date", filters.dateTo);
+        if (filters.courtId) fallbackQuery = fallbackQuery.eq("court_id", filters.courtId);
+        if (filters.status) fallbackQuery = fallbackQuery.eq("status", filters.status);
+
+        const retry = await fallbackQuery;
+        rawBookings = retry.data as any[];
+    }
+
+    if (!rawBookings) return [];
+
+    // Direct profile lookup to guarantee accurate customerName and customerEmail
+    const customerIds = Array.from(
+        new Set(
+            rawBookings
+                .map((row) => row.customer_id)
+                .filter(Boolean)
+        )
+    );
+
+    const profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+    if (customerIds.length > 0) {
+        const { data: profileRows } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", customerIds);
+
+        for (const p of profileRows || []) {
+            profileMap.set(p.id, { full_name: p.full_name, email: p.email });
+        }
+    }
+
+    let results = rawBookings.map((row) => mapBooking(row as BookingRow, profileMap));
 
     // Customer name/email search happens after the fetch rather than
     // in the query, since it needs to match across a joined table
@@ -358,33 +469,88 @@ export async function getTodaysBookings(): Promise<Booking[]> {
 }
 
 export async function getBookingById(id: string): Promise<Booking | null> {
-    const supabase = await createClient();
+    const supabase = await getDbClient();
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from("bookings")
         .select(BOOKING_SELECT)
         .eq("id", id)
         .single();
 
-    if (error || !data) return null;
+    let rawBooking: any = data;
 
-    return mapBooking(data as unknown as BookingRow);
+    if (error || !rawBooking) {
+        const retry = await supabase
+            .from("bookings")
+            .select(`
+                id, court_id, booking_date, start_time, end_time, status, payment_status, payment_method,
+                total_price, cancelled_reason, created_at, customer_id,
+                courts ( name )
+            `)
+            .eq("id", id)
+            .single();
+        rawBooking = retry.data;
+    }
+
+    if (!rawBooking) return null;
+
+    const row = rawBooking as BookingRow;
+    const cid = row.customer_id;
+    let profileMap: Map<string, { full_name: string | null; email: string | null }> | undefined;
+    if (cid) {
+        const { data: pData } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .eq("id", cid)
+            .maybeSingle();
+        if (pData) {
+            profileMap = new Map([[pData.id, { full_name: pData.full_name, email: pData.email }]]);
+        }
+    }
+
+    return mapBooking(row, profileMap);
 }
 
 /** A customer's own booking history — powers the "My Bookings" page. */
 export async function getBookingsForCustomer(customerId: string): Promise<Booking[]> {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from("bookings")
         .select(BOOKING_SELECT)
         .eq("customer_id", customerId)
         .order("booking_date", { ascending: false })
         .order("start_time", { ascending: false });
 
-    if (error || !data) return [];
+    let rawBookings: any[] | null = data;
 
-    return (data as unknown as BookingRow[]).map(mapBooking);
+    if (error || !rawBookings) {
+        const retry = await supabase
+            .from("bookings")
+            .select(`
+                id, court_id, booking_date, start_time, end_time, status, payment_status, payment_method,
+                total_price, cancelled_reason, created_at, customer_id,
+                courts ( name )
+            `)
+            .eq("customer_id", customerId)
+            .order("booking_date", { ascending: false })
+            .order("start_time", { ascending: false });
+        rawBookings = retry.data as any[];
+    }
+
+    if (!rawBookings) return [];
+
+    const { data: pData } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .eq("id", customerId)
+        .maybeSingle();
+
+    const profileMap = pData
+        ? new Map([[pData.id, { full_name: pData.full_name, email: pData.email }]])
+        : undefined;
+
+    return rawBookings.map((row) => mapBooking(row as BookingRow, profileMap));
 }
 
 /**
@@ -497,13 +663,12 @@ export async function cancelOwnBooking(
 export async function findCustomerIdByEmail(
     email: string
 ): Promise<{ id: string; fullName: string | null } | null> {
-    const supabase = await createClient();
+    const supabase = await getDbClient();
 
     const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name")
         .eq("email", email)
-        .eq("role", "customer")
         .single();
 
     if (error || !data) return null;

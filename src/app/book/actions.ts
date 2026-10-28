@@ -21,13 +21,21 @@ export async function confirmBookingAction(prevState: unknown, formData: FormDat
         );
     }
 
-
     const courtId = formData.get("courtId") as string;
     const date = formData.get("date") as string;
     const start = formData.get("start") as string;
     const end = formData.get("end") as string;
     const totalPrice = Number(formData.get("totalPrice"));
     const paymentMethod = (formData.get("paymentMethod") as string) || "Cash walk in";
+
+    const customerEmail = profile!.email || null;
+    const rawName = profile!.full_name;
+    const isGeneric =
+        !rawName ||
+        rawName.trim().toLowerCase() === "customer" ||
+        rawName.trim().toLowerCase() === "customer user";
+    const customerName =
+        !isGeneric && rawName ? rawName.trim() : (customerEmail ? customerEmail.split("@")[0] : "Customer");
 
     // This is the FR-3.4 server-side re-validation: even though the
     // slot looked available when the review page rendered, someone
@@ -36,6 +44,8 @@ export async function confirmBookingAction(prevState: unknown, formData: FormDat
     const result = await createBooking({
         courtId,
         customerId: profile!.id,
+        customerName,
+        customerEmail: customerEmail ?? undefined,
         bookingDate: date,
         startTime: start,
         endTime: end,

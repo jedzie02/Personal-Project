@@ -1,7 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getActiveCourts } from "@/lib/services/court.service";
 import { getTodaysBookings } from "@/lib/services/booking.service";
+import { getCustomerDisplayName } from "@/lib/services/customer.service";
 import type { DashboardStats } from "@/lib/types/domain";
+
+async function getDbClient() {
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+            return createAdminClient();
+        } catch {
+            // fallback
+        }
+    }
+    return await createClient();
+}
 
 /**
  * dashboard.service.ts
@@ -12,7 +25,7 @@ import type { DashboardStats } from "@/lib/types/domain";
  * would be worse than useless for an admin trying to run the venue.
  */
 export async function getDashboardStats(): Promise<DashboardStats> {
-    const supabase = await createClient();
+    const supabase = await getDbClient();
     const today = new Date().toISOString().split("T")[0];
 
     const [todaysBookings, activeCourts, upcomingCountResult] = await Promise.all([
@@ -55,7 +68,7 @@ export interface UpcomingReservation {
     time: string;
     status: "confirmed" | "pending" | "cancelled" | "completed";
     paymentStatus?: "pending" | "succeeded" | "failed" | "refunded";
-    paymentMethod?: "card" | "cash";
+    paymentMethod?: "card" | "cash" | "gcash";
     amount: number;
 }
 
@@ -65,15 +78,16 @@ export interface SystemAlert {
     message: string;
 }
 
-/** Fetches real upcoming reservations from Supabase. */
+/** Fetches real upcoming reservations from Supabase with resilient customer resolution. */
 export async function getUpcomingReservations(limit: number = 5): Promise<UpcomingReservation[]> {
-    const supabase = await createClient();
+    const supabase = await getDbClient();
     const today = new Date().toISOString().split("T")[0];
 
-    const { data, error } = await supabase
+    // 1. Primary query: attempt to join courts and profiles
+    let { data, error } = await supabase
         .from("bookings")
         .select(
-            `id, booking_date, start_time, end_time, total_price, status, payment_status,
+            `id, customer_id, booking_date, start_time, end_time, total_price, status, payment_status, payment_method,
              courts ( name ),
              profiles ( full_name, email )`
         )
@@ -83,34 +97,91 @@ export async function getUpcomingReservations(limit: number = 5): Promise<Upcomi
         .order("start_time", { ascending: true })
         .limit(limit);
 
-    if (error || !data || data.length === 0) {
+    let rawBookings: any[] | null = data;
+
+    // 2. Fallback query if foreign-key relationship had ambiguity in PostgREST
+    if (error || !rawBookings) {
+        const retry = await supabase
+            .from("bookings")
+            .select(
+                `id, customer_id, booking_date, start_time, end_time, total_price, status, payment_status, payment_method,
+                 courts ( name )`
+            )
+            .gte("booking_date", today)
+            .in("status", ["pending", "confirmed"])
+            .order("booking_date", { ascending: true })
+            .order("start_time", { ascending: true })
+            .limit(limit);
+        rawBookings = retry.data as any[];
+    }
+
+    if (!rawBookings || rawBookings.length === 0) {
         return [];
     }
 
-    return (data as unknown as Array<{
+    // 3. Direct lookup into public.profiles to guarantee accurate customer name & email
+    const customerIds = Array.from(
+        new Set(
+            rawBookings
+                .map((row) => row.customer_id)
+                .filter(Boolean)
+        )
+    );
+
+    const profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+    if (customerIds.length > 0) {
+        const { data: profileRows } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", customerIds);
+
+        for (const p of profileRows || []) {
+            profileMap.set(p.id, { full_name: p.full_name, email: p.email });
+        }
+    }
+
+    return (rawBookings as unknown as Array<{
         id: string;
+        customer_id?: string;
         booking_date: string;
         start_time: string;
         end_time: string;
         total_price: number;
         status: string;
         payment_status?: string;
+        payment_method?: string;
         courts: { name: string } | { name: string }[] | null;
         profiles: { full_name: string | null; email: string | null } | { full_name: string | null; email: string | null }[] | null;
     }>).map((row) => {
         const courtObj = Array.isArray(row.courts) ? row.courts[0] : row.courts;
-        const profileObj = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        const joinedProfile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        const directProfile = row.customer_id ? profileMap.get(row.customer_id) : null;
+        const profileObj = directProfile || joinedProfile;
+
         const isPaid = row.payment_status === "succeeded" || (!row.payment_status && row.status === "confirmed");
+
+        let method: "card" | "cash" | "gcash" = "cash";
+        const rawMethod = (row.payment_method || "").toLowerCase();
+        if (rawMethod.includes("gcash") || rawMethod.includes("qr")) {
+            method = "gcash";
+        } else if (rawMethod.includes("card") || rawMethod.includes("stripe")) {
+            method = "card";
+        }
+
+        const effectiveCustomerId = row.customer_id || null;
+        const customerName = getCustomerDisplayName(profileObj?.full_name, effectiveCustomerId, profileObj?.email);
+        const customerEmail = profileObj?.email || "—";
+
         return {
             id: row.id,
-            customer: profileObj?.full_name ?? "Walk-in Guest",
-            email: profileObj?.email ?? "guest@pickle.com",
+            customer: customerName,
+            email: customerEmail,
             court: courtObj?.name ?? "Court",
             date: row.booking_date,
             time: `${row.start_time} – ${row.end_time}`,
             status: (row.status as UpcomingReservation["status"]) || "confirmed",
             paymentStatus: (row.payment_status as UpcomingReservation["paymentStatus"]) || (isPaid ? "succeeded" : "pending"),
-            paymentMethod: profileObj?.email && profileObj.email !== "guest@pickle.com" ? "card" : "cash",
+            paymentMethod: method,
             amount: Number(row.total_price ?? 0),
         };
     });

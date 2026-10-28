@@ -83,14 +83,25 @@ function LoginContent() {
         userRole = "admin";
       }
 
-      // Ensure profile exists in Supabase so server-side AdminLayout grants access
-      if (userRole === "admin") {
-        await supabase.from("profiles").upsert({
-          id: data.user.id,
-          email: data.user.email,
-          full_name: fullName || data.user.email?.split("@")[0] || "Admin",
-          role: "admin",
-        }, { onConflict: "id" });
+      // Ensure profile exists in Supabase for all users (customers and admins)
+      try {
+        const { data: existing } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", data.user.id)
+          .maybeSingle();
+
+        if (!existing) {
+          await supabase.from("profiles").insert({
+            id: data.user.id,
+            email: data.user.email,
+            full_name: fullName || data.user.email?.split("@")[0] || (userRole === "admin" ? "Admin" : "Customer"),
+            phone: phone || null,
+            role: userRole || "customer",
+          });
+        }
+      } catch {
+        // Ignore client RLS permission limitations
       }
 
       if (userRole === "admin") {

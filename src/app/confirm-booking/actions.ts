@@ -2,6 +2,7 @@
 
 import { createBooking } from "@/lib/services/booking.service";
 import { getCurrentProfile } from "@/lib/services/auth.server";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
 
 export interface ConfirmBookingInput {
@@ -13,6 +14,9 @@ export interface ConfirmBookingInput {
     end?: string;
     rate: number;
     paymentMethod: string;
+    userId?: string;
+    userEmail?: string;
+    userName?: string;
 }
 
 export interface ConfirmBookingResult {
@@ -23,13 +27,61 @@ export interface ConfirmBookingResult {
 }
 
 export async function submitConfirmBooking(input: ConfirmBookingInput): Promise<ConfirmBookingResult> {
+    const supabase = await createServerClient();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
     const profile = await getCurrentProfile();
-    if (!profile) {
+
+    const customerId = user?.id || profile?.id || input.userId;
+    if (!customerId) {
         return {
             success: false,
             needsLogin: true,
             error: "Please log in to confirm your booking.",
         };
+    }
+
+    const customerEmail = user?.email || profile?.email || input.userEmail || null;
+    const rawName =
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        profile?.full_name ||
+        input.userName;
+    const isGeneric =
+        !rawName ||
+        rawName.trim().toLowerCase() === "customer" ||
+        rawName.trim().toLowerCase() === "customer user";
+    const customerName =
+        !isGeneric && rawName ? rawName.trim() : (customerEmail ? customerEmail.split("@")[0] : "Customer");
+
+    // Ensure public.profiles has the user's latest name and email
+    try {
+        const { data: existingProfile } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .eq("id", customerId)
+            .maybeSingle();
+
+        if (!existingProfile) {
+            await supabase.from("profiles").insert({
+                id: customerId,
+                email: customerEmail,
+                full_name: customerName,
+                role: "customer",
+            });
+        } else if (!existingProfile.full_name || existingProfile.full_name === "Customer" || !existingProfile.email) {
+            await supabase
+                .from("profiles")
+                .update({
+                    full_name: customerName,
+                    email: customerEmail,
+                })
+                .eq("id", customerId);
+        }
+    } catch {
+        // Continue if RLS restricts server profile write
     }
 
     let bookingDate = input.date;
@@ -67,7 +119,9 @@ export async function submitConfirmBooking(input: ConfirmBookingInput): Promise<
 
     const result = await createBooking({
         courtId: input.courtId,
-        customerId: profile.id,
+        customerId,
+        customerName,
+        customerEmail: customerEmail ?? undefined,
         bookingDate,
         startTime,
         endTime,

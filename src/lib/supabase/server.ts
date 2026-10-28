@@ -31,7 +31,12 @@ function normalizeKey(rawKey?: string): string {
 }
 
 export async function createClient() {
-    const cookieStore = await cookies();
+    let cookieStore: any = null;
+    try {
+        cookieStore = await cookies();
+    } catch {
+        // Called outside an active Next.js request scope (e.g. scripts or background execution)
+    }
 
     const url = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
     const key = normalizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -48,9 +53,10 @@ export async function createClient() {
         {
             cookies: {
                 getAll() {
-                    return cookieStore.getAll();
+                    return cookieStore ? cookieStore.getAll() : [];
                 },
                 setAll(cookiesToSet) {
+                    if (!cookieStore) return;
                     try {
                         cookiesToSet.forEach(({ name, value, options }) => {
                             cookieStore.set(name, value, options as CookieOptions);

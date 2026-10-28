@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import type { Payment } from "@/lib/types/domain";
+import { refundPaymentAction, markPaymentPaidInCashAction } from "./actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,8 +45,6 @@ interface PaymentsLedgerProps {
   initialPayments: Payment[];
 }
 
-const METHODS = ["GCash", "Credit Card", "Cash", "GCash", "Credit Card"];
-
 function formatPHP(amount: number): string {
   return `₱${amount.toLocaleString("en-US", {
     minimumFractionDigits: 2,
@@ -69,6 +69,8 @@ function formatDate(dateStr: string): string {
 }
 
 export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
+  const router = useRouter();
+  const [payments, setPayments] = useState<Payment[]>(initialPayments);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedReceipt, setSelectedReceipt] = useState<{
@@ -77,6 +79,11 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
   } | null>(null);
   const [refundConfirm, setRefundConfirm] = useState<Payment | null>(null);
   const [refundStatus, setRefundStatus] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    setPayments(initialPayments);
+  }, [initialPayments]);
 
   // Memoized single-pass KPI computation (O(n) instead of 4 separate array scans on every keystroke)
   const { todayRevenue, outstanding, refunded, monthlyRevenue } = useMemo(() => {
@@ -86,8 +93,8 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
     let ref = 0;
     let monthlyRev = 0;
 
-    for (let i = 0; i < initialPayments.length; i++) {
-      const p = initialPayments[i];
+    for (let i = 0; i < payments.length; i++) {
+      const p = payments[i];
       if (p.status === "succeeded") {
         monthlyRev += p.amount;
         if (p.bookingDate === today) {
@@ -106,12 +113,12 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
       refunded: ref,
       monthlyRevenue: monthlyRev,
     };
-  }, [initialPayments]);
+  }, [payments]);
 
   // Filtered dataset
   const filteredPayments = useMemo(() => {
-    return initialPayments.filter((p, index) => {
-      const method = METHODS[index % METHODS.length];
+    return payments.filter((p) => {
+      const method = p.method || "Cash";
       const matchesStatus =
         statusFilter === "all" ? true : p.status === statusFilter;
 
@@ -122,11 +129,12 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
         (p.customerEmail?.toLowerCase().includes(q) ?? false) ||
         p.courtName.toLowerCase().includes(q) ||
         p.id.toLowerCase().includes(q) ||
+        (p.paymentReference?.toLowerCase().includes(q) ?? false) ||
         method.toLowerCase().includes(q);
 
       return matchesStatus && matchesSearch;
     });
-  }, [initialPayments, statusFilter, searchQuery]);
+  }, [payments, statusFilter, searchQuery]);
 
   // Export CSV handler
   const handleExportCSV = () => {
@@ -142,14 +150,14 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
       "Amount (PHP)",
     ];
 
-    const rows = filteredPayments.map((p, i) => [
+    const rows = filteredPayments.map((p) => [
       p.id,
       p.bookingId,
       p.bookingDate,
-      `"${p.customerName || "Guest Player"}"`,
+      `"${p.customerName || (p.bookingId ? `Customer (${p.bookingId.slice(0, 8)})` : "Customer")}"`,
       `"${p.customerEmail || "N/A"}"`,
       `"${p.courtName}"`,
-      METHODS[i % METHODS.length],
+      p.method || "Cash",
       p.status,
       p.amount.toFixed(2),
     ]);
@@ -286,26 +294,26 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
           <div className="overflow-x-auto pb-1 lg:pb-0">
             <div className="flex items-center gap-1.5 min-w-max">
               {[
-                { id: "all", label: "All Records", count: initialPayments.length },
+                { id: "all", label: "All Records", count: payments.length },
                 {
                   id: "succeeded",
                   label: "Succeeded",
-                  count: initialPayments.filter((p) => p.status === "succeeded").length,
+                  count: payments.filter((p) => p.status === "succeeded").length,
                 },
                 {
                   id: "pending",
                   label: "Pending",
-                  count: initialPayments.filter((p) => p.status === "pending").length,
+                  count: payments.filter((p) => p.status === "pending").length,
                 },
                 {
                   id: "refunded",
                   label: "Refunded",
-                  count: initialPayments.filter((p) => p.status === "refunded").length,
+                  count: payments.filter((p) => p.status === "refunded").length,
                 },
                 {
                   id: "failed",
                   label: "Failed",
-                  count: initialPayments.filter((p) => p.status === "failed").length,
+                  count: payments.filter((p) => p.status === "failed").length,
                 },
               ].map(({ id, label, count }) => {
                 const active = statusFilter === id;
@@ -416,8 +424,8 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPayments.map((payment, i) => {
-                    const method = METHODS[i % METHODS.length];
+                  filteredPayments.map((payment) => {
+                    const method = payment.method || "Cash";
 
                     return (
                       <TableRow
@@ -438,7 +446,7 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
                         {/* 2. Customer */}
                         <TableCell className="py-3.5">
                           <div className="font-medium text-sm text-slate-900 dark:text-white">
-                            {payment.customerName || "Guest Player"}
+                            {payment.customerName || (payment.bookingId ? `Customer (${payment.bookingId.slice(0, 8)})` : "Customer")}
                           </div>
                           <div className="text-xs text-slate-500">
                             {payment.customerEmail || "No email provided"}
@@ -447,18 +455,25 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
 
                         {/* 3. Method */}
                         <TableCell className="py-3.5">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                              method === "GCash"
-                                ? "bg-sky-50 text-sky-700 border-sky-200/80 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800"
-                                : method === "Credit Card"
-                                ? "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
-                                : "bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
-                            }`}
-                          >
-                            <CreditCard className="size-3" />
-                            {method}
-                          </span>
+                          <div className="space-y-1">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                method.toLowerCase().includes("gcash")
+                                  ? "bg-sky-50 text-sky-700 border-sky-200/80 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800"
+                                  : method.toLowerCase().includes("card")
+                                  ? "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                                  : "bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                              }`}
+                            >
+                              <CreditCard className="size-3" />
+                              {method}
+                            </span>
+                            {payment.paymentReference && (
+                              <div className="text-[10px] font-mono text-slate-500">
+                                Ref: #{payment.paymentReference}
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
 
                         {/* 4. Payment Status */}
@@ -494,6 +509,28 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
                         {/* 6. Actions */}
                         <TableCell className="pr-6 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            {payment.status === "pending" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={isProcessing}
+                                onClick={async () => {
+                                  setIsProcessing(true);
+                                  await markPaymentPaidInCashAction(payment.id, payment.bookingId);
+                                  setPayments((prev) =>
+                                    prev.map((p) =>
+                                      p.id === payment.id ? { ...p, status: "succeeded", method: "Cash" } : p
+                                    )
+                                  );
+                                  setIsProcessing(false);
+                                  router.refresh();
+                                }}
+                                className="h-8 px-2.5 text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer"
+                              >
+                                <CheckCircle2 className="size-3 mr-1 text-emerald-600" /> Mark Paid
+                              </Button>
+                            )}
+
                             <Button
                               variant="ghost"
                               size="sm"
@@ -507,6 +544,7 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                disabled={isProcessing}
                                 onClick={() => setRefundConfirm(payment)}
                                 className="h-8 px-2.5 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer"
                               >
@@ -565,7 +603,7 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
               <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
                 <span className="text-xs uppercase tracking-wider font-medium text-slate-400">Customer</span>
                 <span className="font-semibold text-slate-900 dark:text-white">
-                  {selectedReceipt.payment.customerName || "Guest Player"}
+                  {selectedReceipt.payment.customerName || (selectedReceipt.payment.bookingId ? `Customer (${selectedReceipt.payment.bookingId.slice(0, 8)})` : "Customer")}
                 </span>
               </div>
               <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
@@ -663,16 +701,35 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
               </Button>
               <Button
                 size="sm"
+                disabled={isProcessing}
                 className="rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs cursor-pointer"
-                onClick={() => {
-                  setRefundStatus("Refund request dispatched to Stripe & bank ledger.");
-                  setTimeout(() => {
-                    setRefundConfirm(null);
-                    setRefundStatus(null);
-                  }, 1200);
+                onClick={async () => {
+                  if (!refundConfirm) return;
+                  setIsProcessing(true);
+                  setRefundStatus("Recording refund in live database...");
+                  try {
+                    await refundPaymentAction(refundConfirm.id, refundConfirm.bookingId);
+                    setPayments((prev) =>
+                      prev.map((p) =>
+                        p.id === refundConfirm.id || p.bookingId === refundConfirm.bookingId
+                          ? { ...p, status: "refunded" }
+                          : p
+                      )
+                    );
+                    setRefundStatus("Refund processed successfully.");
+                    setTimeout(() => {
+                      setRefundConfirm(null);
+                      setRefundStatus(null);
+                      setIsProcessing(false);
+                      router.refresh();
+                    }, 800);
+                  } catch {
+                    setRefundStatus("Failed to process refund. Please try again.");
+                    setIsProcessing(false);
+                  }
                 }}
               >
-                Confirm Refund
+                {isProcessing ? "Processing..." : "Confirm Refund"}
               </Button>
             </div>
           </div>

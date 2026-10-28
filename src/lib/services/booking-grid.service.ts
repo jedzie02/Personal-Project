@@ -116,12 +116,7 @@ export async function getBookingGridForDate(
             };
         });
     } else {
-        courts = [
-            { id: "court-1", name: "Court 1", status: "Available", hourly_rate: 25 },
-            { id: "court-2", name: "Court 2", status: "Available", hourly_rate: 25 },
-            { id: "court-3", name: "Court 3", status: "Available", hourly_rate: 25 },
-            { id: "court-4", name: "Court 4", status: "Available", hourly_rate: 25 },
-        ];
+        courts = [];
     }
 
     // Sort courts alphabetically

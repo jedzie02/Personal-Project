@@ -20,9 +20,15 @@ const STATUS_STYLES: Record<Booking["status"], string> = {
   completed: "bg-blue-100 text-blue-800 hover:bg-blue-100",
 };
 
-export function BookingsTable({ bookings }: { bookings: Booking[] }) {
+export function BookingsTable({
+  bookings,
+  showActions = true,
+}: {
+  bookings: Booking[];
+  showActions?: boolean;
+}) {
   if (bookings.length === 0) {
-    return <p className="text-muted-foreground">No bookings match these filters.</p>;
+    return <p className="text-muted-foreground p-4 text-sm">No bookings match these filters.</p>;
   }
 
   return (
@@ -36,7 +42,7 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
           <TableHead>Status</TableHead>
           <TableHead>Payment</TableHead>
           <TableHead>Price</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          {showActions && <TableHead className="text-right">Actions</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -46,6 +52,13 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
           const canCancel = b.status === "pending" || b.status === "confirmed";
           const needsPayment = b.paymentStatus !== "succeeded" && b.status !== "cancelled";
           const isGCash = b.paymentMethod?.toLowerCase().includes("gcash") || b.paymentMethod?.toLowerCase().includes("qr");
+          const isGeneric =
+            !b.customerName ||
+            b.customerName.toLowerCase() === "customer" ||
+            b.customerName.toLowerCase() === "customer user";
+          const customerDisplayName = !isGeneric
+            ? b.customerName
+            : (b.customerEmail ? b.customerEmail.split("@")[0] : b.customerName || "—");
 
           return (
             <TableRow key={b.id} className="align-top">
@@ -55,7 +68,7 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
               </TableCell>
               <TableCell>{b.courtName}</TableCell>
               <TableCell>
-                <div className="font-medium">{b.customerName ?? "—"}</div>
+                <div className="font-medium">{customerDisplayName}</div>
                 <div className="text-xs text-muted-foreground">{b.customerEmail}</div>
               </TableCell>
               <TableCell>
@@ -102,47 +115,49 @@ export function BookingsTable({ bookings }: { bookings: Booking[] }) {
                 )}
               </TableCell>
               <TableCell className="font-medium tabular-nums">₱{b.totalPrice.toFixed(2)}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  {needsPayment && (
-                    <form action={collectCashForThisBooking}>
-                      <Button
-                        size="sm"
-                        type="submit"
-                        className={`h-7 text-xs text-white cursor-pointer font-medium ${
-                          isGCash
-                            ? "bg-blue-600 hover:bg-blue-700"
-                            : "bg-emerald-600 hover:bg-emerald-700"
-                        }`}
-                      >
-                        {isGCash ? (
-                          <>
-                            <CheckCircle2 className="size-3 mr-1" /> Verify GCash
-                          </>
-                        ) : (
-                          <>
-                            <Banknote className="size-3 mr-1" /> Collect Cash
-                          </>
-                        )}
-                      </Button>
-                    </form>
-                  )}
-                  {canCancel && (
-                    <form action={cancelThisBooking} className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        name="reason"
-                        placeholder="Reason"
-                        required
-                        className="w-24 rounded-md border px-2 py-1 text-xs"
-                      />
-                      <Button variant="outline" size="sm" type="submit" className="h-7 text-xs">
-                        Cancel
-                      </Button>
-                    </form>
-                  )}
-                </div>
-              </TableCell>
+              {showActions && (
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    {needsPayment && (
+                      <form action={collectCashForThisBooking}>
+                        <Button
+                          size="sm"
+                          type="submit"
+                          className={`h-7 text-xs text-white cursor-pointer font-medium ${
+                            isGCash
+                              ? "bg-blue-600 hover:bg-blue-700"
+                              : "bg-emerald-600 hover:bg-emerald-700"
+                          }`}
+                        >
+                          {isGCash ? (
+                            <>
+                              <CheckCircle2 className="size-3 mr-1" /> Verify GCash
+                            </>
+                          ) : (
+                            <>
+                              <Banknote className="size-3 mr-1" /> Collect Cash
+                            </>
+                          )}
+                        </Button>
+                      </form>
+                    )}
+                    {canCancel && (
+                      <form action={cancelThisBooking} className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          name="reason"
+                          placeholder="Reason"
+                          required
+                          className="w-24 rounded-md border px-2 py-1 text-xs"
+                        />
+                        <Button variant="outline" size="sm" type="submit" className="h-7 text-xs">
+                          Cancel
+                        </Button>
+                      </form>
+                    )}
+                  </div>
+                </TableCell>
+              )}
             </TableRow>
           );
         })}
