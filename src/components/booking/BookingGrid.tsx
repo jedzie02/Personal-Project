@@ -1,20 +1,24 @@
 "use client";
 
-import { useState, useEffect, useMemo, useActionState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, CheckCircle2, Clock, Calendar, MapPin, DollarSign, CalendarCheck, ChevronRight, Loader2, ShieldCheck, CreditCard, QrCode, Banknote } from "lucide-react";
+import { Lock, CheckCircle2, Clock, ChevronRight, Check, Trash2 } from "lucide-react";
 import type { BookingGridData, GridCell } from "@/lib/services/booking-grid.service";
 import { PRICE_PER_HOUR } from "@/lib/config/booking-rules";
-import { confirmBookingAction } from "@/app/book/actions";
 import { supabase } from "@/lib/supabase";
+import {
+    toggleCartSlot,
+    calculateCartTotal,
+    sortCartSlots,
+    convertCartToSegments,
+    type SelectedGridSlot,
+} from "@/lib/utils/cart";
 
 interface SelectedSlot {
     courtId: string;
     courtName: string;
     hour: string;
 }
-
-type ModalStep = "preview" | "confirm";
 
 function formatAMPM(timeStr: string) {
     const [hStr, mStr] = timeStr.split(":");
@@ -44,18 +48,17 @@ function formatDate(dateStr: string) {
 }
 
 const DEFAULT_MASTER_COURTS = [
-    { id: "court-1", name: "Court 1", status: "Available", hourly_rate: 25 },
-    { id: "court-2", name: "Court 2", status: "Available", hourly_rate: 25 },
-    { id: "court-3", name: "Court 3", status: "Available", hourly_rate: 25 },
-    { id: "court-4", name: "Court 4", status: "Available", hourly_rate: 25 },
+    { id: "court-1", name: "Court 1", status: "Available", hourly_rate: 300 },
+    { id: "court-2", name: "Court 2", status: "Available", hourly_rate: 300 },
+    { id: "court-3", name: "Court 3", status: "Available", hourly_rate: 300 },
+    { id: "court-4", name: "Court 4", status: "Available", hourly_rate: 300 },
 ];
 
 export default function BookingGrid({ data }: { data: BookingGridData }) {
     const router = useRouter();
     const { courts, hours, grid, date } = data;
     const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [selectedSlot, setSelectedSlot] = useState<SelectedSlot | null>(null);
-    const [modalStep, setModalStep] = useState<ModalStep>("preview");
+    const [selectedSlots, setSelectedSlots] = useState<SelectedGridSlot[]>([]);
 
     // Memoize master list of 4 naturally sorted courts
     const masterCourts = useMemo(() => {
@@ -119,8 +122,8 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
         };
     }, []);
 
-    // 1. Payment method selector state
-    const [paymentMethod, setPaymentMethod] = useState<"Credit Card" | "GCash QR" | "Cash walk in">("GCash QR");
+    // 1. Payment method selector state — used in cart flow via handleProceedCart (GCash QR default)
+    // Note: payment method is hardcoded to GCash QR in the cart URL; kept as a constant.
 
     // 2. First-time booking guide banner state
     const [showGuide, setShowGuide] = useState(false);
@@ -144,105 +147,114 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
         }
     };
 
-    // 2. Restore pending slot if user just returned from signup / login
+    const sortedSlots = useMemo(() => sortCartSlots(selectedSlots), [selectedSlots]);
+    const cartTotal = useMemo(() => calculateCartTotal(selectedSlots), [selectedSlots]);
+
+    // Restore pending cart if user just returned from signup / login
     useEffect(() => {
         try {
-            const saved = sessionStorage.getItem("paddlix_pending_slot");
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (parsed.date === date && parsed.courtId && parsed.hour) {
-                    setSelectedSlot({
-                        courtId: parsed.courtId,
-                        courtName: parsed.courtName,
-                        hour: parsed.hour,
-                    });
-                    if (parsed.paymentMethod) {
-                        setPaymentMethod(parsed.paymentMethod);
-                    }
-                    setModalStep("preview");
+            const savedCart = sessionStorage.getItem("paddlix_pending_cart");
+            if (savedCart) {
+                const parsed = JSON.parse(savedCart);
+                if (parsed.date === date && Array.isArray(parsed.slots)) {
+                    setSelectedSlots(parsed.slots);
                 }
-                sessionStorage.removeItem("paddlix_pending_slot");
+                sessionStorage.removeItem("paddlix_pending_cart");
             }
         } catch {
-            // Ignore sessionStorage parse errors
+            // Ignore
         }
     }, [date]);
 
-    // Open slot preview directly without abrupt redirection
-    const handleSelectSlot = (slot: SelectedSlot) => {
-        setSelectedSlot(slot);
-        setPaymentMethod("GCash QR");
-        setModalStep("preview");
+    // Toggle slot in cart directly on grid
+    const handleToggleSlot = (slot: SelectedSlot) => {
+        const selectedCourt = masterCourts.find((c) => c.id === slot.courtId);
+        const hourlyRate =
+            selectedCourt?.hourly_rate != null ? Number(selectedCourt.hourly_rate) : PRICE_PER_HOUR;
+        const endHour = addHours(slot.hour, 1);
+
+        setSelectedSlots((prev) =>
+            toggleCartSlot(prev, {
+                courtId: slot.courtId,
+                courtName: slot.courtName,
+                hour: slot.hour,
+                endHour,
+                hourlyRate,
+            })
+        );
     };
 
-    const handleClose = () => {
-        setSelectedSlot(null);
-        setPaymentMethod("GCash QR");
-        setModalStep("preview");
-    };
+    const handleProceedCart = () => {
+        if (selectedSlots.length === 0) return;
 
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                handleClose();
+        const sorted = sortCartSlots(selectedSlots);
+        const segments = convertCartToSegments(sorted);
+        const total = calculateCartTotal(sorted);
+
+        if (!isLoggedIn) {
+            try {
+                sessionStorage.setItem(
+                    "paddlix_pending_cart",
+                    JSON.stringify({
+                        date,
+                        slots: sorted,
+                    })
+                );
+            } catch {
+                // ignore
             }
-        };
-
-        if (selectedSlot) {
-            document.body.style.overflow = "hidden";
-            window.addEventListener("keydown", handleKeyDown);
-        } else {
-            document.body.style.overflow = "";
+            router.push("/login");
+            return;
         }
 
-        return () => {
-            document.body.style.overflow = "";
-            window.removeEventListener("keydown", handleKeyDown);
-        };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedSlot]);
+        const serializedSegments = encodeURIComponent(JSON.stringify(segments));
+        const primaryCourtName = sorted.length === 1 ? sorted[0].courtName : `Multiple Courts (${sorted.length} slots)`;
+        const primaryCourtId = sorted[0].courtId;
+        const timeSlot = sorted.length === 1
+            ? `${formatAMPM(sorted[0].hour)} - ${formatAMPM(sorted[0].endHour)}`
+            : `${formatAMPM(sorted[0].hour)} - ${formatAMPM(sorted[sorted.length - 1].endHour)} (${sorted.length} slots)`;
 
-    const endTime = selectedSlot ? addHours(selectedSlot.hour, 1) : "";
-    const selectedCourt = masterCourts.find((c) => c.id === selectedSlot?.courtId);
-    const hourlyRate = selectedCourt?.hourly_rate != null ? Number(selectedCourt.hourly_rate) : PRICE_PER_HOUR;
-    const totalPrice = hourlyRate; // 1 hour × live hourly_rate
+        const url = `/confirm-booking?courtId=${encodeURIComponent(primaryCourtId)}&courtName=${encodeURIComponent(primaryCourtName)}&timeSlot=${encodeURIComponent(timeSlot)}&rate=${total}&paymentMethod=GCash%20QR&date=${encodeURIComponent(date)}&start=${encodeURIComponent(sorted[0].hour)}&end=${encodeURIComponent(sorted[sorted.length - 1].endHour)}&duration=${sorted.length}&segments=${serializedSegments}`;
+        router.push(url);
+    };
+
 
     return (
-        <div className="w-full space-y-3">
+        <div className={`w-full space-y-3 ${selectedSlots.length > 0 ? "pb-28" : ""}`}>
             {/* First-time player quick onboarding guide */}
             {showGuide && (
-                <div className="flex items-center justify-between p-3.5 rounded-xl border border-blue-100 bg-blue-50/70 text-xs text-blue-950 transition-all shadow-xs animate-in fade-in">
+                <div className="flex items-center justify-between p-3.5 rounded-xl border border-border bg-muted/70 text-xs text-foreground transition-all shadow-2xs animate-in fade-in">
                     <div className="flex items-center gap-2.5">
-                        <span className="size-6 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 font-bold text-xs shadow-xs">
+                        <span className="size-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0 font-bold text-xs shadow-2xs">
                             ✓
                         </span>
                         <span>
-                            <strong>First time booking?</strong> Select any open green slot below to inspect court details and reserve your game in seconds.
+                            <strong>First time booking?</strong> Select any open slot below to inspect court details and reserve your game in seconds.
                         </span>
                     </div>
                     <button
                         type="button"
                         onClick={dismissGuide}
-                        className="text-xs text-blue-700 hover:text-blue-900 font-semibold px-2.5 py-1 rounded-md hover:bg-blue-100/60 cursor-pointer ml-2 shrink-0 transition-colors"
+                        className="text-xs text-muted-foreground hover:text-foreground font-medium px-2.5 py-1 rounded-md hover:bg-muted cursor-pointer ml-2 shrink-0 transition-colors"
                     >
                         Got it
                     </button>
                 </div>
             )}
 
-            <div className="w-full bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <div className="w-full bg-card rounded-2xl border border-border overflow-hidden">
                 {/* Header Title */}
-                <div className="flex items-center gap-3 p-4 border-b border-slate-100">
-                    <Clock className="w-5 h-5 text-blue-500" />
-                    <h2 className="text-lg font-bold text-gray-900">Available Times</h2>
+                <div className="flex items-center gap-3 p-4 border-b border-border">
+                    <Clock className="w-5 h-5 text-muted-foreground" />
+                    <h2 className="text-lg font-bold text-foreground">Available Times</h2>
                 </div>
 
             {/* Grid */}
             <div className="relative overflow-x-auto w-full">
                 <div className="min-w-[700px]">
                     {/* Court headers */}
-                    <div className="grid grid-cols-[175px_repeat(4,1fr)] border-b border-slate-100 bg-white">
-                        <div className="py-4 px-2 text-center text-sm font-semibold text-gray-500 border-r border-slate-100 flex items-center justify-center">
+                    <div className="grid grid-cols-[175px_repeat(4,1fr)] border-b border-border bg-card">
+                        <div className="py-4 px-2 text-center text-sm font-semibold text-muted-foreground border-r border-border flex items-center justify-center">
                             Time
                         </div>
                         {masterCourts.map((court) => {
@@ -250,25 +262,25 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                             return (
                                 <div
                                     key={court.id}
-                                    className={`py-4 px-2 text-center text-sm font-bold uppercase tracking-wider border-r last:border-r-0 border-slate-100 flex flex-col items-center justify-center ${
+                                    className={`py-4 px-2 text-center text-sm font-bold uppercase tracking-wider border-r last:border-r-0 border-border flex flex-col items-center justify-center ${
                                         isNotAvailable
-                                            ? "opacity-60 bg-gray-100 text-gray-500"
-                                            : "bg-white text-gray-900"
+                                            ? "opacity-60 bg-muted/60 text-muted-foreground"
+                                            : "bg-card text-foreground"
                                     }`}
                                 >
                                     <div>{court.name}</div>
                                     {court.hourly_rate != null && (
-                                        <span className="text-xs font-semibold text-blue-600 normal-case">
+                                        <span className="text-xs font-semibold text-foreground normal-case tabular-nums">
                                             ₱{court.hourly_rate}/hr
                                         </span>
                                     )}
                                     {court.status === "Maintenance" && (
-                                        <span className="inline-block mt-1 text-xs font-semibold tracking-normal normal-case text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
+                                        <span className="inline-block mt-1 text-xs font-semibold tracking-normal normal-case text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
                                             Currently in Maintenance
                                         </span>
                                     )}
                                     {court.status === "Not Available" && (
-                                        <span className="inline-block mt-1 text-xs font-semibold tracking-normal normal-case text-gray-700 bg-gray-200 border border-gray-300 px-2 py-0.5 rounded-full">
+                                        <span className="inline-block mt-1 text-xs font-semibold tracking-normal normal-case text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded-full">
                                             Not Available
                                         </span>
                                     )}
@@ -278,7 +290,7 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                     </div>
 
                     {/* Time rows */}
-                    <div className="divide-y divide-slate-100">
+                    <div className="divide-y divide-border">
                         {hours.map((hour, hourIdx) => {
                             const hourNum = parseInt(hour.split(":")[0], 10);
                             const nextHourNum = (hourNum + 1) % 24;
@@ -290,8 +302,8 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                                     className="grid grid-cols-[175px_repeat(4,1fr)] min-h-[58px]"
                                 >
                                     {/* Time label */}
-                                    <div className="px-2 py-4 text-center flex items-center justify-center border-r border-slate-100 bg-white">
-                                        <span className="text-sm font-bold text-gray-900 whitespace-nowrap">
+                                    <div className="px-2 py-4 text-center flex items-center justify-center border-r border-border bg-card">
+                                        <span className="text-sm font-bold text-foreground whitespace-nowrap tabular-nums">
                                             {formatAMPM(hour)} – {formatAMPM(nextHour)}
                                         </span>
                                     </div>
@@ -312,16 +324,21 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                                             isPeak: false,
                                         };
 
+                                        const isSelected = selectedSlots.some(
+                                            (s) => s.courtId === court.id && s.hour === hour
+                                        );
+
                                         return (
                                             <div
                                                 key={court.id}
-                                                className="p-1.5 border-r last:border-r-0 border-slate-100 flex items-center justify-center bg-white min-w-0"
+                                                className="p-1.5 border-r last:border-r-0 border-border flex items-center justify-center bg-card min-w-0"
                                             >
                                                 <CellContent
                                                     cell={cell}
                                                     courtName={court.name}
                                                     courtStatus={court.status}
-                                                    onSelectSlot={handleSelectSlot}
+                                                    isSelected={isSelected}
+                                                    onSelectSlot={handleToggleSlot}
                                                     isLoggedIn={isLoggedIn}
                                                     router={router}
                                                 />
@@ -336,200 +353,82 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
             </div>
             </div>
 
-            {/* Bottom Sheet Modal */}
-            {selectedSlot && (
+            {/* Floating Cart Bar */}
+            {selectedSlots.length > 0 && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4"
-                    onClick={handleClose}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="available-slot-modal-title"
-                    style={{ animation: "fadeIn 200ms ease-out" }}
+                    className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none"
+                    style={{ animation: "slideUp 250ms ease-out" }}
                 >
-                    <div
-                        className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col"
-                        onClick={(e) => e.stopPropagation()}
-                        style={{ animation: "scaleIn 200ms ease-out" }}
-                    >
+                    <div className="w-full max-w-2xl mx-4 mb-4 pointer-events-auto rounded-2xl border border-border bg-card/95 backdrop-blur-md shadow-2xl ring-1 ring-border/50 overflow-hidden">
+                        {/* Slot Pills */}
+                        <div className="px-4 pt-3 pb-2 flex flex-wrap gap-1.5 border-b border-border">
+                            {sortedSlots.map((slot) => (
+                                <span
+                                    key={`${slot.courtId}-${slot.hour}`}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary text-primary-foreground shadow-2xs"
+                                >
+                                    <span className="size-1.5 rounded-full bg-accent-court shrink-0" />
+                                    {slot.courtName}
+                                    <span className="opacity-80">
+                                        {formatAMPM(slot.hour)}–{formatAMPM(slot.endHour)}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        aria-label={`Remove ${slot.courtName}`}
+                                        onClick={() =>
+                                            setSelectedSlots((prev) =>
+                                                prev.filter(
+                                                    (s) => !(s.courtId === slot.courtId && s.hour === slot.hour)
+                                                )
+                                            )
+                                        }
+                                        className="ml-0.5 rounded-full p-0.5 hover:bg-primary-foreground/20 transition-colors cursor-pointer"
+                                    >
+                                        <svg className="size-2.5" viewBox="0 0 10 10" fill="none">
+                                            <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                        </svg>
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
 
-                        {/* Step 1: Preview */}
-                        {modalStep === "preview" && (
-                            <div className="px-6 pb-6 pt-6 flex flex-col items-center text-center" style={{ animation: "fadeIn 200ms ease-out" }}>
-                                {/* Top Icon Badge */}
-                                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-blue-50 text-blue-600 mb-4 border border-blue-100 shadow-xs">
-                                    <CalendarCheck className="w-7 h-7" />
-                                </div>
-
-                                {/* Modal Header */}
-                                <h3 id="available-slot-modal-title" className="text-xl font-bold text-gray-900">
-                                    Court Slot Available
-                                </h3>
-                                <p className="text-sm text-gray-500 mt-1 max-w-xs">
-                                    This court slot is available for booking. Review your court details below.
-                                </p>
-
-                                {/* Slot Details Card */}
-                                <div className="w-full mt-5 rounded-xl border border-slate-100 bg-slate-50/80 p-4 text-left divide-y divide-slate-100">
-                                    <div className="flex items-center justify-between pb-2.5">
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                            <MapPin className="w-3.5 h-3.5 text-blue-500" /> Court
-                                        </span>
-                                        <span className="text-sm font-bold text-gray-900">
-                                            {selectedSlot.courtName}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between py-2.5">
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                            <Calendar className="w-3.5 h-3.5 text-blue-500" /> Date
-                                        </span>
-                                        <span className="text-sm font-semibold text-gray-900">
-                                            {formatDate(date)}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between py-2.5">
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                            <Clock className="w-3.5 h-3.5 text-blue-500" /> Time
-                                        </span>
-                                        <span className="text-sm font-semibold text-gray-900">
-                                            {formatAMPM(selectedSlot.hour)} – {formatAMPM(endTime)}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between pt-2.5">
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                            <DollarSign className="w-3.5 h-3.5 text-blue-500" /> Rate
-                                        </span>
-                                        <span className="text-sm font-bold text-blue-600">
-                                            ₱{hourlyRate.toFixed(2)}/hr
-                                        </span>
-                                    </div>
-
-                                    {/* Payment Method Selector */}
-                                    <div className="pt-3 border-t border-slate-100 mt-2.5 text-left">
-                                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-                                            Payment Method
-                                        </label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {[
-                                                { id: "Credit Card", label: "Credit Card", icon: CreditCard },
-                                                { id: "GCash QR", label: "GCash QR", icon: QrCode },
-                                                { id: "Cash walk in", label: "Cash walk in", icon: Banknote },
-                                            ].map((method) => {
-                                                const Icon = method.icon;
-                                                const isSelected = paymentMethod === method.id;
-                                                return (
-                                                    <button
-                                                        key={method.id}
-                                                        type="button"
-                                                        onClick={() => setPaymentMethod(method.id as any)}
-                                                        className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
-                                                            isSelected
-                                                                ? "border-blue-600 bg-blue-50/70 text-blue-700 font-semibold shadow-xs"
-                                                                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
-                                                        }`}
-                                                    >
-                                                        <Icon className={`w-4 h-4 mb-1.5 ${isSelected ? "text-blue-600" : "text-slate-500"}`} />
-                                                        <span className="text-xs leading-tight">{method.label}</span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Actions / Onboarding step */}
-                                {!isLoggedIn ? (
-                                    <div className="w-full mt-5 p-4 rounded-xl border border-blue-100 bg-blue-50/70 text-center space-y-2.5">
-                                        <p className="text-xs text-blue-900 font-medium">
-                                            Sign up or log in to secure this court reservation.
-                                        </p>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    try {
-                                                        sessionStorage.setItem(
-                                                            "paddlix_pending_slot",
-                                                            JSON.stringify({
-                                                                courtId: selectedSlot.courtId,
-                                                                courtName: selectedSlot.courtName,
-                                                                hour: selectedSlot.hour,
-                                                                date,
-                                                                paymentMethod,
-                                                            })
-                                                        );
-                                                    } catch {
-                                                        // Ignore
-                                                    }
-                                                    router.push("/signup");
-                                                }}
-                                                className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
-                                            >
-                                                Sign Up to Book
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    try {
-                                                        sessionStorage.setItem(
-                                                            "paddlix_pending_slot",
-                                                            JSON.stringify({
-                                                                courtId: selectedSlot.courtId,
-                                                                courtName: selectedSlot.courtName,
-                                                                hour: selectedSlot.hour,
-                                                                date,
-                                                                paymentMethod,
-                                                            })
-                                                        );
-                                                    } catch {
-                                                        // Ignore
-                                                    }
-                                                    router.push("/login");
-                                                }}
-                                                className="py-2.5 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors cursor-pointer"
-                                            >
-                                                Log In
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center justify-center gap-3 w-full mt-6">
-                                        <button
-                                            type="button"
-                                            onClick={handleClose}
-                                            className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors shadow-xs cursor-pointer"
-                                        >
-                                            Back
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const timeSlot = `${formatAMPM(selectedSlot.hour)} - ${formatAMPM(endTime)}`;
-                                                const url = `/confirm-booking?courtId=${encodeURIComponent(selectedSlot.courtId)}&courtName=${encodeURIComponent(selectedSlot.courtName)}&timeSlot=${encodeURIComponent(timeSlot)}&rate=${hourlyRate}&paymentMethod=${encodeURIComponent(paymentMethod)}&date=${encodeURIComponent(date)}&start=${encodeURIComponent(selectedSlot.hour)}&end=${encodeURIComponent(endTime)}`;
-                                                router.push(url);
-                                            }}
-                                            className="flex-1 py-2.5 px-4 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm text-center cursor-pointer flex items-center justify-center gap-1.5"
-                                        >
-                                            Book Slot
-                                            <ChevronRight className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                )}
+                        {/* Summary Row */}
+                        <div className="px-4 py-3 flex items-center gap-3">
+                            {/* Slot count + total */}
+                            <div className="flex-1 min-w-0">
+                                <span className="text-sm font-bold text-foreground">
+                                    {selectedSlots.length} {selectedSlots.length === 1 ? "Slot" : "Slots"} Selected
+                                </span>
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                    ₱300/slot
+                                </span>
                             </div>
-                        )}
 
-                        {/* Step 2: Confirm */}
-                        {modalStep === "confirm" && (
-                            <ConfirmStep
-                                courtId={selectedSlot.courtId}
-                                courtName={selectedSlot.courtName}
-                                date={date}
-                                startTime={selectedSlot.hour}
-                                endTime={endTime}
-                                totalPrice={totalPrice}
-                                onBack={() => setModalStep("preview")}
-                                onClose={handleClose}
-                            />
-                        )}
+                            {/* Total price */}
+                            <span className="text-lg font-bold text-foreground tabular-nums shrink-0">
+                                ₱{cartTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                            </span>
+
+                            {/* Clear button */}
+                            <button
+                                type="button"
+                                onClick={() => setSelectedSlots([])}
+                                className="shrink-0 p-2 rounded-xl border border-border bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                                title="Clear all selected slots"
+                            >
+                                <Trash2 className="size-4" />
+                            </button>
+
+                            {/* Book CTA */}
+                            <button
+                                type="button"
+                                onClick={handleProceedCart}
+                                className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 active:bg-primary/80 text-primary-foreground text-sm font-semibold transition-colors shadow-sm cursor-pointer"
+                            >
+                                Review & Book ({selectedSlots.length})
+                                <ChevronRight className="size-4" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -554,108 +453,17 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                         opacity: 1;
                     }
                 }
+                @keyframes slideUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
             `}</style>
-        </div>
-    );
-}
-
-/** Step 2 of the bottom sheet — review & confirm booking via server action. */
-function ConfirmStep({
-    courtId,
-    courtName,
-    date,
-    startTime,
-    endTime,
-    totalPrice,
-    onBack,
-    onClose,
-}: {
-    courtId: string;
-    courtName: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    totalPrice: number;
-    onBack: () => void;
-    onClose: () => void;
-}) {
-    const [state, formAction, isPending] = useActionState(confirmBookingAction, undefined);
-
-    // If the action redirected (e.g. to login or payment), the component
-    // unmounts automatically. We only need to handle the visual state here.
-
-    return (
-        <div className="px-6 pb-8 pt-3 flex flex-col items-center text-center" style={{ animation: "fadeIn 200ms ease-out" }}>
-            {/* Top Icon Badge */}
-            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 mb-4 border border-emerald-100 shadow-xs">
-                <ShieldCheck className="w-7 h-7" />
-            </div>
-
-            {/* Header */}
-            <h3 className="text-xl font-bold text-gray-900">
-                Confirm Your Booking
-            </h3>
-            <p className="text-sm text-gray-500 mt-1 max-w-xs">
-                You&apos;re about to book this court. Please review the summary and confirm.
-            </p>
-
-            {/* Summary Card */}
-            <div className="w-full mt-5 rounded-xl border border-slate-100 bg-slate-50/80 p-4 text-left space-y-2">
-                <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Court</span>
-                    <span className="font-semibold text-gray-900">{courtName}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Date</span>
-                    <span className="font-semibold text-gray-900">{formatDate(date)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                    <span className="text-slate-500">Time</span>
-                    <span className="font-semibold text-gray-900">{formatAMPM(startTime)} – {formatAMPM(endTime)}</span>
-                </div>
-                <div className="flex justify-between text-sm border-t border-slate-200 pt-2 mt-2">
-                    <span className="font-semibold text-gray-900">Total</span>
-                    <span className="font-bold text-blue-600">₱{totalPrice.toFixed(2)}</span>
-                </div>
-            </div>
-
-            {/* Confirm Form */}
-            <form action={formAction} className="w-full mt-6">
-                <input type="hidden" name="courtId" value={courtId} />
-                <input type="hidden" name="date" value={date} />
-                <input type="hidden" name="start" value={startTime} />
-                <input type="hidden" name="end" value={endTime} />
-                <input type="hidden" name="totalPrice" value={totalPrice} />
-
-                <div className="flex items-center justify-center gap-3 w-full">
-                    <button
-                        type="button"
-                        onClick={onBack}
-                        disabled={isPending}
-                        className="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Back
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={isPending}
-                        className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 active:bg-emerald-800 transition-colors shadow-sm text-center cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
-                    >
-                        {isPending ? (
-                            <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Booking…
-                            </>
-                        ) : (
-                            "Confirm Booking"
-                        )}
-                    </button>
-                </div>
-            </form>
-
-            <p className="mt-3 text-xs text-slate-400">
-                Confirming reserves your court slot immediately. Payment can be settled at the venue.
-            </p>
         </div>
     );
 }
@@ -664,6 +472,7 @@ function CellContent({
     cell,
     courtName,
     courtStatus,
+    isSelected = false,
     onSelectSlot,
     isLoggedIn,
     router,
@@ -671,6 +480,7 @@ function CellContent({
     cell: BookingGridData["grid"][0][0];
     courtName: string;
     courtStatus?: string;
+    isSelected?: boolean;
     onSelectSlot: (slot: SelectedSlot) => void;
     isLoggedIn: boolean;
     router: ReturnType<typeof useRouter>;
@@ -687,19 +497,19 @@ function CellContent({
         case "passed":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-50 flex items-center justify-center py-2"
+                    className="w-full h-full min-h-[44px] rounded-[14px] bg-muted/40 flex items-center justify-center py-2"
                 >
-                    <span className="text-xs font-semibold text-slate-400 uppercase">Passed</span>
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">Passed</span>
                 </div>
             );
 
         case "booked":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 flex flex-col items-center justify-center gap-0.5 py-2"
+                    className="w-full h-full min-h-[44px] rounded-[14px] bg-muted/60 flex flex-col items-center justify-center gap-0.5 py-2"
                 >
-                    <Lock className="size-3.5 text-slate-400" />
-                    <span className="text-xs font-semibold text-slate-400 uppercase">
+                    <Lock className="size-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">
                         Booked
                     </span>
                 </div>
@@ -708,10 +518,10 @@ function CellContent({
         case "fulfilled":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 flex flex-col items-center justify-center gap-0.5 py-2"
+                    className="w-full h-full min-h-[44px] rounded-[14px] bg-muted/60 flex flex-col items-center justify-center gap-0.5 py-2"
                 >
-                    <CheckCircle2 className="size-3.5 text-slate-400" />
-                    <span className="text-xs font-semibold text-slate-400 uppercase">
+                    <CheckCircle2 className="size-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">
                         Fulfilled
                     </span>
                 </div>
@@ -728,38 +538,49 @@ function CellContent({
                             hour: cell.hour,
                         });
                     }}
-                    className="w-full h-full min-h-[44px] rounded-[14px] py-2 bg-blue-50/50 border border-blue-200 hover:bg-blue-500 hover:border-blue-500 flex items-center justify-center transition-all duration-200 group/cell cursor-pointer"
+                    className={`w-full h-full min-h-[44px] rounded-[14px] py-2 flex items-center justify-center transition-all duration-150 cursor-pointer ${
+                        isSelected
+                            ? "bg-primary text-primary-foreground border-2 border-primary shadow-xs"
+                            : "bg-card border border-border hover:bg-muted hover:border-foreground/30 group/cell"
+                    }`}
                 >
-                    <span className="text-sm font-semibold text-blue-600 capitalize group-hover/cell:text-white transition-colors duration-200">
-                        Available
-                    </span>
+                    {isSelected ? (
+                        <div className="flex items-center gap-1.5 text-xs font-bold animate-in zoom-in-95 duration-150">
+                            <Check className="size-3.5 stroke-[3] text-accent-court" />
+                            <span>Selected</span>
+                        </div>
+                    ) : (
+                        <span className="text-xs font-semibold text-muted-foreground group-hover/cell:text-foreground transition-colors duration-150 capitalize">
+                            Available
+                        </span>
+                    )}
                 </button>
             );
 
         case "closed":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-50 flex items-center justify-center py-2"
+                    className="w-full h-full min-h-[44px] rounded-[14px] bg-muted/40 flex items-center justify-center py-2"
                 >
-                    <span className="text-xs font-semibold text-slate-400 uppercase">Closed</span>
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">Closed</span>
                 </div>
             );
 
         case "maintenance":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-amber-50 border border-amber-200 flex flex-col items-center justify-center cursor-not-allowed py-2 text-center"
+                    className="w-full h-full min-h-[44px] rounded-[14px] bg-amber-500/10 border border-amber-500/30 flex flex-col items-center justify-center cursor-not-allowed py-2 text-center"
                 >
-                    <span className="text-xs font-semibold text-amber-800">Maintenance</span>
+                    <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">Maintenance</span>
                 </div>
             );
 
         case "not_available":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] opacity-60 bg-gray-200 border border-gray-300 flex flex-col items-center justify-center cursor-not-allowed py-2 text-center"
+                    className="w-full h-full min-h-[44px] rounded-[14px] opacity-60 bg-muted border border-border flex flex-col items-center justify-center cursor-not-allowed py-2 text-center"
                 >
-                    <span className="text-xs font-semibold text-gray-500 uppercase">Not Available</span>
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">Not Available</span>
                 </div>
             );
     }
