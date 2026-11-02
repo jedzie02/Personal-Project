@@ -24,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 import { supabase } from "@/lib/supabase";
 import { cancelOwnBookingClientAction } from "@/app/bookings/actions";
@@ -281,35 +282,47 @@ export function Navbar() {
   }, [profile.fullName]);
 
   return (
-    <header className="flex items-center w-full px-4 sm:px-6 py-3 sm:py-4 bg-white border-b border-gray-200 sticky top-0 z-50">
+    <header className="flex items-center w-full px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-md border-b border-border sticky top-0 z-50 transition-colors">
       {/* Left: Brand */}
       <div className="flex-1 flex justify-start">
-        <Link href="/" className="flex items-center gap-2 text-xl sm:text-2xl font-bold tracking-tight text-gray-900">
-          <CircleDotDashed className="size-6 sm:size-7 text-blue-600" />
-          <span>Paddlix</span>
+        <Link href="/" className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-foreground group">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-2xs group-hover:scale-105 transition-transform relative">
+            <CircleDotDashed className="size-5" />
+            <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-accent-court ring-2 ring-background" />
+          </div>
+          <span className="font-extrabold tracking-tight">Paddlix</span>
         </Link>
       </div>
 
-      {/* Center: Navigation Links — hidden on mobile to prevent squeezing */}
-      <nav className="hidden sm:flex justify-center gap-6" aria-label="Primary navigation">
+      {/* Center: Navigation Links */}
+      <nav className="hidden sm:flex items-center gap-1 bg-muted p-1 rounded-full border border-border" aria-label="Primary navigation">
         <Link
           href="/"
-          className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors"
+          className="text-xs font-semibold px-4 py-1.5 rounded-full text-foreground bg-card shadow-2xs transition-all"
           aria-label="Home"
         >
           Home
         </Link>
         <Link
+          href="#book-a-court"
+          className="text-xs font-medium px-4 py-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-card/60 transition-all"
+          aria-label="Book a Court"
+        >
+          Book Court
+        </Link>
+        <Link
           href="#about"
-          className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+          className="text-xs font-medium px-4 py-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-card/60 transition-all"
           aria-label="About Pickleball"
         >
           About
         </Link>
       </nav>
 
-      {/* Right: Profile Avatar or Sign In button */}
-      <div className="flex-1 flex justify-end">
+      {/* Right: Theme Toggle + Profile Avatar or Sign In button */}
+      <div className="flex-1 flex items-center justify-end gap-2 sm:gap-2.5">
+        <ThemeToggle />
+
         {profile.isLoggedIn ? (
           <DropdownMenu
             onOpenChange={(open) => {
@@ -325,10 +338,10 @@ export function Navbar() {
                   fetchUserBookings(profile.userId);
                 }
               }}
-              className="outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 rounded-full cursor-pointer transition-transform hover:scale-105"
+              className="outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-full cursor-pointer transition-transform hover:scale-105"
             >
-              <Avatar className="size-10 border-2 border-blue-600/20 hover:border-blue-600 transition-colors shadow-xs">
-                <AvatarFallback className="bg-blue-600 text-white font-bold text-sm tracking-wide">
+              <Avatar className="size-10 border border-border hover:border-foreground transition-colors shadow-xs">
+                <AvatarFallback className="bg-primary text-primary-foreground font-bold text-sm tracking-wide">
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -337,27 +350,27 @@ export function Navbar() {
             <DropdownMenuContent
               align="end"
               sideOffset={8}
-              className="w-80 p-0 rounded-2xl border border-gray-200/90 bg-white shadow-xl overflow-hidden divide-y divide-gray-100"
+              className="w-80 p-0 rounded-2xl border border-border bg-card shadow-xl overflow-hidden divide-y divide-border"
             >
               {/* 1. User Details Header */}
-              <div className="p-4 bg-slate-50/70">
+              <div className="p-4 bg-muted/40">
                 <div className="flex items-center gap-3">
-                  <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-sm shadow-2xs">
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-sm shadow-2xs">
                     {initials}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold text-sm text-gray-900 truncate">
+                    <p className="font-bold text-sm text-foreground truncate">
                       {profile.fullName || "Guest"}
                     </p>
                     {profile.email && (
-                      <p className="text-xs text-gray-500 truncate mt-0.5 flex items-center gap-1">
-                        <Mail className="size-3 text-gray-400 shrink-0" />
+                      <p className="text-xs text-muted-foreground truncate mt-0.5 flex items-center gap-1">
+                        <Mail className="size-3 text-muted-foreground shrink-0" />
                         <span className="truncate">{profile.email}</span>
                       </p>
                     )}
                     {profile.phoneNumber && (
-                      <p className="text-xs font-semibold text-blue-600 mt-1 flex items-center gap-1">
-                        <Phone className="size-3 text-blue-500 shrink-0" />
+                      <p className="text-xs font-semibold text-foreground mt-1 flex items-center gap-1">
+                        <Phone className="size-3 text-muted-foreground shrink-0" />
                         <span>{profile.phoneNumber}</span>
                       </p>
                     )}
@@ -370,27 +383,27 @@ export function Navbar() {
                 <div className="flex items-center justify-between mb-3">
                   <Link
                     href="/bookings"
-                    className="text-xs font-bold uppercase tracking-wider text-gray-700 hover:text-blue-600 flex items-center gap-1.5 transition-colors group"
+                    className="text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors group"
                   >
-                    <Calendar className="size-3.5 text-blue-600 group-hover:scale-110 transition-transform" />
+                    <Calendar className="size-3.5 text-foreground group-hover:scale-110 transition-transform" />
                     <span>My Bookings</span>
-                    <ChevronRight className="size-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                    <ChevronRight className="size-3 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </Link>
-                  <span className="text-xs font-semibold bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-100">
+                  <span className="text-xs font-semibold bg-muted text-foreground px-2 py-0.5 rounded-full border border-border">
                     {bookings.length} upcoming
                   </span>
                 </div>
 
                 <div className="space-y-2">
                   {loadingBookings && !bookingsLoaded ? (
-                    <div className="py-4 text-center rounded-xl bg-gray-50/60 border border-gray-100 flex items-center justify-center gap-2 text-xs text-gray-500">
-                      <Loader2 className="size-3.5 animate-spin text-blue-600" />
+                    <div className="py-4 text-center rounded-xl bg-muted/30 border border-border flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="size-3.5 animate-spin text-foreground" />
                       <span>Loading reservations...</span>
                     </div>
                   ) : bookings.length === 0 ? (
-                    <div className="py-3 px-2 text-center rounded-xl bg-gray-50 border border-gray-100">
-                      <p className="text-xs text-gray-500 font-medium">No active bookings yet.</p>
-                      <a href="#book-a-court" className="text-xs text-blue-600 hover:underline mt-1 inline-block font-semibold">
+                    <div className="py-3 px-2 text-center rounded-xl bg-muted/30 border border-border">
+                      <p className="text-xs text-muted-foreground font-medium">No active bookings yet.</p>
+                      <a href="#book-a-court" className="text-xs text-foreground hover:underline mt-1 inline-block font-semibold">
                         Reserve a court →
                       </a>
                     </div>
@@ -398,26 +411,26 @@ export function Navbar() {
                     bookings.map((booking) => (
                       <div
                         key={booking.id}
-                        className="p-2.5 rounded-xl border border-gray-100 bg-gray-50/80 hover:bg-gray-100/70 transition-colors flex flex-col gap-2"
+                        className="p-2.5 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors flex flex-col gap-2"
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs font-bold text-gray-900 flex items-center gap-1">
-                              <MapPin className="size-3 text-blue-500" />
+                            <p className="text-xs font-bold text-foreground flex items-center gap-1">
+                              <MapPin className="size-3 text-muted-foreground" />
                               {booking.court}
                             </p>
-                            <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                              <Clock className="size-3 text-gray-400" />
+                            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                              <Clock className="size-3 text-muted-foreground" />
                               <span>{booking.date} · {booking.time}</span>
                             </p>
                           </div>
                           <span
                             className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
                               booking.status === "Confirmed"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200/80"
+                                ? "bg-accent-court/10 text-foreground border-accent-court/30 font-semibold"
                                 : booking.status === "Cancelled"
-                                ? "bg-slate-100 text-slate-500 border-slate-200"
-                                : "bg-amber-50 text-amber-700 border-amber-200/80"
+                                ? "bg-destructive/10 text-destructive border-destructive/20"
+                                : "bg-warning/10 text-warning border-warning/20"
                             }`}
                           >
                             {booking.status}
@@ -425,13 +438,13 @@ export function Navbar() {
                         </div>
 
                         {booking.status !== "Cancelled" && (
-                          <div className="flex items-center justify-between pt-1.5 border-t border-gray-200/60 text-[11px]">
-                            <span className="text-gray-400">Changed your mind?</span>
+                          <div className="flex items-center justify-between pt-1.5 border-t border-border text-[11px]">
+                            <span className="text-muted-foreground">Changed your mind?</span>
                             <button
                               type="button"
                               disabled={cancellingBookingId === booking.id}
                               onClick={() => handleCancelBooking(booking.id)}
-                              className="text-red-600 hover:text-red-700 hover:underline font-semibold cursor-pointer flex items-center gap-1 disabled:opacity-50"
+                              className="text-destructive hover:underline font-semibold cursor-pointer flex items-center gap-1 disabled:opacity-50"
                             >
                               {cancellingBookingId === booking.id ? (
                                 <>
@@ -452,11 +465,11 @@ export function Navbar() {
               </div>
 
               {/* 3. Prominent Logout Action */}
-              <div className="p-2.5 bg-gray-50/50">
+              <div className="p-2.5 bg-muted/20">
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-semibold text-red-600 hover:text-white hover:bg-red-600 rounded-xl transition-all duration-200 cursor-pointer shadow-2xs group"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-semibold text-destructive hover:text-white hover:bg-destructive rounded-xl transition-all duration-200 cursor-pointer shadow-2xs group"
                 >
                   <LogOut className="size-3.5 group-hover:-translate-x-0.5 transition-transform" />
                   <span>Log out</span>
@@ -467,12 +480,12 @@ export function Navbar() {
         ) : (
           <div className="flex items-center gap-1 sm:gap-2">
             <Link href="/auth/login">
-              <Button variant="ghost" size="sm" className="text-xs sm:text-sm font-medium text-gray-700 hover:text-blue-600 px-2 sm:px-3">
+              <Button variant="ghost" size="sm" className="text-xs sm:text-sm font-semibold text-muted-foreground hover:text-foreground px-3 rounded-full">
                 Sign in
               </Button>
             </Link>
             <Link href="/auth/signup">
-              <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700 rounded-full px-3 sm:px-4 text-xs font-semibold shadow-xs">
+              <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4 text-xs font-semibold shadow-xs hover:shadow-sm transition-all cursor-pointer">
                 Sign up
               </Button>
             </Link>

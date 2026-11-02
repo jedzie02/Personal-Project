@@ -50,45 +50,50 @@ export default async function LandingPage({ searchParams }: PageProps) {
     }));
 
     return (
-        <div className="flex min-h-screen flex-col bg-white">
+        <div className="flex min-h-screen flex-col bg-background text-foreground transition-colors">
             <Navbar />
 
             <main className="flex-1 flex flex-col">
-                {/* 1. Home / Hero Section (Top) */}
-                <section className="flex flex-col items-center justify-center text-center px-4 py-24 sm:px-6 lg:px-8">
-                    <div className="max-w-3xl mx-auto space-y-8">
+                {/* 1. Home / Hero Section */}
+                <section className="relative flex flex-col items-center justify-center text-center px-4 pt-20 pb-16 sm:px-6 lg:px-8 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(0,0,0,0.03),transparent)] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(255,255,255,0.03),transparent)]">
+                    <div className="max-w-3xl mx-auto space-y-6">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/80 border border-border text-foreground text-xs font-medium shadow-2xs">
+                            <span className="size-2 rounded-full bg-accent-court animate-pulse" />
+                            Live Real-Time Court Availability
+                        </div>
+
                         <h1
-                            className="animate-hero-rise text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-gray-900"
+                            className="animate-hero-rise text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-foreground leading-[1.12]"
                             style={{ animationDelay: "0ms" }}
                         >
                             Effortless booking for your next{" "}
-                            <span className="text-blue-600">pickleball match</span>
+                            <span className="text-foreground underline decoration-accent-court decoration-4 underline-offset-4">pickleball match</span>
                         </h1>
                         <p
-                            className="animate-hero-rise max-w-2xl mx-auto text-xl text-gray-600"
+                            className="animate-hero-rise max-w-2xl mx-auto text-base sm:text-lg text-muted-foreground leading-relaxed"
                             style={{ animationDelay: "120ms" }}
                         >
-                            Reserve courts in real time with live hourly rates. Check open slots, pick your schedule, and get right onto the court.
+                            Reserve courts in real time with live hourly rates in Philippine Pesos (₱). Check open slots, pick your schedule, and get right onto the court.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
+                        <div className="flex flex-col sm:flex-row gap-3.5 justify-center items-center pt-4">
                             <a
                                 href="#book-a-court"
-                                className="animate-hero-rise"
+                                className="animate-hero-rise w-full sm:w-auto"
                                 style={{ animationDelay: "240ms" }}
                             >
-                                <Button className="w-full sm:w-auto text-xl px-12 py-7 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:scale-105 hover:shadow-xl transition-all duration-300 cursor-pointer">
+                                <Button className="w-full sm:w-auto text-base font-semibold px-8 py-6 rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:shadow-md transition-all duration-200 cursor-pointer">
                                     Book a Court
                                 </Button>
                             </a>
                             <a
                                 href="#about"
-                                className="animate-hero-rise"
+                                className="animate-hero-rise w-full sm:w-auto"
                                 style={{ animationDelay: "320ms" }}
                             >
                                 <Button
                                     variant="outline"
-                                    className="w-full sm:w-auto text-xl px-12 py-7 rounded-full border-gray-300 text-gray-700 hover:border-blue-600 hover:text-blue-600 transition-all duration-300 cursor-pointer"
+                                    className="w-full sm:w-auto text-base font-medium px-8 py-6 rounded-full border-border text-foreground hover:bg-muted transition-all duration-200 cursor-pointer"
                                 >
                                     Learn More
                                 </Button>
@@ -98,14 +103,14 @@ export default async function LandingPage({ searchParams }: PageProps) {
                 </section>
 
                 {/* 2. Court Booking Section (Middle) */}
-                <section id="book-a-court" className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50/50 border-t border-gray-100">
+                <section id="book-a-court" className="py-14 px-4 sm:px-6 lg:px-8 bg-muted/20 border-t border-border">
                     <div className="mx-auto max-w-6xl">
-                        <div className="mb-8 text-center">
-                        <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-gray-900">
-                                Book a Court
+                        <div className="mb-6 text-center">
+                            <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl text-foreground">
+                                Court Availability & Schedule
                             </h2>
-                            <p className="mt-2 text-base text-gray-600 max-w-xl mx-auto">
-                                Select a date to view live hourly rates and open time slots across all courts.
+                            <p className="mt-1.5 text-sm text-muted-foreground max-w-lg mx-auto">
+                                Select a date to view live hourly rates and open time slots across all 4 master courts.
                             </p>
                         </div>
 
@@ -121,27 +126,27 @@ export default async function LandingPage({ searchParams }: PageProps) {
                                                 key={court.id}
                                                 className={`animate-pill-pop flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
                                                     isAvailable
-                                                        ? "bg-white border-slate-200 text-slate-800 shadow-xs"
+                                                        ? "bg-card border-border text-foreground shadow-2xs"
                                                         : isMaintenance
-                                                        ? "opacity-60 cursor-not-allowed bg-amber-50 border-amber-200 text-amber-800"
-                                                        : "opacity-50 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-600"
+                                                        ? "opacity-75 cursor-not-allowed bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
+                                                        : "opacity-50 cursor-not-allowed bg-muted border-border text-muted-foreground"
                                                 }`}
                                                 style={{ animationDelay: `${idx * 60}ms` }}
                                             >
                                                 <span
                                                     className={`size-2 rounded-full ${
                                                         isAvailable
-                                                            ? "bg-emerald-500"
+                                                            ? "bg-accent-court"
                                                             : isMaintenance
                                                             ? "bg-amber-500"
-                                                            : "bg-slate-400"
+                                                            : "bg-muted-foreground"
                                                     }`}
                                                 />
                                                 <span className="font-semibold">{court.name}</span>
-                                                <span className="text-xs font-semibold text-blue-600">
+                                                <span className="text-xs font-semibold text-foreground">
                                                     ₱{court.hourly_rate}/hr
                                                 </span>
-                                                <span className="text-xs opacity-90">
+                                                <span className="text-xs opacity-75">
                                                     {isMaintenance
                                                         ? "Maintenance"
                                                         : court.status === "Not Available"
@@ -157,7 +162,7 @@ export default async function LandingPage({ searchParams }: PageProps) {
                             <DateSelector selectedDate={date} today={today} />
 
                             {error && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
                                     {error.startsWith("Something went wrong") || error.length < 200 ? error : "Something went wrong. Please try again."}
                                 </div>
                             )}
@@ -165,9 +170,9 @@ export default async function LandingPage({ searchParams }: PageProps) {
                             {gridData ? (
                                 <BookingGrid data={gridData} />
                             ) : (
-                                <div className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
-                                    <p className="text-lg text-gray-600 font-medium">The venue is closed on this date.</p>
-                                    <p className="mt-2 text-sm text-gray-400">
+                                <div className="rounded-xl border border-border bg-card p-12 text-center shadow-2xs">
+                                    <p className="text-lg text-foreground font-medium">The venue is closed on this date.</p>
+                                    <p className="mt-2 text-sm text-muted-foreground">
                                         Please select another date to view available court times.
                                     </p>
                                 </div>
@@ -179,18 +184,18 @@ export default async function LandingPage({ searchParams }: PageProps) {
                 {/* 3. About Pickleball Section (Bottom) */}
                 <section
                     id="about"
-                    className="px-4 py-24 sm:px-6 lg:px-8 bg-gray-50 border-t border-gray-100"
+                    className="px-4 py-24 sm:px-6 lg:px-8 bg-muted/10 border-t border-border"
                     aria-labelledby="about-heading"
                 >
                     <div className="max-w-5xl mx-auto">
                         <div className="text-center mb-16">
                             <h2
                                 id="about-heading"
-                                className="text-3xl font-extrabold tracking-tight sm:text-4xl text-gray-900"
+                                className="text-3xl font-extrabold tracking-tight sm:text-4xl text-foreground"
                             >
                                 The fastest-growing sport in the world
                             </h2>
-                            <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-600">
+                            <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
                                 Pickleball blends tennis, badminton, and table tennis into a fast-paced, easy-to-learn game for players of all levels.
                             </p>
                         </div>
@@ -198,36 +203,36 @@ export default async function LandingPage({ searchParams }: PageProps) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                             {[
                                 {
-                                    icon: <Zap className="size-7 text-blue-600" />,
+                                    icon: <Zap className="size-6 text-foreground" />,
                                     title: "Quick to Learn",
                                     body: "Pick up the basics in minutes. Compact court dimensions and straightforward scoring make it beginner-friendly from day one.",
                                 },
                                 {
-                                    icon: <Users className="size-7 text-blue-600" />,
+                                    icon: <Users className="size-6 text-foreground" />,
                                     title: "Social & Inclusive",
                                     body: "Play singles or doubles. Pickleball brings players of every age and fitness level together in a welcoming community.",
                                 },
                                 {
-                                    icon: <Trophy className="size-7 text-blue-600" />,
+                                    icon: <Trophy className="size-6 text-foreground" />,
                                     title: "Competitive Play",
                                     body: "From friendly local round-robins to competitive tournaments, find the right level of challenge to elevate your game.",
                                 },
                                 {
-                                    icon: <CalendarCheck className="size-7 text-blue-600" />,
+                                    icon: <CalendarCheck className="size-6 text-foreground" />,
                                     title: "Instant Booking",
                                     body: "Check live court availability and lock in your reservation in seconds with transparent hourly rates in Philippine Pesos (₱).",
                                 },
                             ].map(({ icon, title, body }, idx) => (
                                 <div
                                     key={title}
-                                    className="animate-card-reveal flex flex-col items-center text-center gap-4 p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300"
+                                    className="animate-card-reveal flex flex-col items-center text-center gap-4 p-6 bg-card rounded-2xl border border-border shadow-2xs hover:shadow-xs hover:-translate-y-0.5 transition-all duration-300"
                                     style={{ animationDelay: `${idx * 80}ms` }}
                                 >
-                                    <div className="flex items-center justify-center size-14 rounded-xl bg-blue-50">
+                                    <div className="flex items-center justify-center size-12 rounded-xl bg-muted border border-border/60">
                                         {icon}
                                     </div>
-                                    <h3 className="font-bold text-gray-900 text-lg">{title}</h3>
-                                    <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+                                    <h3 className="font-semibold text-foreground text-base">{title}</h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
                                 </div>
                             ))}
                         </div>
@@ -235,7 +240,7 @@ export default async function LandingPage({ searchParams }: PageProps) {
                 </section>
             </main>
 
-            <footer className="py-8 border-t border-gray-200 text-center text-sm text-gray-500 bg-gray-50">
+            <footer className="py-8 border-t border-border text-center text-sm text-muted-foreground bg-background">
                 <p>&copy; {new Date().getFullYear()} Paddlix. All rights reserved.</p>
             </footer>
         </div>

@@ -34,12 +34,12 @@ export default function DateSelector({
     const go = (iso: string) => router.push(`/?date=${iso}#book-a-court`);
 
     return (
-        <div className="flex w-full items-stretch gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+        <div className="flex w-full items-stretch gap-2 rounded-2xl border border-border bg-card p-3 shadow-xs">
             {weekOffset > 0 && (
                 <button
                     onClick={() => setWeekOffset(weekOffset - 1)}
                     aria-label="Previous week"
-                    className="flex w-9 shrink-0 items-center justify-center self-center rounded-full border border-gray-200 text-gray-700 hover:bg-gray-100 aspect-square"
+                    className="flex w-9 shrink-0 items-center justify-center self-center rounded-full border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors aspect-square cursor-pointer"
                 >
                     <ChevronLeft size={16} />
                 </button>
@@ -55,16 +55,20 @@ export default function DateSelector({
                         <button
                             key={iso}
                             onClick={() => go(iso)}
-                            className={`flex flex-col items-center justify-center rounded-xl px-1 py-3 transition-all ${isSelected
-                                    ? "border-2 border-gray-900 bg-white text-gray-900 shadow-sm"
-                                    : "border border-gray-200 bg-gray-50 text-gray-900 hover:border-gray-300 hover:bg-gray-100"
-                                }`}
+                            className={`flex flex-col items-center justify-center rounded-xl px-1 py-3 transition-all cursor-pointer relative ${
+                                isSelected
+                                    ? "border-2 border-primary bg-primary text-primary-foreground shadow-sm scale-[1.02]"
+                                    : "border border-border bg-card text-foreground hover:border-foreground/40 hover:bg-muted/50"
+                            }`}
                         >
-                            <span className={`text-xs font-semibold tracking-wide ${isSelected ? "text-gray-900" : "text-gray-500"}`}>
+                            {isSelected && (
+                                <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-accent-court ring-2 ring-primary" />
+                            )}
+                            <span className={`text-[11px] font-semibold tracking-wider uppercase ${isSelected ? "text-primary-foreground/90 font-bold" : "text-muted-foreground"}`}>
                                 {isToday ? "TODAY" : DAYS[d.getDay()]}
                             </span>
-                            <span className="text-2xl font-extrabold leading-tight">{d.getDate()}</span>
-                            <span className={`text-xs ${isSelected ? "text-gray-900" : "text-gray-500"}`}>
+                            <span className="text-2xl font-black leading-tight tabular-nums my-0.5">{d.getDate()}</span>
+                            <span className={`text-[11px] font-medium ${isSelected ? "text-primary-foreground/90" : "text-muted-foreground"}`}>
                                 {MONTHS[d.getMonth()]}
                             </span>
                         </button>
@@ -73,8 +77,8 @@ export default function DateSelector({
             </div>
 
             {/* More Dates: native date picker laid over the button */}
-            <label className="relative flex w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-gray-300 bg-white text-sm font-bold text-gray-900 hover:border-gray-400 hover:bg-gray-50">
-                <CalendarDays size={16} />
+            <label className="relative flex w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-border bg-muted/40 text-xs font-bold text-foreground hover:border-foreground/40 hover:bg-muted transition-all">
+                <CalendarDays size={16} className="text-muted-foreground" />
                 <span className="text-center leading-tight">More<br />Dates</span>
                 <input
                     type="date"
@@ -88,7 +92,7 @@ export default function DateSelector({
             <button
                 onClick={() => setWeekOffset(weekOffset + 1)}
                 aria-label="Next week"
-                className="flex w-9 shrink-0 items-center justify-center self-center rounded-full border border-gray-200 text-gray-700 hover:bg-gray-100 aspect-square"
+                className="flex w-9 shrink-0 items-center justify-center self-center rounded-full border border-border text-muted-foreground hover:bg-muted hover:text-foreground transition-colors aspect-square cursor-pointer"
             >
                 <ChevronRight size={16} />
             </button>
