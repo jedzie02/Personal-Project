@@ -91,63 +91,75 @@ export default async function LandingPage({ searchParams }: PageProps) {
 
             <main className="flex-1 flex flex-col">
                 {/* 1. Home / Hero Section */}
-                <section className="relative flex flex-col items-center justify-center text-center px-4 pt-20 pb-16 sm:px-6 lg:px-8 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(37,99,235,0.08),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(37,99,235,0.2),rgba(2,6,23,0))]">
-                    <div className="max-w-3xl mx-auto space-y-6 w-full">
-                        <div>
-                            <HeroLiveStatusBadge summary={quickSummary} todayISO={today} />
-                        </div>
+                <section className="relative flex flex-col items-center justify-center px-4 pt-16 pb-16 sm:px-6 lg:px-8 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(37,99,235,0.08),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(37,99,235,0.2),rgba(2,6,23,0))]">
+                    <div className="max-w-6xl mx-auto w-full space-y-8 sm:space-y-10">
+                        {/* 2-Column Desktop Grid / 1-Column Mobile Stack */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+                            {/* Left Column: Headline, subtext, CTA buttons, and badges */}
+                            <div className="lg:col-span-6 flex flex-col items-center lg:items-start text-center lg:text-left space-y-5">
+                                <div>
+                                    <HeroLiveStatusBadge summary={quickSummary} todayISO={today} />
+                                </div>
 
-                        <h1
-                            className="animate-hero-rise text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-slate-900 dark:text-white leading-[1.12]"
-                            style={{ animationDelay: "0ms" }}
-                        >
-                            Effortless booking for your next{" "}
-                            <span className="text-blue-600 dark:text-blue-400">pickleball match</span>
-                        </h1>
-                        <p
-                            className="animate-hero-rise max-w-2xl mx-auto text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed"
-                            style={{ animationDelay: "120ms" }}
-                        >
-                            Reserve courts in real time with live hourly rates in Philippine Pesos (₱). Check open slots, pick your schedule, and get right onto the court.
-                        </p>
-
-                        <div className="flex flex-col sm:flex-row gap-3.5 justify-center items-center pt-2">
-                            <a
-                                href="#book-a-court"
-                                className="animate-hero-rise w-full sm:w-auto"
-                                style={{ animationDelay: "240ms" }}
-                            >
-                                <Button className="w-full sm:w-auto text-base font-semibold px-8 py-6 rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700 hover:shadow-md transition-all duration-200 cursor-pointer">
-                                    Book a Court
-                                </Button>
-                            </a>
-                            <a
-                                href="#about"
-                                className="animate-hero-rise w-full sm:w-auto"
-                                style={{ animationDelay: "320ms" }}
-                            >
-                                <Button
-                                    variant="outline"
-                                    className="w-full sm:w-auto text-base font-semibold px-8 py-6 rounded-full border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-600 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all duration-200 cursor-pointer"
+                                <h1
+                                    className="animate-hero-rise text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-slate-900 dark:text-white leading-[1.12]"
+                                    style={{ animationDelay: "0ms" }}
                                 >
-                                    Learn More
-                                </Button>
-                            </a>
+                                    Effortless booking for your next{" "}
+                                    <span className="text-blue-600 dark:text-blue-400">pickleball match</span>
+                                </h1>
+                                <p
+                                    className="animate-hero-rise max-w-2xl text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed"
+                                    style={{ animationDelay: "120ms" }}
+                                >
+                                    Reserve courts in real time with live hourly rates in Philippine Pesos (₱). Check open slots, pick your schedule, and get right onto the court.
+                                </p>
+
+                                <div className="flex flex-col sm:flex-row gap-3.5 justify-center lg:justify-start items-center pt-1 w-full sm:w-auto">
+                                    <a
+                                        href="#book-a-court"
+                                        className="animate-hero-rise w-full sm:w-auto"
+                                        style={{ animationDelay: "240ms" }}
+                                    >
+                                        <Button className="w-full sm:w-auto text-base font-semibold px-8 py-6 rounded-full bg-blue-600 text-white shadow-sm hover:bg-blue-700 hover:shadow-md transition-all duration-200 cursor-pointer">
+                                            Book a Court
+                                        </Button>
+                                    </a>
+                                    <a
+                                        href="#about"
+                                        className="animate-hero-rise w-full sm:w-auto"
+                                        style={{ animationDelay: "320ms" }}
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full sm:w-auto text-base font-semibold px-8 py-6 rounded-full border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-600 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all duration-200 cursor-pointer"
+                                        >
+                                            Learn More
+                                        </Button>
+                                    </a>
+                                </div>
+
+                                <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-4 sm:gap-6 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        4 Master Courts
+                                    </span>
+                                    <span>•</span>
+                                    <span>Instant GCash &amp; Card Checkout</span>
+                                    <span>•</span>
+                                    <span>Official Email Receipt</span>
+                                </div>
+                            </div>
+
+                            {/* Right Column (Desktop) / Below CTA buttons on Mobile */}
+                            <div className="lg:col-span-6 flex items-center justify-center w-full">
+                                <HeroCourtRally className="lg:max-w-none" />
+                            </div>
                         </div>
 
-                        <HeroCourtRally />
-
-                        <HeroQuickSlots summary={quickSummary} activeDate={date} todayISO={today} />
-
-                        <div className="pt-2 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                            <span className="flex items-center gap-1.5">
-                                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                4 Master Courts
-                            </span>
-                            <span>•</span>
-                            <span>Instant GCash &amp; Card Checkout</span>
-                            <span>•</span>
-                            <span>Official Email Receipt</span>
+                        {/* Full-width 1-tap quick slots below the split hero */}
+                        <div className="w-full">
+                            <HeroQuickSlots summary={quickSummary} activeDate={date} todayISO={today} />
                         </div>
                     </div>
                 </section>

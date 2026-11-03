@@ -227,11 +227,11 @@
 }
 
 @keyframes pickleball-rally {
-  0%   { transform: translate(35px, 38px) scale(0.95); }
-  25%  { transform: translate(130px, 28px) scale(1.18); }
-  50%  { transform: translate(225px, 64px) scale(0.95); }
-  75%  { transform: translate(130px, 52px) scale(1.18); }
-  100% { transform: translate(35px, 38px) scale(0.95); }
+  0%   { transform: translate(38px, 46px) scale(0.95); }
+  25%  { transform: translate(130px, 32px) scale(1.2); }
+  50%  { transform: translate(222px, 98px) scale(0.95); }
+  75%  { transform: translate(130px, 78px) scale(1.2); }
+  100% { transform: translate(38px, 46px) scale(0.95); }
 }
 
 @keyframes court-bounce-ring {
