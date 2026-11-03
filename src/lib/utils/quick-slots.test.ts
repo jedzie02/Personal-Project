@@ -119,5 +119,17 @@ describe("extractQuickSlotsSummary", () => {
         expect(res.openCourtsCount).toBe(0);
         expect(res.slots).toEqual([]);
     });
+
+    it("returns 0 slots and empty array when grid is marked isClosed", () => {
+        const grid = makeGridData({
+            isClosed: true,
+            hours: [],
+            grid: [],
+        });
+        const res = extractQuickSlotsSummary(grid);
+        expect(res.totalOpenSlots).toBe(0);
+        expect(res.openCourtsCount).toBe(0);
+        expect(res.slots).toEqual([]);
+    });
 });
 

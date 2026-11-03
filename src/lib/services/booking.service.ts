@@ -8,7 +8,7 @@ import type {
     ServiceResult,
 } from "@/lib/types/domain";
 import { getActiveCourts } from "@/lib/services/court.service";
-import { getOperatingHoursForDay } from "@/lib/services/schedule.service";
+import { getOperatingHoursForDay, getOperatingHoursForDate } from "@/lib/services/schedule.service";
 import { generateTimeSlots, doTimeRangesOverlap, timeToMinutes } from "@/lib/utils/date";
 import {
     SLOT_DURATION_MINUTES,
@@ -202,6 +202,25 @@ export async function createBooking(
     // is the single shared entry point for creating a booking either way.
     if (slotStart.getTime() < Date.now()) {
         return { success: false, error: "Cannot book a time slot in the past." };
+    }
+
+    // Facility Operating Hours Guard: Check if venue is closed on this date
+    const operatingHours = await getOperatingHoursForDate(input.bookingDate);
+    if (operatingHours?.isClosed) {
+        return { success: false, error: "The venue is closed on this date." };
+    }
+    if (operatingHours) {
+        const venueOpen = operatingHours.openTime || "09:00";
+        const venueClose = operatingHours.closeTime || "23:00";
+        if (
+            timeToMinutes(input.startTime) < timeToMinutes(venueOpen) ||
+            timeToMinutes(input.endTime) > timeToMinutes(venueClose)
+        ) {
+            return {
+                success: false,
+                error: `Booking times must fall within venue operating hours (${venueOpen} – ${venueClose}).`,
+            };
+        }
     }
     // --- End validation ---
 
@@ -643,9 +662,13 @@ async function getActiveBookingsForDate(
  * if the venue's timezone differs from wherever this app is hosted.
  */
 export async function getAvailableSlotsForDate(date: string): Promise<AvailableSlot[]> {
-    // All 7 days (Monday - Sunday) use the exact same 09:00 AM to 11:00 PM schedule
-    const openTime = "09:00";
-    const closeTime = "23:00";
+    const operatingHours = await getOperatingHoursForDate(date);
+    if (operatingHours?.isClosed) {
+        return [];
+    }
+
+    const openTime = operatingHours?.openTime || "09:00";
+    const closeTime = operatingHours?.closeTime || "23:00";
 
     const [courts, activeBookings] = await Promise.all([
         getActiveCourts(),

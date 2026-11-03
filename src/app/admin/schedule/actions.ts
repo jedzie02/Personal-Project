@@ -29,6 +29,9 @@ export async function updateScheduleAction(
     const failure = results.find((r) => !r.success);
 
     revalidatePath("/admin/schedule");
+    revalidatePath("/");
+    revalidatePath("/book");
+    revalidatePath("/admin/bookings/new");
 
     if (failure) {
       return { success: false, error: failure.error || "Failed to update operating hours" };

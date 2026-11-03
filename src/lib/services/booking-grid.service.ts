@@ -1,6 +1,7 @@
 import { getActiveCourts } from "@/lib/services/court.service";
 import { createClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
+import { getOperatingHoursForDate } from "@/lib/services/schedule.service";
 
 /**
  * A single cell in the booking grid — represents what's happening
@@ -43,6 +44,7 @@ export interface BookingGridData {
     grid: GridCell[][]; // grid[hourIndex][courtIndex]
     operatingOpen: string;
     operatingClose: string;
+    isClosed?: boolean;
 }
 
 
@@ -142,9 +144,22 @@ export async function getBookingGridForDate(
         profiles: { full_name: string | null } | null;
     }>;
 
-    // Enforce 9 AM to 12 AM midnight schedule (Monday - Sunday)
-    const openTime = "09:00";
-    const closeTime = "23:00";
+    // Query operating hours for this specific date
+    const operatingHours = await getOperatingHoursForDate(date);
+    if (operatingHours?.isClosed) {
+        return {
+            date,
+            courts: courts.map((c) => ({ id: c.id, name: c.name, status: c.status, hourly_rate: c.hourly_rate })),
+            hours: [],
+            grid: [],
+            operatingOpen: operatingHours.openTime || "09:00",
+            operatingClose: operatingHours.closeTime || "23:00",
+            isClosed: true,
+        };
+    }
+
+    const openTime = operatingHours?.openTime || "09:00";
+    const closeTime = operatingHours?.closeTime || "23:00";
     const hours = generateHourSlots(openTime, closeTime);
 
     // Figure out which hours are "passed" (in the past) in Philippine Time (UTC+8)
@@ -277,7 +292,8 @@ export async function getBookingGridForDate(
         courts: courts.map((c) => ({ id: c.id, name: c.name, status: c.status, hourly_rate: c.hourly_rate })),
         hours,
         grid,
-        operatingOpen: "09:00",
-        operatingClose: "23:00",
+        operatingOpen: openTime,
+        operatingClose: closeTime,
+        isClosed: false,
     };
 }

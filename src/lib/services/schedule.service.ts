@@ -1,5 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
-import type { OperatingHours, ServiceResult } from "@/lib/types/domain";
+import { createClient } from "../supabase/server";
+import { createAdminClient } from "../supabase/admin";
+import type { OperatingHours, ServiceResult } from "../types/domain";
 
 /**
  * schedule.service.ts
@@ -8,6 +9,23 @@ import type { OperatingHours, ServiceResult } from "@/lib/types/domain";
  * no "create" here — the 7 rows already exist (seeded by the
  * migration), so this service only reads and updates.
  */
+
+async function getDbClient() {
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        try {
+            return createAdminClient();
+        } catch {
+            // fallback
+        }
+    }
+    return await createClient();
+}
+
+export function getDayOfWeekFromDateString(dateStr: string): number {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const d = new Date(Date.UTC(year, month - 1, day));
+    return d.getUTCDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+}
 
 function mapOperatingHours(row: {
     day_of_week: number;
@@ -26,13 +44,13 @@ function mapOperatingHours(row: {
         dayOfWeek: row.day_of_week,
         openTime: row.open_time?.slice(0, 5) || "09:00",
         closeTime,
-        isClosed: row.is_closed,
+        isClosed: Boolean(row.is_closed),
     };
 }
 
 /** Returns all 7 days, ordered Sunday (0) through Saturday (6). */
 export async function getOperatingHours(): Promise<OperatingHours[]> {
-    const supabase = await createClient();
+    const supabase = await getDbClient();
 
     const { data, error } = await supabase
         .from("operating_hours")
@@ -45,14 +63,12 @@ export async function getOperatingHours(): Promise<OperatingHours[]> {
 }
 
 /**
- * Returns hours for a single day of the week. This is the function
- * Phase 7's availability calculation will lean on most — "what are
- * today's operating hours?" is the first question that logic asks.
+ * Returns hours for a single day of the week.
  */
 export async function getOperatingHoursForDay(
     dayOfWeek: number
 ): Promise<OperatingHours | null> {
-    const supabase = await createClient();
+    const supabase = await getDbClient();
 
     const { data, error } = await supabase
         .from("operating_hours")
@@ -65,13 +81,20 @@ export async function getOperatingHoursForDay(
     return mapOperatingHours(data);
 }
 
+export async function getOperatingHoursForDate(
+    dateStr: string
+): Promise<OperatingHours | null> {
+    const dayOfWeek = getDayOfWeekFromDateString(dateStr);
+    return getOperatingHoursForDay(dayOfWeek);
+}
+
 export async function updateOperatingHoursForDay(
     dayOfWeek: number,
     openTime: string | null,
     closeTime: string | null,
     isClosed: boolean
 ): Promise<ServiceResult> {
-    const supabase = await createClient();
+    const supabase = await getDbClient();
 
     const { error } = await supabase
         .from("operating_hours")

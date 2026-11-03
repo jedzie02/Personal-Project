@@ -41,7 +41,7 @@ export function extractQuickSlotsSummary(
     gridData: BookingGridData | null,
     maxCards: number = 3
 ): QuickSlotsSummary {
-    if (!gridData || !Array.isArray(gridData.hours) || !Array.isArray(gridData.grid)) {
+    if (!gridData || gridData.isClosed || !Array.isArray(gridData.hours) || !Array.isArray(gridData.grid)) {
         return {
             date: gridData?.date ?? "",
             totalOpenSlots: 0,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, CheckCircle2, Clock, ChevronRight, Check, Trash2 } from "lucide-react";
+import { Lock, CheckCircle2, Clock, ChevronRight, Check, Trash2, CalendarX } from "lucide-react";
 import type { BookingGridData, GridCell } from "@/lib/services/booking-grid.service";
 import { PRICE_PER_HOUR } from "@/lib/config/booking-rules";
 import { supabase } from "@/lib/supabase";
@@ -288,6 +288,41 @@ export default function BookingGrid({
         router.push(url);
     };
 
+    if (data.isClosed) {
+        const parts = date.split("-").map(Number);
+        const nextDayDate = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] + 1));
+        const nextDayISO = nextDayDate.toISOString().split("T")[0];
+        const formattedDate = new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "short",
+            day: "numeric",
+        });
+
+        return (
+            <div className="w-full bg-slate-900/90 rounded-2xl border border-slate-800 p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-4 shadow-xl">
+                <div className="size-16 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center shadow-inner">
+                    <CalendarX className="size-8 stroke-[1.75]" />
+                </div>
+                <div className="space-y-1.5 max-w-md">
+                    <h3 className="text-xl font-bold text-white tracking-tight">
+                        Facility Closed on this Date
+                    </h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">
+                        DinkSync is marked as <strong className="text-slate-200">Closed</strong> on <strong className="text-slate-200">{formattedDate}</strong> in facility operating hours. Court reservations are unavailable for this day.
+                    </p>
+                </div>
+                <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => router.push(`/?date=${nextDayISO}#book-a-court`)}
+                        className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm transition-all shadow-md hover:shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
+                    >
+                        Check Next Day ({nextDayISO}) →
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={`w-full space-y-3 ${selectedSlots.length > 0 ? "pb-28" : ""}`}>
