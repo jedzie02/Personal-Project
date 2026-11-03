@@ -16,6 +16,7 @@ import {
     canCancelBooking,
 } from "@/lib/config/booking-rules";
 import { getCustomerDisplayName } from "@/lib/services/customer.service";
+import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
 
 async function getDbClient() {
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -442,6 +443,8 @@ export async function getAllBookings(
 
     if (!rawBookings) return [];
 
+    rawBookings = rawBookings.filter((row) => row.payment_method !== OPEN_PLAY_HOLD_LABEL);
+
     // Direct profile lookup to guarantee accurate customerName and customerEmail
     const customerIds = Array.from(
         new Set(
@@ -586,6 +589,8 @@ export async function getBookingsForCustomer(customerId: string): Promise<Bookin
     }
 
     if (!rawBookings) return [];
+
+    rawBookings = rawBookings.filter((row) => row.payment_method !== OPEN_PLAY_HOLD_LABEL);
 
     const { data: pData } = await supabase
         .from("profiles")

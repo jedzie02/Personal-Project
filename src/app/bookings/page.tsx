@@ -2,11 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/services/auth.server";
 import { getBookingsForCustomer } from "@/lib/services/booking.service";
+import { listPaidEntriesForCustomer } from "@/lib/services/open-play.service";
 import { cancelOwnBookingAction } from "@/app/bookings/actions";
 import { formatTime } from "@/lib/utils/date";
 import { CANCELLATION_CUTOFF_HOURS, canCancelBooking } from "@/lib/config/booking-rules";
 import { Button } from "@/components/ui/button";
-import { Clock, XCircle, CalendarCheck, Receipt } from "lucide-react";
+import { Clock, XCircle, CalendarCheck, Receipt, Users } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 
 export default async function MyBookingsPage({
@@ -21,10 +22,13 @@ export default async function MyBookingsPage({
         redirect(`/auth/login?redirectTo=${encodeURIComponent("/bookings")}`);
     }
 
-    const bookings = await getBookingsForCustomer(profile!.id);
+    const [bookings, openPlayEntries] = await Promise.all([
+        getBookingsForCustomer(profile!.id),
+        listPaidEntriesForCustomer(profile!.id),
+    ]);
 
     return (
-        <div className="min-h-screen flex flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+        <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
             <Navbar />
 
             <main className="flex-1 mx-auto w-full max-w-2xl px-4 py-8 sm:py-10">
@@ -40,7 +44,7 @@ export default async function MyBookingsPage({
                 )}
 
                 <div className="mt-6 flex flex-col gap-3">
-                    {bookings.length === 0 && (
+                    {bookings.length === 0 && openPlayEntries.length === 0 && (
                         <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 sm:p-10 text-center shadow-xs">
                             <div className="size-14 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto mb-4 border border-blue-100 dark:border-blue-900/60">
                                 <CalendarCheck className="size-7" />
@@ -71,6 +75,76 @@ export default async function MyBookingsPage({
                             </div>
                         </div>
                     )}
+
+                    {openPlayEntries.map((entry) => {
+                        const isPaid = entry.status === "paid";
+                        const isNeedsRefund = entry.status === "needs_refund";
+                        return (
+                            <div
+                                key={entry.entryId}
+                                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-bold text-base text-slate-900 dark:text-white">
+                                                {entry.session.courtName}
+                                            </p>
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
+                                                <Users className="size-3" /> Open Play
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+                                            {entry.session.date} · {formatTime(entry.session.startTime)} – {formatTime(entry.session.endTime)} · ₱{entry.amount.toFixed(2)}
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                                        <span
+                                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                                isPaid
+                                                    ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60"
+                                                    : "bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60"
+                                            }`}
+                                        >
+                                            {isPaid
+                                                ? "Spot Reserved · Paid"
+                                                : isNeedsRefund
+                                                ? "Refund Pending"
+                                                : "Spot Reserved · Pending Payment"}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                                        {isPaid
+                                            ? `Official Open Play receipt ready (${entry.paymentMethod})`
+                                            : isNeedsRefund
+                                            ? "Session cancelled — venue team will refund your payment"
+                                            : `Payment method: ${entry.paymentMethod}${entry.paymentReference ? ` (Ref: ${entry.paymentReference})` : ""}`}
+                                    </span>
+                                    <Link href={`/open-play/confirmation?entryId=${entry.entryId}`}>
+                                        <Button
+                                            variant={isPaid ? "default" : "outline"}
+                                            size="sm"
+                                            className={
+                                                isPaid
+                                                    ? "h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                                                    : "h-8 text-xs gap-1.5 cursor-pointer"
+                                            }
+                                        >
+                                            <Receipt className="size-3.5" />
+                                            {isPaid
+                                                ? "View Official Receipt"
+                                                : entry.paymentMethod === "GCash QR"
+                                                ? "View / Submit GCash Ref"
+                                                : "View Booking"}
+                                        </Button>
+                                    </Link>
+                                </div>
+                            </div>
+                        );
+                    })}
 
                     {bookings.map((booking) => {
                         const cancelThisBooking = cancelOwnBookingAction.bind(null, booking.id);

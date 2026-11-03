@@ -24,6 +24,7 @@ interface GCashPaymentCardProps {
     gcashNumber?: string | null;
     gcashName?: string | null;
     gcashQrUrl?: string | null;
+    submitAction?: (id: string, formData: FormData) => Promise<{ success: boolean; error?: string }>;
 }
 
 export function GCashPaymentCard({
@@ -33,6 +34,7 @@ export function GCashPaymentCard({
     gcashNumber: propGcashNumber,
     gcashName: propGcashName,
     gcashQrUrl: propGcashQrUrl,
+    submitAction = submitPaymentReferenceAction,
 }: GCashPaymentCardProps) {
     const [copiedField, setCopiedField] = useState<string | null>(null);
     const [reference, setReference] = useState(initialReference || "");
@@ -61,7 +63,7 @@ export function GCashPaymentCard({
         setSuccessMessage(null);
 
         const formData = new FormData(e.currentTarget);
-        const res = await submitPaymentReferenceAction(bookingId, formData);
+        const res = await submitAction(bookingId, formData);
 
         setIsSubmitting(false);
         if (res.success) {

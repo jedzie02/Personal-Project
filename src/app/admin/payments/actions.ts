@@ -8,6 +8,7 @@ export async function refundPaymentAction(paymentId: string, bookingId?: string)
     await requireAdmin();
     const res = await refundPayment(paymentId, bookingId);
     revalidatePath("/admin/payments");
+    revalidatePath("/admin/open-play");
     revalidatePath("/admin/dashboard");
     revalidatePath("/admin/bookings");
     return res;
@@ -17,6 +18,7 @@ export async function markPaymentPaidInCashAction(paymentId: string, bookingId?:
     await requireAdmin();
     const res = await markPaymentPaidInCash(paymentId, bookingId);
     revalidatePath("/admin/payments");
+    revalidatePath("/admin/open-play");
     revalidatePath("/admin/dashboard");
     revalidatePath("/admin/bookings");
     return res;

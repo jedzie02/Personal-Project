@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCustomerProfile } from "@/lib/services/customer.service";
 import { getBookingsForCustomer } from "@/lib/services/booking.service";
+import { updateCustomerPhoneByAdminAction } from "@/app/bookings/actions";
 import { BookingsTable } from "@/components/ui/admin/bookingstable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Mail, Phone, Calendar, Trophy, Coins } from "lucide-react";
@@ -62,6 +63,30 @@ export default async function AdminCustomerDetailPage({
                         </span>
                         <span className="flex items-center gap-1">
                             <Phone className="size-3.5" /> {customer.phone ?? "No phone on file"}
+                        </span>
+                        <form
+                            action={updateCustomerPhoneByAdminAction.bind(null, id)}
+                            className="inline-flex items-center gap-1.5"
+                        >
+                            <input
+                                type="tel"
+                                name="phone"
+                                inputMode="numeric"
+                                maxLength={11}
+                                pattern="\d{11}"
+                                title="Must be 11 digits (e.g. 09171234567)"
+                                defaultValue={(customer.phone ?? "").replace(/\D/g, "").slice(0, 11)}
+                                placeholder="11-digit GCash #"
+                                className="h-7 w-40 rounded-md border border-border bg-white dark:bg-slate-950 px-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                            <button
+                                type="submit"
+                                className="h-7 px-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer"
+                            >
+                                Save
+                            </button>
+                        </form>
+                        <span>
                         </span>
                         <span className="flex items-center gap-1">
                             <Calendar className="size-3.5" /> Member since {memberSince}

@@ -10,7 +10,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Paddlix — Real-Time Pickleball Court Booking & Venue Management",
+  title: "DinkSync — Real-Time Pickleball Court Booking & Venue Management",
   description: "Reserve courts in real time with live hourly rates in Philippine Pesos (₱). Check open slots and lock in your match instantly.",
 };
 
@@ -20,12 +20,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      className={`${poppins.variable} h-full antialiased scroll-smooth`}
+      className={`${poppins.variable} dark h-full antialiased scroll-smooth`}
+      style={{ colorScheme: "dark" }}
     >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d){document.documentElement.classList.add('dark')}else{document.documentElement.classList.remove('dark')}}catch(e){}})()`,
+            __html: `(function(){try{document.documentElement.classList.add('dark');localStorage.setItem('theme','dark');}catch(e){}})()`,
           }}
         />
       </head>

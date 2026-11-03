@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { DinkSyncLogoMark, DinkSyncWordmark } from "@/components/DinkSyncLogo"
 
 function LoginContent() {
     const router = useRouter()
@@ -140,11 +141,9 @@ function LoginContent() {
             </div>
 
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 mb-8 group" aria-label="Paddlix Home">
-                <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60 shadow-2xs">
-                    <CircleDotDashed className="size-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <span className="font-bold text-xl tracking-tight text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Paddlix</span>
+            <Link href="/" className="flex items-center gap-2.5 mb-8 group" aria-label="DinkSync Home">
+                <DinkSyncLogoMark className="size-10 rounded-xl group-hover:scale-105 transition-transform" svgClassName="size-6" />
+                <DinkSyncWordmark className="font-extrabold text-xl tracking-tight text-foreground" />
             </Link>
             <Card className="w-full max-w-sm shadow-lg border">
                 <CardHeader className="text-center pb-4">
@@ -221,7 +220,7 @@ function LoginContent() {
                 </CardContent>
             </Card>
             <p className="mt-6 text-sm text-muted-foreground">
-                &copy; {new Date().getFullYear()} Paddlix
+                &copy; {new Date().getFullYear()} DinkSync
             </p>
         </div>
     )

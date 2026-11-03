@@ -1,4 +1,6 @@
 import { getAllBookings } from "@/lib/services/booking.service";
+import { getActiveCourts } from "@/lib/services/court.service";
+import { getManilaNow } from "@/lib/utils/date";
 import { BookingsTable } from "@/components/ui/admin/bookingstable";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
@@ -11,11 +13,17 @@ export default async function AdminBookingsPage({
   searchParams?: Promise<{ search?: string; status?: string; courtId?: string }>;
 }) {
   const params = await searchParams;
-  const bookings = await getAllBookings({
-    customerSearch: params?.search,
-    status: params?.status as any,
-    courtId: params?.courtId,
-  });
+  const [bookings, activeCourts] = await Promise.all([
+    getAllBookings({
+      courtId: params?.courtId,
+    }),
+    getActiveCourts().catch(() => []),
+  ]);
+
+  const { todayISO } = getManilaNow();
+  const courtNames = [...activeCourts]
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    .map((c) => c.name);
 
   return (
     <div className="space-y-6">
@@ -43,7 +51,15 @@ export default async function AdminBookingsPage({
           </div>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
-          <BookingsTable bookings={bookings} showActions={true} />
+          <BookingsTable
+            bookings={bookings}
+            showActions={true}
+            enableControls={true}
+            courts={courtNames}
+            todayISO={todayISO}
+            initialSearch={params?.search ?? ""}
+            initialStatus={params?.status ?? ""}
+          />
         </CardContent>
       </Card>
     </div>

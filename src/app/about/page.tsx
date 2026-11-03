@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-    title: "About Pickleball | Paddlix",
+    title: "About Pickleball | DinkSync",
     description: "Learn about pickleball - its origins, rules, scoring, and why it is the fastest-growing sport in the world.",
 };
 
@@ -44,14 +44,14 @@ const SECTIONS = [
         paragraphs: [
             "Pickleball combines the best elements of tennis, badminton, and ping-pong into an easy-to-learn, highly social game. The smaller court size means less running and more fast-paced rallies, making it accessible to players of all ages and fitness levels.",
             "The sport offers meaningful cardio, improved hand-eye coordination, and a vibrant community. Whether you are 8 or 80, a weekend warrior or a competitive athlete, pickleball has a spot for you.",
-            "Paddlix is your gateway to getting on the court. Book your session, grab a paddle, and join the fastest-growing sport in the world!",
+            "DinkSync is your gateway to getting on the court. Book your session, grab a paddle, and join the fastest-growing sport in the world!",
         ],
     },
 ] as const;
 
 export default function AboutPage() {
     return (
-        <div className="flex min-h-screen flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+        <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
             <Navbar />
 
             <section className="bg-gradient-to-br from-blue-600 to-blue-800 text-white py-20 px-6 text-center">
@@ -94,7 +94,7 @@ export default function AboutPage() {
             </section>
 
             <footer className="py-8 border-t border-slate-200 dark:border-slate-800 text-center text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950">
-                <p>&copy; {new Date().getFullYear()} Paddlix. All rights reserved.</p>
+                <p>&copy; {new Date().getFullYear()} DinkSync. All rights reserved.</p>
             </footer>
         </div>
     );

@@ -5,6 +5,7 @@ import {
   wrapBase64Mime,
   resolveRecipientEmail,
   buildReceiptEmailContent,
+  buildOpenPlayReceiptContent,
   sendPaymentReceiptEmail,
 } from "./email.service";
 
@@ -75,12 +76,37 @@ describe("email.service", () => {
       ],
     });
 
+    expect(out.subject).toContain("DinkSync");
     expect(out.subject).toContain("#ABCD1234");
     expect(out.text).toContain("₱600.00");
     expect(out.text).toContain("9:00 AM – 10:00 AM");
+    expect(out.html).toContain("DinkSync Official Receipt");
     expect(out.html).toContain("Juan Dela Cruz");
     expect(out.html).toContain("1029384756102");
     expect(out.html).toContain("Court 1");
     expect(out.html).toContain("Court 2");
+  });
+
+  it("builds open play receipt email with session details and HTML escaping", () => {
+    const out = buildOpenPlayReceiptContent({
+      entryId: "abcdef12-0000",
+      customerName: "<b>Ana</b>",
+      sessionDate: "2026-11-05",
+      startTime: "18:00",
+      endTime: "20:00",
+      courtName: "Court 2",
+      amount: 100,
+    });
+
+    expect(out.subject).toContain("DinkSync");
+    expect(out.subject).toContain("#ABCDEF12");
+    expect(out.subject).toContain("2026-11-05");
+    expect(out.text).toContain("Court 2");
+    expect(out.text).toContain("6:00 PM – 8:00 PM");
+    expect(out.text).toContain("₱100.00");
+    expect(out.text).toContain("Open Play");
+    expect(out.html).toContain("DinkSync Official Receipt");
+    expect(out.html).toContain("₱100.00");
+    expect(out.html).toContain("&lt;b&gt;Ana&lt;/b&gt;");
   });
 });

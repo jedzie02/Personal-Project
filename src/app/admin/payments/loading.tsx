@@ -23,7 +23,7 @@ export default function AdminPaymentsLoading() {
                 ].map((title, i) => (
                     <div
                         key={i}
-                        className="flex flex-col justify-between p-5 min-h-[116px] rounded-xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-800 shadow-xs space-y-3"
+                        className="flex flex-col justify-between p-5 min-h-[116px] rounded-xl border border-slate-800 bg-slate-900 shadow-xs space-y-3"
                     >
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -40,7 +40,7 @@ export default function AdminPaymentsLoading() {
             </div>
 
             {/* Ledger Transactions Card */}
-            <Card className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden">
+            <Card className="rounded-2xl border border-slate-800 bg-slate-900 shadow-xs overflow-hidden">
                 {/* Search & Filter Toolbar */}
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <Skeleton className="h-10 w-72 max-w-full rounded-xl bg-slate-100 dark:bg-slate-800" />

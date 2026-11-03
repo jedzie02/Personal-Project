@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import NewBookingLoading from "./loading";
 import { supabase } from "@/lib/supabase";
+import { markBookingPaidInCashAction } from "@/app/admin/bookings/actions";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,11 +125,14 @@ function NewBookingForm() {
         ]);
 
         if (courtData && courtData.length > 0) {
-          setCourts(courtData);
-          if (paramCourt && courtData.some((c) => c.id === paramCourt)) {
+          const sortedCourts = [...courtData].sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { numeric: true })
+          );
+          setCourts(sortedCourts);
+          if (paramCourt && sortedCourts.some((c) => c.id === paramCourt)) {
             setSelectedCourtId(paramCourt);
           } else {
-            setSelectedCourtId(courtData[0].id);
+            setSelectedCourtId(sortedCourts[0].id);
           }
         }
         if (profileData) {
@@ -296,15 +300,9 @@ function NewBookingForm() {
         throw new Error(bookingError.message || "Failed to create booking reservation.");
       }
 
-      // Record successful payment entry if settled immediately at counter
+      // Record successful payment entry and send official Gmail receipt if settled immediately at counter
       if (newBooking && isPaid) {
-        await supabase.from("payments").insert({
-          booking_id: newBooking.id,
-          amount: finalPrice,
-          currency: "PHP",
-          status: "succeeded",
-          payment_method: paymentMethod,
-        });
+        await markBookingPaidInCashAction(newBooking.id);
       }
 
       router.push("/admin/bookings");
@@ -573,15 +571,18 @@ function NewBookingForm() {
 
                 <div>
                   <Label htmlFor="customerPhone" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    Contact Mobile Number
+                    Contact Mobile Number (11 digits)
                   </Label>
                   <Input
                     id="customerPhone"
                     type="tel"
-                    placeholder="e.g. +63 917 123 4567"
+                    inputMode="numeric"
+                    maxLength={11}
+                    pattern="\d{11}"
+                    placeholder="e.g. 09171234567"
                     value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="mt-1.5 rounded-xl dark:border-slate-800 dark:bg-slate-950"
+                    onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                    className="mt-1.5 rounded-xl dark:border-slate-800 dark:bg-slate-950 font-mono"
                   />
                 </div>
               </div>

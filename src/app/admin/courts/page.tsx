@@ -65,11 +65,13 @@ export default function AdminCourtsPage() {
 
     if (!error && data) {
       setCourts(
-        data.map((c: any) => ({
-          ...c,
-          hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 25,
-          status: c.status || (c.is_active ? "Available" : "Not Available"),
-        }))
+        data
+          .map((c: any) => ({
+            ...c,
+            hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 25,
+            status: c.status || (c.is_active ? "Available" : "Not Available"),
+          }))
+          .sort((a: Court, b: Court) => a.name.localeCompare(b.name, undefined, { numeric: true }))
       );
     } else if (error) {
       setErrorMessage("Unable to load courts. Please refresh the page to try again.");

@@ -26,9 +26,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { DinkSyncLogoMark, DinkSyncWordmark } from "@/components/DinkSyncLogo";
 
 import { supabase } from "@/lib/supabase";
-import { cancelOwnBookingClientAction } from "@/app/bookings/actions";
+import { cancelOwnBookingClientAction, updateOwnPhoneClientAction } from "@/app/bookings/actions";
 
 interface BookingReservation {
   id: string;
@@ -85,6 +86,35 @@ export function Navbar() {
   const [bookingsLoaded, setBookingsLoaded] = useState(false);
 
   const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null);
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+
+  const handleSavePhone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleaned = phoneInput.replace(/\D/g, "");
+    if (cleaned.length !== 11) {
+      alert("Phone number must be exactly 11 digits (e.g., 09171234567).");
+      return;
+    }
+    setSavingPhone(true);
+    try {
+      const res = await updateOwnPhoneClientAction(cleaned);
+      if (res.success) {
+        const formatted = cleaned ? formatPHPhoneNumber(cleaned) : "";
+        localStorage.setItem("userPhone", cleaned);
+        setProfile((prev) => ({ ...prev, phoneNumber: formatted }));
+        await supabase.auth.updateUser({ data: { phone: cleaned } }).catch(() => {});
+        setIsEditingPhone(false);
+      } else {
+        alert(res.error || "Could not update phone number");
+      }
+    } catch (err: any) {
+      alert(err?.message || "Failed to save phone number");
+    } finally {
+      setSavingPhone(false);
+    }
+  };
 
   // Lazy fetch user reservations on demand (only when dropdown is hovered or opened)
   const fetchUserBookings = useCallback(async (userId: string) => {
@@ -283,45 +313,52 @@ export function Navbar() {
   }, [profile.fullName]);
 
   return (
-    <header className="flex items-center w-full px-4 sm:px-6 py-3 bg-white/95 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-50 transition-colors">
+    <header className="flex items-center w-full px-4 sm:px-6 py-3 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-50">
       {/* Left: Brand */}
       <div className="flex-1 flex justify-start">
-        <Link href="/" className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-slate-900 dark:text-white group">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100/80 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-900/60 shadow-2xs group-hover:scale-105 transition-transform">
-            <CircleDotDashed className="size-5" />
-          </div>
-          <span className="font-extrabold tracking-tight">Paddlix</span>
+        <Link href="/" className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-white group">
+          <DinkSyncLogoMark
+            className="size-9 rounded-xl group-hover:scale-105 transition-transform"
+            svgClassName="size-6"
+          />
+          <DinkSyncWordmark />
         </Link>
       </div>
 
       {/* Center: Navigation Links */}
-      <nav className="hidden sm:flex items-center gap-1 bg-slate-100/70 dark:bg-slate-900/80 p-1 rounded-full border border-slate-200/60 dark:border-slate-800/80" aria-label="Primary navigation">
+      <nav className="hidden sm:flex items-center gap-1 bg-slate-900/80 p-1 rounded-full border border-slate-800/80" aria-label="Primary navigation">
         <Link
           href="/"
-          className="text-xs font-semibold px-4 py-1.5 rounded-full text-slate-900 dark:text-white bg-white dark:bg-slate-800 shadow-2xs dark:shadow-none transition-all"
+          className="text-xs font-semibold px-4 py-1.5 rounded-full text-white bg-slate-800 shadow-none transition-all"
           aria-label="Home"
         >
           Home
         </Link>
         <Link
+          href="/#open-play"
+          className="text-xs font-medium px-4 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all"
+          aria-label="Open Play"
+        >
+          Open Play
+        </Link>
+        <Link
           href="#book-a-court"
-          className="text-xs font-medium px-4 py-1.5 rounded-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all"
+          className="text-xs font-medium px-4 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all"
           aria-label="Book a Court"
         >
           Book Court
         </Link>
         <Link
           href="#about"
-          className="text-xs font-medium px-4 py-1.5 rounded-full text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-800/60 transition-all"
+          className="text-xs font-medium px-4 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all"
           aria-label="About Pickleball"
         >
           About
         </Link>
       </nav>
 
-      {/* Right: Theme Toggle + Mobile Menu + Profile Avatar or Sign In button */}
+      {/* Right: Mobile Menu + Profile Avatar or Sign In button */}
       <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-2.5">
-        <ThemeToggle />
 
         {/* Mobile Navigation Menu */}
         <div className="sm:hidden">
@@ -340,6 +377,11 @@ export function Navbar() {
               <DropdownMenuItem className="p-0">
                 <Link href="/" className="w-full text-xs font-semibold py-2 px-3 rounded-xl cursor-pointer">
                   Home
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="p-0">
+                <Link href="/#open-play" className="w-full text-xs font-medium py-2 px-3 rounded-xl cursor-pointer">
+                  Open Play
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="p-0">
@@ -417,6 +459,55 @@ export function Navbar() {
                         <Phone className="size-3 text-blue-500 shrink-0" />
                         <span>{profile.phoneNumber}</span>
                       </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const rawDigits = (profile.phoneNumber || "").replace(/\D/g, "");
+                        const elevenDigits =
+                          rawDigits.startsWith("639") && rawDigits.length === 12
+                            ? `0${rawDigits.slice(2)}`
+                            : rawDigits.slice(0, 11);
+                        setPhoneInput(elevenDigits);
+                        setIsEditingPhone((prev) => !prev);
+                      }}
+                      className="mt-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    >
+                      {isEditingPhone
+                        ? "Cancel"
+                        : profile.phoneNumber
+                        ? "Edit Phone / GCash #"
+                        : "+ Add Phone / GCash #"}
+                    </button>
+                    {isEditingPhone && (
+                      <form
+                        onSubmit={handleSavePhone}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        className="mt-2 flex items-center gap-1.5"
+                      >
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          maxLength={11}
+                          pattern="\d{11}"
+                          value={phoneInput}
+                          onChange={(e) =>
+                            setPhoneInput(e.target.value.replace(/\D/g, "").slice(0, 11))
+                          }
+                          placeholder="09XXXXXXXXX (11 digits)"
+                          className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={savingPhone || phoneInput.length !== 11}
+                          className="h-7 px-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold cursor-pointer"
+                        >
+                          {savingPhone ? "..." : "Save"}
+                        </Button>
+                      </form>
                     )}
                   </div>
                 </div>

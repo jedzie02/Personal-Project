@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
 import type { CustomerSummary, Profile } from "@/lib/types/domain";
 
 async function getDbClient() {
@@ -49,12 +50,12 @@ export async function getAllCustomersWithBookingCounts(): Promise<CustomerSummar
     // 2. Fetch live bookings to aggregate counts and spend
     const { data: bookings } = await supabase
         .from("bookings")
-        .select("id, customer_id, total_price, payment_status, created_at");
+        .select("id, customer_id, total_price, payment_status, payment_method, created_at");
 
     // Group live bookings by customer_id
     const bookingsByCustomer = new Map<string, { count: number; totalSpend: number }>();
     for (const b of bookings || []) {
-        if (!b.customer_id) continue;
+        if (!b.customer_id || b.payment_method === OPEN_PLAY_HOLD_LABEL) continue;
         const current = bookingsByCustomer.get(b.customer_id) || { count: 0, totalSpend: 0 };
         current.count += 1;
         current.totalSpend += Number(b.total_price) || 0;

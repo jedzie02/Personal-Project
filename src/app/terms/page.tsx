@@ -3,25 +3,25 @@ import Link from "next/link";
 import { ArrowLeft, FileText, Mail, Calendar, ChevronRight } from "lucide-react";
 
 export const metadata = {
-    title: "Terms of Use – Paddlix",
-    description: "Guidelines, court etiquette, cancellation rules, and booking policies for Paddlix courts.",
+    title: "Terms of Use – DinkSync",
+    description: "Guidelines, court etiquette, cancellation rules, and booking policies for DinkSync courts.",
 };
 
 const sections = [
     {
         id: "acceptance",
         title: "1. Acceptance of Terms",
-        body: "By accessing or reserving courts through Paddlix, you agree to comply with and be bound by these terms. If you disagree with any portion of these conditions, please refrain from submitting reservations.",
+        body: "By accessing or reserving courts through DinkSync, you agree to comply with and be bound by these terms. If you disagree with any portion of these conditions, please refrain from submitting reservations.",
     },
     {
         id: "booking-payments",
         title: "2. Reservations & Payment Verification",
-        body: "Court time slots are temporarily reserved during cart checkout and officially confirmed only upon submission of a valid, authentic GCash reference number. Paddlix reserves the explicit right to void and reopen reservations associated with invalid, fraudulent, or duplicated payment references.",
+        body: "Court time slots are temporarily reserved during cart checkout and officially confirmed only upon submission of a valid, authentic GCash reference number. DinkSync reserves the explicit right to void and reopen reservations associated with invalid, fraudulent, or duplicated payment references.",
     },
     {
         id: "cancellations-refunds",
         title: "3. Cancellations & Rescheduling Policy",
-        body: "Rescheduling requests or cancellations must be communicated to venue management via play@paddlix.com at least 24 hours prior to the scheduled slot start time. Due to court capacity constraints, cancellations submitted within 24 hours of play or no-shows are non-refundable.",
+        body: "Rescheduling requests or cancellations must be communicated to venue management via play@dinksync.com at least 24 hours prior to the scheduled slot start time. Due to court capacity constraints, cancellations submitted within 24 hours of play or no-shows are non-refundable.",
     },
     {
         id: "court-rules-conduct",
@@ -31,7 +31,7 @@ const sections = [
     {
         id: "liability-assumption-risk",
         title: "5. Health, Safety & Limitation of Liability",
-        body: "Pickleball is an active athletic sport with inherent physical risks. Players participate voluntarily at their own discretion and assume full responsibility for their personal health and safety. Paddlix and venue partners disclaim liability for accidental personal injury, equipment loss, or property damage occurring on premises.",
+        body: "Pickleball is an active athletic sport with inherent physical risks. Players participate voluntarily at their own discretion and assume full responsibility for their personal health and safety. DinkSync and venue partners disclaim liability for accidental personal injury, equipment loss, or property damage occurring on premises.",
     },
     {
         id: "facility-maintenance-weather",
@@ -41,13 +41,13 @@ const sections = [
     {
         id: "policy-modifications",
         title: "7. Modifications to Agreement",
-        body: "Paddlix reserves the right to amend court pricing, operational guidelines, and these terms as venue operations evolve. Continued engagement with the booking platform after revisions constitutes full acceptance of the updated terms.",
+        body: "DinkSync reserves the right to amend court pricing, operational guidelines, and these terms as venue operations evolve. Continued engagement with the booking platform after revisions constitutes full acceptance of the updated terms.",
     },
 ];
 
 export default function TermsPage() {
     return (
-        <div className="flex min-h-screen flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+        <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
             <Navbar />
 
             <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
@@ -116,11 +116,11 @@ export default function TermsPage() {
                         </p>
                     </div>
                     <a
-                        href="mailto:play@paddlix.com"
+                        href="mailto:play@dinksync.com"
                         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors"
                     >
                         <Mail className="size-3.5" />
-                        play@paddlix.com
+                        play@dinksync.com
                     </a>
                 </section>
 

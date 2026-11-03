@@ -16,7 +16,7 @@ export default function AdminScheduleLoading() {
       </div>
 
       {/* 2. Command Bar & Operational Strip Skeleton */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 shadow-2xs overflow-hidden">
         <div className="p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2.5">
             <Skeleton className="h-9 w-48 rounded-xl bg-slate-100 dark:bg-slate-800" />
@@ -55,24 +55,24 @@ export default function AdminScheduleLoading() {
       </div>
 
       {/* 4. Schedule Timeline Grid Card */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 shadow-2xs overflow-hidden">
         <div className="min-w-[820px]">
-          <div className="grid grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)] border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40">
-            <div className="p-3.5 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center">
-              <Skeleton className="h-4 w-24 bg-slate-200 dark:bg-slate-800" />
+          <div className="grid grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)] border-b border-slate-800 bg-slate-950/40">
+            <div className="p-3.5 border-r border-slate-800 flex items-center justify-center">
+              <Skeleton className="h-4 w-24 bg-slate-800" />
             </div>
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="p-3.5 border-r last:border-r-0 border-slate-200 dark:border-slate-800 flex items-center justify-center gap-2"
+                className="p-3.5 border-r last:border-r-0 border-slate-800 flex items-center justify-center gap-2"
               >
-                <Skeleton className="h-4 w-20 bg-slate-200 dark:bg-slate-800" />
-                <Skeleton className="h-4 w-12 bg-slate-100 dark:bg-slate-800" />
+                <Skeleton className="h-4 w-20 bg-slate-800" />
+                <Skeleton className="h-4 w-12 bg-slate-800" />
               </div>
             ))}
           </div>
 
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-slate-800">
             {[
               "09:00 AM – 10:00 AM",
               "10:00 AM – 11:00 AM",
@@ -93,7 +93,7 @@ export default function AdminScheduleLoading() {
                 key={idx}
                 className="grid grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)] min-h-[68px] items-stretch"
               >
-                <div className="border-r border-slate-200 dark:border-slate-800 flex items-center justify-center p-2.5 bg-white dark:bg-slate-900">
+                <div className="border-r border-slate-800 flex items-center justify-center p-2.5 bg-slate-900">
                   <span className="text-xs font-semibold text-slate-400 tabular-nums">
                     {slotLabel}
                   </span>

@@ -33,8 +33,7 @@ function mapCourt(row: {
 }
 
 /**
- * Returns only ACTIVE courts. This is what customers will see —
- * a deactivated court should never appear in a customer-facing list.
+ * Returns only ACTIVE courts, sorted naturally by name (Court 1, Court 2, Court 3, Court 4).
  */
 export async function getActiveCourts(): Promise<Court[]> {
     const supabase = await createClient();
@@ -43,18 +42,17 @@ export async function getActiveCourts(): Promise<Court[]> {
         .from("courts")
         .select("id, name, description, is_active, status, hourly_rate, created_at")
         .eq("status", "Available")
-        .order("created_at", { ascending: true });
+        .order("name", { ascending: true });
 
     if (error || !data) return [];
 
-    return data.map(mapCourt);
+    return data
+        .map(mapCourt)
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 }
 
 /**
- * Returns ALL courts, active and inactive. Admin-only — the RLS
- * policy on the courts table already enforces this at the database
- * level, so even if this function were called by a non-admin, the
- * query would just come back empty rather than leaking data.
+ * Returns ALL courts, active and inactive, sorted naturally by name (Court 1, Court 2, Court 3, Court 4).
  */
 export async function getAllCourts(): Promise<Court[]> {
     const supabase = await createClient();
@@ -62,11 +60,13 @@ export async function getAllCourts(): Promise<Court[]> {
     const { data, error } = await supabase
         .from("courts")
         .select("id, name, description, is_active, status, hourly_rate, created_at")
-        .order("created_at", { ascending: true });
+        .order("name", { ascending: true });
 
     if (error || !data) return [];
 
-    return data.map(mapCourt);
+    return data
+        .map(mapCourt)
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 }
 
 export async function getCourtById(id: string): Promise<Court | null> {
@@ -145,13 +145,6 @@ export async function setCourtStatus(
     return { success: true };
 }
 
-/**
- * Counts a court's PENDING/CONFIRMED bookings that are still in the
- * future. Used to warn an admin before deactivating a court out from
- * under real, upcoming reservations (FR-6.5) — this is the check
- * that was flagged as missing back in Phase 3, now that bookings
- * actually exist.
- */
 export async function getFutureActiveBookingsCountForCourt(
     courtId: string
 ): Promise<number> {
@@ -168,17 +161,6 @@ export async function getFutureActiveBookingsCountForCourt(
     return count ?? 0;
 }
 
-/**
- * Flips is_active. This is how "deactivate" and "reactivate" both
- * work — one function, one boolean, rather than two near-duplicate
- * functions.
- *
- * NOTE: this function itself stays "dumb" on purpose — it just does
- * the update, no matter what. The FR-6.5 warning-before-deactivating
- * logic lives in the Server Action (admin/courts/actions.ts) instead,
- * since deciding "should we warn, and has the admin confirmed" is a
- * flow-control concern, not a data-write concern.
- */
 export async function setCourtActiveStatus(
     id: string,
     isActive: boolean

@@ -22,6 +22,16 @@ export interface ReceiptTemplateInput {
   segments: ReceiptSegmentItem[];
 }
 
+export interface OpenPlayReceiptInput {
+  entryId: string;
+  customerName: string;
+  sessionDate: string;
+  startTime: string;
+  endTime: string;
+  courtName: string;
+  amount: number;
+}
+
 /**
  * Only online payment methods (Card / Stripe and GCash QR) receive email receipts.
  * Cash walk-ins settled at the counter are excluded.
@@ -137,7 +147,7 @@ export function buildReceiptEmailContent(input: ReceiptTemplateInput): {
 } {
   const shortRef = `#${input.bookingId.slice(0, 8).toUpperCase()}`;
   const formattedTotal = `₱${Number(input.totalPrice).toFixed(2)}`;
-  const subject = `Paddlix Payment Receipt (${shortRef}) — ${input.bookingDate}`;
+  const subject = `DinkSync Payment Receipt (${shortRef}) — ${input.bookingDate}`;
 
   const segmentLinesText = input.segments
     .map(
@@ -149,7 +159,7 @@ export function buildReceiptEmailContent(input: ReceiptTemplateInput): {
   const text = [
     `Hi ${input.customerName},`,
     ``,
-    `Thank you for your payment! Your Paddlix court reservation is confirmed and paid.`,
+    `Thank you for your payment! Your DinkSync court reservation is confirmed and paid.`,
     ``,
     `Booking Reference: ${shortRef}`,
     `Date: ${input.bookingDate}`,
@@ -162,7 +172,7 @@ export function buildReceiptEmailContent(input: ReceiptTemplateInput): {
     `Total Paid: ${formattedTotal}`,
     ``,
     `Please arrive 10 minutes before your slot and present this receipt (${shortRef}) at the front desk.`,
-    `— Paddlix Pickleball Club`,
+    `— DinkSync Pickleball Club`,
   ]
     .filter((line): line is string => line !== null)
     .join("\n");
@@ -193,7 +203,7 @@ export function buildReceiptEmailContent(input: ReceiptTemplateInput): {
         <div style="display:inline-block;padding:4px 12px;border-radius:9999px;background:#059669;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">
           Payment Confirmed
         </div>
-        <h1 style="margin:12px 0 4px;font-size:22px;color:#0f172a;">Paddlix Official Receipt</h1>
+        <h1 style="margin:12px 0 4px;font-size:22px;color:#0f172a;">DinkSync Official Receipt</h1>
         <p style="margin:0;font-size:13px;color:#475569;font-family:monospace;">Booking Ref: ${escapeHtml(shortRef)}</p>
       </div>
 
@@ -267,7 +277,7 @@ async function sendGmailSmtpMessage(params: {
   const mimeBody = [
     `Date: ${new Date().toUTCString()}`,
     `Message-ID: ${messageId}`,
-    `From: "Paddlix Pickleball" <${params.fromUser}>`,
+    `From: "DinkSync Pickleball" <${params.fromUser}>`,
     `To: <${params.to}>`,
     `Subject: ${encodedSubject}`,
     `MIME-Version: 1.0`,
@@ -460,6 +470,349 @@ export async function sendPaymentReceiptEmail(
     return { sent: true };
   } catch (err) {
     console.warn("[email.service] Failed to send receipt email:", err);
+    return { sent: false, skippedReason: "smtp-error" };
+  }
+}
+
+export function buildOpenPlayReceiptContent(input: OpenPlayReceiptInput): {
+  subject: string;
+  text: string;
+  html: string;
+} {
+  const shortRef = `#${input.entryId.slice(0, 8).toUpperCase()}`;
+  const formattedAmount = `₱${Number(input.amount).toFixed(2)}`;
+  const timeRange = `${formatTime(input.startTime)} – ${formatTime(input.endTime)}`;
+  const subject = `DinkSync Open Play Receipt (${shortRef}) — ${input.sessionDate}`;
+
+  const text = [
+    `Hi ${input.customerName},`,
+    ``,
+    `Your DinkSync Open Play spot is confirmed and paid!`,
+    ``,
+    `Open Play Reference: ${shortRef}`,
+    `Date: ${input.sessionDate}`,
+    `Time: ${timeRange}`,
+    `Court: ${input.courtName}`,
+    `Payment Method: Card (Stripe)`,
+    `Total Paid: ${formattedAmount}`,
+    ``,
+    `Please arrive 10 minutes before the session and present reference ${shortRef} at the reception counter.`,
+    `— DinkSync Pickleball Club`,
+  ].join("\n");
+
+  const html = `
+<!DOCTYPE html>
+<html>
+  <body style="margin:0;padding:24px;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
+      <div style="background:#ecfdf5;padding:24px;text-align:center;border-bottom:1px solid #d1fae5;">
+        <div style="display:inline-block;padding:4px 12px;border-radius:9999px;background:#059669;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">
+          Open Play Spot Confirmed
+        </div>
+        <h1 style="margin:12px 0 4px;font-size:22px;color:#0f172a;">DinkSync Official Receipt</h1>
+        <p style="margin:0;font-size:13px;color:#475569;font-family:monospace;">Entry Ref: ${escapeHtml(shortRef)}</p>
+      </div>
+      <div style="padding:24px;">
+        <p style="margin:0 0 16px;font-size:14px;color:#334155;">
+          Hi <strong>${escapeHtml(input.customerName)}</strong>, your Open Play spot is reserved and paid.
+        </p>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;font-size:14px;">
+          <div style="margin-bottom:8px;"><strong>Date:</strong> ${escapeHtml(input.sessionDate)}</div>
+          <div style="margin-bottom:8px;"><strong>Time:</strong> ${escapeHtml(timeRange)}</div>
+          <div style="margin-bottom:8px;"><strong>Court:</strong> ${escapeHtml(input.courtName)}</div>
+          <div><strong>Total Paid:</strong> <span style="color:#059669;font-weight:700;font-variant-numeric:tabular-nums;">${escapeHtml(formattedAmount)}</span></div>
+        </div>
+        <div style="margin-top:20px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;font-size:12px;color:#475569;">
+          Please arrive 10 minutes before your scheduled time and present reference <strong>${escapeHtml(shortRef)}</strong> at the reception counter.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`.trim();
+
+  return { subject, text, html };
+}
+
+export async function sendOpenPlayReceiptEmail(
+  entryId: string
+): Promise<{ sent: boolean; skippedReason?: string }> {
+  try {
+    const creds = readSmtpCredentials();
+    if (!creds) {
+      return { sent: false, skippedReason: "missing-smtp-config" };
+    }
+
+    const { gmailUser, gmailPass } = creds;
+    const supabase = await getDbClient();
+    const { data: entry } = await supabase
+      .from("open_play_entries")
+      .select(
+        "id, customer_id, amount, open_play_sessions ( session_date, start_time, end_time, courts ( name ) )"
+      )
+      .eq("id", entryId)
+      .maybeSingle();
+
+    if (!entry) {
+      return { sent: false, skippedReason: "entry-not-found" };
+    }
+
+    const sessionObj: any = Array.isArray(entry.open_play_sessions)
+      ? entry.open_play_sessions[0]
+      : entry.open_play_sessions;
+    if (!sessionObj) {
+      return { sent: false, skippedReason: "session-not-found" };
+    }
+
+    const courtObj: any = Array.isArray(sessionObj.courts)
+      ? sessionObj.courts[0]
+      : sessionObj.courts;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", entry.customer_id)
+      .maybeSingle();
+
+    const recipientEmail = resolveRecipientEmail(profile?.email, gmailUser);
+    const customerName =
+      profile?.full_name?.trim() || recipientEmail.split("@")[0] || "Player";
+
+    const { subject, text, html } = buildOpenPlayReceiptContent({
+      entryId: entry.id,
+      customerName,
+      sessionDate: sessionObj.session_date,
+      startTime: String(sessionObj.start_time).slice(0, 5),
+      endTime: String(sessionObj.end_time).slice(0, 5),
+      courtName: courtObj?.name ?? "Pickleball Court",
+      amount: Number(entry.amount) || 0,
+    });
+
+    await sendGmailSmtpMessage({
+      fromUser: gmailUser,
+      appPassword: gmailPass,
+      to: recipientEmail,
+      subject,
+      text,
+      html,
+    });
+
+    return { sent: true };
+  } catch (err) {
+    console.warn("[email.service] Failed to send open play receipt email:", err);
+    return { sent: false, skippedReason: "smtp-error" };
+  }
+}
+
+
+export function buildRefundEmailContent(input: {
+  referenceId: string;
+  customerName: string;
+  sessionDate: string;
+  timeRange: string;
+  courtName: string;
+  amount: number;
+  paymentMethod: string;
+  itemLabel: string;
+}): {
+  subject: string;
+  text: string;
+  html: string;
+} {
+  const shortRef = `#${input.referenceId.slice(0, 8).toUpperCase()}`;
+  const formattedAmount = `₱${Number(input.amount).toFixed(2)}`;
+  const subject = `DinkSync Refund Confirmation (${shortRef}) — ${input.sessionDate}`;
+
+  const text = [
+    `Hi ${input.customerName},`,
+    ``,
+    `Your refund for ${input.itemLabel} has been processed.`,
+    ``,
+    `Reference: ${shortRef}`,
+    `Date: ${input.sessionDate}`,
+    `Time: ${input.timeRange}`,
+    `Court: ${input.courtName}`,
+    `Refund Method: ${input.paymentMethod}`,
+    `Amount Refunded: ${formattedAmount}`,
+    ``,
+    `If you paid via GCash, please check your GCash wallet for the returned amount.`,
+    `— DinkSync Pickleball Club`,
+  ].join("\n");
+
+  const html = `
+<!DOCTYPE html>
+<html>
+  <body style="margin:0;padding:24px;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0f172a;">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
+      <div style="background:#fffbeb;padding:24px;text-align:center;border-bottom:1px solid #fde68a;">
+        <div style="display:inline-block;padding:4px 12px;border-radius:9999px;background:#d97706;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">
+          Refund Completed
+        </div>
+        <h1 style="margin:12px 0 4px;font-size:22px;color:#0f172a;">DinkSync Refund Notice</h1>
+        <p style="margin:0;font-size:13px;color:#475569;font-family:monospace;">Reference: ${escapeHtml(shortRef)}</p>
+      </div>
+      <div style="padding:24px;">
+        <p style="margin:0 0 16px;font-size:14px;color:#334155;">
+          Hi <strong>${escapeHtml(input.customerName)}</strong>, your payment for <strong>${escapeHtml(input.itemLabel)}</strong> has been refunded.
+        </p>
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;font-size:14px;">
+          <div style="margin-bottom:8px;"><strong>Date:</strong> ${escapeHtml(input.sessionDate)}</div>
+          <div style="margin-bottom:8px;"><strong>Time:</strong> ${escapeHtml(input.timeRange)}</div>
+          <div style="margin-bottom:8px;"><strong>Court:</strong> ${escapeHtml(input.courtName)}</div>
+          <div style="margin-bottom:8px;"><strong>Refund Method:</strong> ${escapeHtml(input.paymentMethod)}</div>
+          <div><strong>Amount Refunded:</strong> <span style="color:#d97706;font-weight:700;font-variant-numeric:tabular-nums;">${escapeHtml(formattedAmount)}</span></div>
+        </div>
+        <div style="margin-top:20px;padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;font-size:12px;color:#475569;">
+          Thank you for playing with <strong>DinkSync</strong>. If you have any questions about your refund (${escapeHtml(shortRef)}), please reply to this email or contact the reception desk.
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`.trim();
+
+  return { subject, text, html };
+}
+
+export async function sendOpenPlayRefundEmail(
+  entryId: string
+): Promise<{ sent: boolean; skippedReason?: string }> {
+  try {
+    const creds = readSmtpCredentials();
+    if (!creds) {
+      return { sent: false, skippedReason: "missing-smtp-config" };
+    }
+
+    const { gmailUser, gmailPass } = creds;
+    const supabase = await getDbClient();
+    const { data: entry } = await supabase
+      .from("open_play_entries")
+      .select(
+        "id, customer_id, amount, stripe_checkout_session_id, open_play_sessions ( session_date, start_time, end_time, courts ( name ) )"
+      )
+      .eq("id", entryId)
+      .maybeSingle();
+
+    if (!entry) {
+      return { sent: false, skippedReason: "entry-not-found" };
+    }
+
+    const sessionObj: any = Array.isArray(entry.open_play_sessions)
+      ? entry.open_play_sessions[0]
+      : entry.open_play_sessions;
+    if (!sessionObj) {
+      return { sent: false, skippedReason: "session-not-found" };
+    }
+
+    const courtObj: any = Array.isArray(sessionObj.courts)
+      ? sessionObj.courts[0]
+      : sessionObj.courts;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", entry.customer_id)
+      .maybeSingle();
+
+    const recipientEmail = resolveRecipientEmail(profile?.email, gmailUser);
+    const customerName =
+      profile?.full_name?.trim() || recipientEmail.split("@")[0] || "Player";
+    const rawMethod = String(entry.stripe_checkout_session_id || "GCash QR");
+    const paymentMethod = rawMethod.toLowerCase().includes("cash") && !rawMethod.toLowerCase().includes("gcash")
+      ? "Cash"
+      : "GCash";
+    const timeRange = `${formatTime(String(sessionObj.start_time).slice(0, 5))} – ${formatTime(String(sessionObj.end_time).slice(0, 5))}`;
+
+    const { subject, text, html } = buildRefundEmailContent({
+      referenceId: entry.id,
+      customerName,
+      sessionDate: sessionObj.session_date,
+      timeRange,
+      courtName: courtObj?.name ?? "Pickleball Court",
+      amount: Number(entry.amount) || 0,
+      paymentMethod,
+      itemLabel: "Open Play Session",
+    });
+
+    await sendGmailSmtpMessage({
+      fromUser: gmailUser,
+      appPassword: gmailPass,
+      to: recipientEmail,
+      subject,
+      text,
+      html,
+    });
+
+    return { sent: true };
+  } catch (err) {
+    console.warn("[email.service] Failed to send open play refund email:", err);
+    return { sent: false, skippedReason: "smtp-error" };
+  }
+}
+
+export async function sendBookingRefundEmail(
+  bookingId: string
+): Promise<{ sent: boolean; skippedReason?: string }> {
+  try {
+    const creds = readSmtpCredentials();
+    if (!creds) {
+      return { sent: false, skippedReason: "missing-smtp-config" };
+    }
+
+    const { gmailUser, gmailPass } = creds;
+    const supabase = await getDbClient();
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select(
+        "id, customer_id, booking_date, start_time, end_time, total_price, payment_method, courts ( name )"
+      )
+      .eq("id", bookingId)
+      .maybeSingle();
+
+    if (!booking) {
+      return { sent: false, skippedReason: "booking-not-found" };
+    }
+
+    const courtObj: any = Array.isArray(booking.courts)
+      ? booking.courts[0]
+      : booking.courts;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", booking.customer_id)
+      .maybeSingle();
+
+    const recipientEmail = resolveRecipientEmail(profile?.email, gmailUser);
+    const customerName =
+      profile?.full_name?.trim() || recipientEmail.split("@")[0] || "Player";
+    const rawMethod = String(booking.payment_method || "GCash");
+    const paymentMethod = rawMethod.toLowerCase().includes("gcash") || rawMethod.toLowerCase().includes("qr")
+      ? "GCash"
+      : "Cash";
+    const timeRange = `${formatTime(String(booking.start_time).slice(0, 5))} – ${formatTime(String(booking.end_time).slice(0, 5))}`;
+
+    const { subject, text, html } = buildRefundEmailContent({
+      referenceId: booking.id,
+      customerName,
+      sessionDate: booking.booking_date,
+      timeRange,
+      courtName: courtObj?.name ?? "Pickleball Court",
+      amount: Number(booking.total_price) || 0,
+      paymentMethod,
+      itemLabel: "Court Reservation",
+    });
+
+    await sendGmailSmtpMessage({
+      fromUser: gmailUser,
+      appPassword: gmailPass,
+      to: recipientEmail,
+      subject,
+      text,
+      html,
+    });
+
+    return { sent: true };
+  } catch (err) {
+    console.warn("[email.service] Failed to send booking refund email:", err);
     return { sent: false, skippedReason: "smtp-error" };
   }
 }

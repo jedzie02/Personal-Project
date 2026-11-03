@@ -322,7 +322,7 @@ export function ScheduleTimeline({
             Timeline Schedule
           </h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Live court availability matrix and walk-in dispatch for Paddlix.
+            Live court availability matrix and walk-in dispatch for DinkSync.
           </p>
         </div>
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { stripe } from "@/lib/stripe/client";
 import { markPaymentFailed, markPaymentSucceeded } from "@/lib/services/payment.service";
+import { markEntryExpired, markEntryPaid } from "@/lib/services/open-play.service";
 
 /**
  * This is a real Next.js Route Handler — the "one true API route"
@@ -50,13 +51,21 @@ export async function POST(request: Request) {
                     ? session.payment_intent
                     : (session.payment_intent?.id ?? null);
 
-            await markPaymentSucceeded(session.id, paymentIntentId);
+            if (session.metadata?.openPlayEntryId) {
+                await markEntryPaid(session.id, paymentIntentId);
+            } else {
+                await markPaymentSucceeded(session.id, paymentIntentId);
+            }
             break;
         }
 
         case "checkout.session.expired": {
             const session = event.data.object as Stripe.Checkout.Session;
-            await markPaymentFailed(session.id);
+            if (session.metadata?.openPlayEntryId) {
+                await markEntryExpired(session.id);
+            } else {
+                await markPaymentFailed(session.id);
+            }
             break;
         }
 

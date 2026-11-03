@@ -6,7 +6,9 @@ import DateSelector from "@/components/booking/DateSelector";
 import BookingGrid from "@/components/booking/BookingGrid";
 import HeroQuickSlots, { HeroLiveStatusBadge } from "@/components/booking/HeroQuickSlots";
 import HeroCourtRally from "@/components/booking/HeroCourtRally";
+import OpenPlaySection from "@/components/booking/OpenPlaySection";
 import { getBookingGridForDate } from "@/lib/services/booking-grid.service";
+import { listUpcomingSessions, type OpenPlaySessionView } from "@/lib/services/open-play.service";
 import { createClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
 import { extractQuickSlotsSummary } from "@/lib/utils/quick-slots";
@@ -39,18 +41,21 @@ export default async function LandingPage({ searchParams }: PageProps) {
     let rawCourts: any[] = [];
     let gridData: any = null;
     let quickSummary = extractQuickSlotsSummary(null);
+    let openPlaySessions: OpenPlaySessionView[] = [];
 
     try {
         const supabase = await createClient();
-        const [{ data }, grid] = await Promise.all([
+        const [{ data }, grid, sessions] = await Promise.all([
             supabase
                 .from("courts")
                 .select("id, name, status, is_active, hourly_rate")
                 .order("name", { ascending: true }),
             getBookingGridForDate(date),
+            listUpcomingSessions(),
         ]);
         rawCourts = data || [];
         gridData = grid;
+        openPlaySessions = sessions;
         quickSummary = extractQuickSlotsSummary(grid);
 
         if (date === today && quickSummary.totalOpenSlots === 0) {
@@ -65,19 +70,23 @@ export default async function LandingPage({ searchParams }: PageProps) {
         console.error("Failed to load courts or schedule for landing page:", err);
     }
 
-    const courts = (rawCourts ?? []).map((c: any) => ({
-        id: c.id,
-        name: c.name,
-        hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
-        status: c.status === "Maintenance"
-            ? "Maintenance"
-            : (c.status === "Not Available" || c.status === "Deactivated" || c.is_active === false)
-                ? "Not Available"
-                : "Available",
-    }));
+    const courts = (rawCourts ?? [])
+        .map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
+            status: c.status === "Maintenance"
+                ? "Maintenance"
+                : (c.status === "Not Available" || c.status === "Deactivated" || c.is_active === false)
+                    ? "Not Available"
+                    : "Available",
+        }))
+        .sort((a: { name: string }, b: { name: string }) =>
+            a.name.localeCompare(b.name, undefined, { numeric: true })
+        );
 
     return (
-        <div className="flex min-h-screen flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+        <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
             <Navbar />
 
             <main className="flex-1 flex flex-col">
@@ -142,6 +151,8 @@ export default async function LandingPage({ searchParams }: PageProps) {
                         </div>
                     </div>
                 </section>
+
+                <OpenPlaySection sessions={openPlaySessions} />
 
                 {/* How It Works */}
                 <section className="py-20 px-4 sm:px-6 lg:px-8 border-t border-slate-200/70 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/20">
@@ -269,7 +280,7 @@ export default async function LandingPage({ searchParams }: PageProps) {
                                 id="about-heading"
                                 className="text-3xl font-extrabold tracking-tight sm:text-4xl text-slate-900 dark:text-white"
                             >
-                                Why players choose the Paddlix courts
+                                Why players choose the DinkSync courts
                             </h2>
                             <p className="mt-4 max-w-2xl mx-auto text-base sm:text-lg text-slate-600 dark:text-slate-400">
                                 Pickleball blends tennis, badminton, and table tennis into a fast-paced, high-energy game built for everyone.
@@ -287,7 +298,7 @@ export default async function LandingPage({ searchParams }: PageProps) {
                                 {
                                     icon: <Users className="size-5 text-blue-600 dark:text-blue-400" />,
                                     title: "Social & Community Focused",
-                                    body: "Play doubles or singles. Paddlix courts bring together all ages and skill levels for friendly rallies and open sessions.",
+                                    body: "Play doubles or singles. DinkSync courts bring together all ages and skill levels for friendly rallies and open sessions.",
                                     tag: "Open Play",
                                 },
                                 {
@@ -409,7 +420,7 @@ export default async function LandingPage({ searchParams }: PageProps) {
             <footer className="border-t border-slate-200/80 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm text-slate-500 dark:text-slate-400">
                 <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
                     <div className="flex flex-col items-center sm:items-start gap-2">
-                        <span className="font-bold text-slate-900 dark:text-white text-base">Paddlix</span>
+                        <span className="font-bold text-slate-900 dark:text-white text-base">DinkSync</span>
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                             <span className="flex items-center gap-1.5">
                                 <MapPin className="size-3.5 text-slate-400 shrink-0" />
@@ -421,13 +432,13 @@ export default async function LandingPage({ searchParams }: PageProps) {
                                 +63 9171234567
                             </span>
                             <span className="hidden sm:inline text-slate-300 dark:text-slate-700">·</span>
-                            <a href="mailto:play@paddlix.com" className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                            <a href="mailto:play@dinksync.com" className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                                 <Mail className="size-3.5 text-slate-400 shrink-0" />
-                                play@paddlix.com
+                                play@dinksync.com
                             </a>
                         </div>
                         <span className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                            &copy; {new Date().getFullYear()} Paddlix. All rights reserved.
+                            &copy; {new Date().getFullYear()} DinkSync. All rights reserved.
                         </span>
                     </div>
                     <nav className="flex gap-6 text-xs sm:text-sm font-medium" aria-label="Footer">

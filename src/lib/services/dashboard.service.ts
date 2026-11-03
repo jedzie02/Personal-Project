@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getActiveCourts } from "@/lib/services/court.service";
 import { getTodaysBookings } from "@/lib/services/booking.service";
 import { getCustomerDisplayName } from "@/lib/services/customer.service";
+import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
 import type { DashboardStats } from "@/lib/types/domain";
 
 async function getDbClient() {
@@ -28,19 +29,19 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     const supabase = await getDbClient();
     const today = new Date().toISOString().split("T")[0];
 
-    const [todaysBookings, activeCourts, upcomingCountResult] = await Promise.all([
+    const [todaysBookings, activeCourts, upcomingRowsResult] = await Promise.all([
         getTodaysBookings(),
         getActiveCourts(),
-        // { count: "exact", head: true } asks Postgres for JUST the row
-        // count, not the actual rows — "head" means "don't send me the
-        // body, just tell me how many there'd be." Much cheaper than
-        // fetching every upcoming booking just to check .length.
         supabase
             .from("bookings")
-            .select("id", { count: "exact", head: true })
+            .select("id, payment_method")
             .gt("booking_date", today)
             .in("status", ["pending", "confirmed"]),
     ]);
+
+    const upcomingBookingsCount = (upcomingRowsResult.data || []).filter(
+        (b) => b.payment_method !== OPEN_PLAY_HOLD_LABEL
+    ).length;
 
     const todaysRevenue = todaysBookings
         .filter((b) => (b.status === "confirmed" || b.status === "completed") && b.paymentStatus === "succeeded")
@@ -54,7 +55,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         todaysBookingsCount: todaysBookings.length,
         todaysRevenue,
         todaysUncollected,
-        upcomingBookingsCount: upcomingCountResult.count ?? 0,
+        upcomingBookingsCount,
         activeCourtsCount: activeCourts.length,
     };
 }
@@ -116,6 +117,11 @@ export async function getUpcomingReservations(limit: number = 5): Promise<Upcomi
     }
 
     if (!rawBookings || rawBookings.length === 0) {
+        return [];
+    }
+
+    rawBookings = rawBookings.filter((row) => row.payment_method !== OPEN_PLAY_HOLD_LABEL);
+    if (rawBookings.length === 0) {
         return [];
     }
 

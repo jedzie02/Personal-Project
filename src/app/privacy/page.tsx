@@ -3,15 +3,15 @@ import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Mail, Calendar, ChevronRight } from "lucide-react";
 
 export const metadata = {
-    title: "Privacy Policy – Paddlix",
-    description: "Learn how Paddlix collects, protects, and handles your booking data and payment information.",
+    title: "Privacy Policy – DinkSync",
+    description: "Learn how DinkSync collects, protects, and handles your booking data and payment information.",
 };
 
 const sections = [
     {
         id: "information-we-collect",
         title: "1. Information We Collect",
-        body: "When you book a court through Paddlix, we collect your name, contact phone number, and GCash payment reference number. We also record the specific date, operating time slot, and court assignment associated with your reservation.",
+        body: "When you book a court through DinkSync, we collect your name, contact phone number, and GCash payment reference number. We also record the specific date, operating time slot, and court assignment associated with your reservation.",
     },
     {
         id: "how-we-use-information",
@@ -26,12 +26,12 @@ const sections = [
     {
         id: "cookies-sessions",
         title: "4. Cookies & Session Storage",
-        body: "Paddlix uses strictly necessary functional cookies and local storage tokens to preserve booking cart items and session authentication. We do not deploy third-party trackers or ad targeting beacons.",
+        body: "DinkSync uses strictly necessary functional cookies and local storage tokens to preserve booking cart items and session authentication. We do not deploy third-party trackers or ad targeting beacons.",
     },
     {
         id: "your-rights",
         title: "5. Your Rights & Data Access",
-        body: "You maintain full rights to inspect, update, or request permanent deletion of your booking history and contact details from our records. To exercise these rights, submit a request via play@paddlix.com.",
+        body: "You maintain full rights to inspect, update, or request permanent deletion of your booking history and contact details from our records. To exercise these rights, submit a request via play@dinksync.com.",
     },
     {
         id: "policy-updates",
@@ -42,7 +42,7 @@ const sections = [
 
 export default function PrivacyPage() {
     return (
-        <div className="flex min-h-screen flex-col bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+        <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
             <Navbar />
 
             <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
@@ -111,11 +111,11 @@ export default function PrivacyPage() {
                         </p>
                     </div>
                     <a
-                        href="mailto:play@paddlix.com"
+                        href="mailto:play@dinksync.com"
                         className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors"
                     >
                         <Mail className="size-3.5" />
-                        play@paddlix.com
+                        play@dinksync.com
                     </a>
                 </section>
 

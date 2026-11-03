@@ -2,7 +2,13 @@ import { stripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCustomerDisplayName } from "@/lib/services/customer.service";
-import { sendPaymentReceiptEmail } from "@/lib/services/email.service";
+import { sendPaymentReceiptEmail, sendBookingRefundEmail } from "@/lib/services/email.service";
+import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
+import {
+    markOpenPlayEntryPaidByAdmin,
+    markOpenPlayEntryRefundedByAdmin,
+    parseEntryPaymentMeta,
+} from "@/lib/services/open-play.service";
 import type { CheckoutResult, Payment } from "@/lib/types/domain";
 
 async function getDbClient() {
@@ -34,7 +40,7 @@ export interface CreateCheckoutSessionInput {
     customerEmail: string | null;
 }
 
-function getSiteUrl(): string {
+export function getSiteUrl(): string {
     const customUrl = process.env.NEXT_PUBLIC_SITE_URL;
     if (customUrl) {
         let trimmed = customUrl.trim().replace(/\/+$/, "");
@@ -151,7 +157,7 @@ export async function getAllPayments(): Promise<Payment[]> {
         .order("created_at", { ascending: false });
 
     // 2. Fetch live bookings to unify all ledger charges
-    const { data: bookingRows } = await supabase
+    const { data: rawBookingRows } = await supabase
         .from("bookings")
         .select(`
             id, customer_id, court_id, booking_date, start_time, end_time, total_price, status, payment_status, payment_method, created_at,
@@ -159,13 +165,25 @@ export async function getAllPayments(): Promise<Payment[]> {
         `)
         .order("created_at", { ascending: false });
 
-    // 3. Resolve customer profiles for all bookings
+    const bookingRows = (rawBookingRows || []).filter(
+        (b: any) => b.payment_method !== OPEN_PLAY_HOLD_LABEL
+    );
+
+    // 2b. Fetch Open Play entries so Open Play registrations also appear in /admin/payments
+    const { data: openPlayEntries } = await supabase
+        .from("open_play_entries")
+        .select(`
+            id, customer_id, status, amount, stripe_checkout_session_id, created_at,
+            open_play_sessions ( session_date, courts ( name ) )
+        `)
+        .order("created_at", { ascending: false });
+
+    // 3. Resolve customer profiles for all bookings and Open Play entries
     const customerIds = Array.from(
-        new Set(
-            (bookingRows || [])
-                .map((row) => row.customer_id)
-                .filter(Boolean)
-        )
+        new Set([
+            ...bookingRows.map((row: any) => row.customer_id).filter(Boolean),
+            ...(openPlayEntries || []).map((row: any) => row.customer_id).filter(Boolean),
+        ])
     );
 
     const profileMap = new Map<string, { full_name: string | null; email: string | null }>();
@@ -190,8 +208,9 @@ export async function getAllPayments(): Promise<Payment[]> {
 
     // Add entries from public.payments
     for (const p of paymentsData || []) {
-        seenBookingIds.add(p.booking_id);
         const b = bookingMap.get(p.booking_id);
+        if (!b) continue;
+        seenBookingIds.add(p.booking_id);
         const courtObj = Array.isArray(b?.courts) ? b.courts[0] : b?.courts;
         const profile = b?.customer_id ? profileMap.get(b.customer_id) : null;
         const customerName = getCustomerDisplayName(profile?.full_name, b?.customer_id, profile?.email);
@@ -261,12 +280,55 @@ export async function getAllPayments(): Promise<Payment[]> {
         });
     }
 
+    // Add Open Play entries to the payments ledger
+    for (const entry of openPlayEntries || []) {
+        const { paymentMethod, paymentReference, isRefunded } = parseEntryPaymentMeta(
+            entry.stripe_checkout_session_id
+        );
+        // Skip unpaid cancelled holds that were never paid or refunded
+        if (entry.status === "cancelled" && !isRefunded) continue;
+
+        const sessionObj: any = Array.isArray(entry.open_play_sessions)
+            ? entry.open_play_sessions[0]
+            : entry.open_play_sessions;
+        const courtObj = Array.isArray(sessionObj?.courts)
+            ? sessionObj.courts[0]
+            : sessionObj?.courts;
+        const profile = entry.customer_id ? profileMap.get(entry.customer_id) : null;
+        const customerName = getCustomerDisplayName(
+            profile?.full_name,
+            entry.customer_id,
+            profile?.email
+        );
+
+        const status: Payment["status"] = isRefunded
+            ? "refunded"
+            : entry.status === "paid" || entry.status === "needs_refund"
+            ? "succeeded"
+            : "pending";
+
+        resultPayments.push({
+            id: entry.id,
+            bookingId: entry.id,
+            courtName: `${courtObj?.name ?? "Court"} (Open Play)`,
+            customerName,
+            customerEmail: profile?.email ?? null,
+            bookingDate: sessionObj?.session_date ?? "",
+            amount: Number(entry.amount) || 0,
+            currency: "PHP",
+            method: paymentMethod,
+            paymentReference,
+            status,
+            createdAt: entry.created_at,
+        });
+    }
+
     // Sort newest first
     return resultPayments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 /**
- * Marks a payment as refunded in both public.bookings and public.payments.
+ * Marks a payment as refunded in public.bookings, public.payments, or public.open_play_entries.
  */
 export async function refundPayment(
     paymentId: string,
@@ -275,8 +337,20 @@ export async function refundPayment(
     const supabase = await getDbClient();
     const targetBookingId = bookingId || paymentId;
 
+    // Check if this is an Open Play entry first
+    const { data: openPlayEntry } = await supabase
+        .from("open_play_entries")
+        .select("id")
+        .eq("id", targetBookingId)
+        .maybeSingle();
+
+    if (openPlayEntry) {
+        const res = await markOpenPlayEntryRefundedByAdmin(openPlayEntry.id);
+        return { success: res.ok, error: res.error };
+    }
+
     // 1. Update booking
-    await supabase
+    const { data: updatedBooking } = await supabase
         .from("bookings")
         .update({
             payment_status: "refunded",
@@ -284,7 +358,22 @@ export async function refundPayment(
             cancelled_reason: "Refunded by administrator",
             updated_at: new Date().toISOString(),
         })
-        .eq("id", targetBookingId);
+        .eq("id", targetBookingId)
+        .select("id, customer_id")
+        .maybeSingle();
+
+    // Also clear any Open Play 'needs_refund' entry tied to this hold booking or customer
+    if (updatedBooking?.customer_id) {
+        const { data: pendingRefundEntries } = await supabase
+            .from("open_play_entries")
+            .select("id")
+            .eq("customer_id", updatedBooking.customer_id)
+            .eq("status", "needs_refund");
+
+        for (const e of pendingRefundEntries || []) {
+            await markOpenPlayEntryRefundedByAdmin(e.id);
+        }
+    }
 
     // 2. Update or insert in public.payments
     const { data: existingPayment } = await supabase
@@ -298,7 +387,7 @@ export async function refundPayment(
             .from("payments")
             .update({ status: "refunded" })
             .eq("id", existingPayment.id);
-    } else {
+    } else if (updatedBooking) {
         await supabase
             .from("payments")
             .insert({
@@ -306,6 +395,10 @@ export async function refundPayment(
                 status: "refunded",
                 currency: "PHP",
             });
+    }
+
+    if (updatedBooking) {
+        await sendBookingRefundEmail(targetBookingId);
     }
 
     return { success: true };
@@ -321,6 +414,18 @@ export async function markPaymentPaidInCash(
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = await getDbClient();
     const targetBookingId = bookingId || paymentId;
+
+    // Check if this is an Open Play entry first
+    const { data: openPlayEntry } = await supabase
+        .from("open_play_entries")
+        .select("id")
+        .eq("id", targetBookingId)
+        .maybeSingle();
+
+    if (openPlayEntry) {
+        const res = await markOpenPlayEntryPaidByAdmin(openPlayEntry.id);
+        return { success: res.ok, error: res.error };
+    }
 
     // Retrieve existing booking to preserve its original payment_method (e.g. GCash with ref)
     const { data: booking } = await supabase

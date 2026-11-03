@@ -171,7 +171,7 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `paddlix-payments-${new Date().toISOString().slice(0, 10)}.csv`
+      `dinksync-payments-${new Date().toISOString().slice(0, 10)}.csv`
     );
     document.body.appendChild(link);
     link.click();

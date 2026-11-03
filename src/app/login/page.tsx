@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { DinkSyncLogoMark, DinkSyncWordmark } from "@/components/DinkSyncLogo";
 
 function LoginContent() {
   const router = useRouter();
@@ -132,13 +133,9 @@ function LoginContent() {
       </Link>
 
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 mb-8 group" aria-label="Paddlix Home">
-        <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-          <CircleDotDashed className="size-7 text-blue-600" />
-        </div>
-        <span className="font-bold text-xl tracking-tight group-hover:text-blue-600 transition-colors">
-          Paddlix
-        </span>
+      <Link href="/" className="flex items-center gap-2.5 mb-8 group" aria-label="DinkSync Home">
+        <DinkSyncLogoMark className="size-10 rounded-xl group-hover:scale-105 transition-transform" svgClassName="size-6" />
+        <DinkSyncWordmark className="font-extrabold text-xl tracking-tight text-foreground" />
       </Link>
 
       <Card className="w-full max-w-sm shadow-lg border">
@@ -215,7 +212,7 @@ function LoginContent() {
       </Card>
 
       <p className="mt-6 text-sm text-muted-foreground">
-        &copy; {new Date().getFullYear()} Paddlix
+        &copy; {new Date().getFullYear()} DinkSync
       </p>
     </div>
   );

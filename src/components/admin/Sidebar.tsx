@@ -22,6 +22,7 @@ import { logout } from "@/lib/services/auth.service";
 import { supabase } from "@/lib/supabase";
 import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { DinkSyncLogoMark, DinkSyncWordmark } from "@/components/DinkSyncLogo";
 
 interface NavItem {
   title: string;
@@ -62,6 +63,11 @@ const navSections: NavSection[] = [
         title: "Bookings",
         url: "/admin/bookings",
         icon: Ticket,
+      },
+      {
+        title: "Open Play",
+        url: "/admin/open-play",
+        icon: CircleDotDashed,
       },
       {
         title: "Customers",
@@ -113,7 +119,7 @@ export function Sidebar() {
   }, [open]);
 
   const handleLogout = async () => {
-    const confirmed = window.confirm("Are you sure you want to log out of Paddlix Admin?");
+    const confirmed = window.confirm("Are you sure you want to log out of DinkSync Admin?");
     if (!confirmed) return;
 
     try {
@@ -153,10 +159,11 @@ export function Sidebar() {
             <Menu className="size-5" />
           </button>
           <Link href="/admin" className="flex items-center gap-2">
-            <div className="flex aspect-square size-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-xs">
-              <CircleDotDashed className="size-4" />
-            </div>
-            <span className="font-bold text-base tracking-tight text-slate-900 dark:text-white">Paddlix Admin</span>
+            <DinkSyncLogoMark className="size-7 rounded-lg" svgClassName="size-4.5" />
+            <DinkSyncWordmark
+              suffix="Admin"
+              className="font-bold text-base tracking-tight text-slate-900 dark:text-white"
+            />
           </Link>
         </div>
         <ThemeToggle />
@@ -185,12 +192,11 @@ export function Sidebar() {
         {/* 1. Header & Logo */}
         <div className="flex h-16 items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800 shrink-0">
           <Link href="/admin" className="flex items-center gap-3" onClick={() => setOpen(false)}>
-            <div className="flex aspect-square size-9 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
-              <CircleDotDashed className="size-5" />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Paddlix Admin
-            </span>
+            <DinkSyncLogoMark className="size-9 rounded-xl" svgClassName="size-6" />
+            <DinkSyncWordmark
+              suffix="Admin"
+              className="text-xl font-bold tracking-tight text-slate-900 dark:text-white"
+            />
           </Link>
           <button
             type="button"
