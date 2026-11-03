@@ -4,14 +4,27 @@ import { MapPin, Mail, Phone, Zap, Users, Trophy, CalendarCheck, ChevronDown } f
 import { Navbar } from "@/components/Navbar";
 import DateSelector from "@/components/booking/DateSelector";
 import BookingGrid from "@/components/booking/BookingGrid";
+import HeroQuickSlots, { HeroLiveStatusBadge } from "@/components/booking/HeroQuickSlots";
 import { getBookingGridForDate } from "@/lib/services/booking-grid.service";
 import { createClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
+import { extractQuickSlotsSummary } from "@/lib/utils/quick-slots";
 
 export const dynamic = "force-dynamic";
 
+function addOneDayISO(isoDate: string): string {
+    const [y, m, d] = isoDate.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d + 1));
+    return dt.toISOString().slice(0, 10);
+}
+
 type PageProps = {
-    searchParams?: Promise<{ date?: string; error?: string }>;
+    searchParams?: Promise<{
+        date?: string;
+        error?: string;
+        selectCourt?: string;
+        selectHour?: string;
+    }>;
 };
 
 export default async function LandingPage({ searchParams }: PageProps) {
@@ -19,9 +32,12 @@ export default async function LandingPage({ searchParams }: PageProps) {
     const today = getManilaNow().todayISO;
     const date = params?.date || today;
     const error = params?.error;
+    const selectCourt = params?.selectCourt;
+    const selectHour = params?.selectHour;
 
     let rawCourts: any[] = [];
     let gridData: any = null;
+    let quickSummary = extractQuickSlotsSummary(null);
 
     try {
         const supabase = await createClient();
@@ -34,6 +50,16 @@ export default async function LandingPage({ searchParams }: PageProps) {
         ]);
         rawCourts = data || [];
         gridData = grid;
+        quickSummary = extractQuickSlotsSummary(grid);
+
+        if (date === today && quickSummary.totalOpenSlots === 0) {
+            const tomorrowISO = addOneDayISO(today);
+            const tomorrowGrid = await getBookingGridForDate(tomorrowISO);
+            const tomorrowSummary = extractQuickSlotsSummary(tomorrowGrid);
+            if (tomorrowSummary.totalOpenSlots > 0) {
+                quickSummary = tomorrowSummary;
+            }
+        }
     } catch (err) {
         console.error("Failed to load courts or schedule for landing page:", err);
     }
@@ -55,8 +81,12 @@ export default async function LandingPage({ searchParams }: PageProps) {
 
             <main className="flex-1 flex flex-col">
                 {/* 1. Home / Hero Section */}
-                <section className="relative flex flex-col items-center justify-center text-center px-4 pt-24 pb-16 sm:px-6 lg:px-8 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(37,99,235,0.08),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(37,99,235,0.2),rgba(2,6,23,0))]">
-                    <div className="max-w-3xl mx-auto space-y-6">
+                <section className="relative flex flex-col items-center justify-center text-center px-4 pt-20 pb-16 sm:px-6 lg:px-8 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(37,99,235,0.08),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(37,99,235,0.2),rgba(2,6,23,0))]">
+                    <div className="max-w-3xl mx-auto space-y-6 w-full">
+                        <div>
+                            <HeroLiveStatusBadge summary={quickSummary} todayISO={today} />
+                        </div>
+
                         <h1
                             className="animate-hero-rise text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-slate-900 dark:text-white leading-[1.12]"
                             style={{ animationDelay: "0ms" }}
@@ -95,15 +125,17 @@ export default async function LandingPage({ searchParams }: PageProps) {
                             </a>
                         </div>
 
-                        <div className="pt-4 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        <HeroQuickSlots summary={quickSummary} activeDate={date} todayISO={today} />
+
+                        <div className="pt-2 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 dark:text-slate-400 font-medium">
                             <span className="flex items-center gap-1.5">
                                 <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 4 Master Courts
                             </span>
                             <span>•</span>
-                            <span>Instant GCash Confirmation</span>
+                            <span>Instant GCash &amp; Card Checkout</span>
                             <span>•</span>
-                            <span>Live Slot Availability</span>
+                            <span>Official Email Receipt</span>
                         </div>
                     </div>
                 </section>
@@ -203,7 +235,11 @@ export default async function LandingPage({ searchParams }: PageProps) {
                             )}
 
                             {gridData ? (
-                                <BookingGrid data={gridData} />
+                                <BookingGrid
+                                    data={gridData}
+                                    initialSelectCourt={selectCourt}
+                                    initialSelectHour={selectHour}
+                                />
                             ) : (
                                 <div className="rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center shadow-sm">
                                     <p className="text-lg text-gray-600 dark:text-slate-300 font-medium">The venue is closed on this date.</p>

@@ -54,7 +54,15 @@ const DEFAULT_MASTER_COURTS = [
     { id: "court-4", name: "Court 4", status: "Available", hourly_rate: 300 },
 ];
 
-export default function BookingGrid({ data }: { data: BookingGridData }) {
+export default function BookingGrid({
+    data,
+    initialSelectCourt,
+    initialSelectHour,
+}: {
+    data: BookingGridData;
+    initialSelectCourt?: string;
+    initialSelectHour?: string;
+}) {
     const router = useRouter();
     const { courts, hours, grid, date } = data;
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -190,6 +198,61 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
             })
         );
     };
+
+    // Idempotently select a slot (used by HeroQuickSlots event & initial URL params)
+    useEffect(() => {
+        const ensureSlotSelected = (courtId: string, hour: string, fallbackName?: string) => {
+            const selectedCourt = masterCourts.find((c) => c.id === courtId);
+            if (!selectedCourt || (selectedCourt.status && selectedCourt.status !== "Available")) {
+                return;
+            }
+            const hourIdx = hours.indexOf(hour);
+            if (hourIdx === -1) return;
+            const cell = grid[hourIdx]?.find((c) => c.courtId === courtId);
+            if (cell && cell.status !== "available") return;
+
+            const hourlyRate =
+                selectedCourt.hourly_rate != null ? Number(selectedCourt.hourly_rate) : PRICE_PER_HOUR;
+            const endHour = addHours(hour, 1);
+
+            setMobileCourtFilter((prevFilter) =>
+                prevFilter !== "all" && prevFilter !== courtId ? "all" : prevFilter
+            );
+            setSelectedSlots((prev) => {
+                if (prev.some((s) => s.courtId === courtId && s.hour === hour)) {
+                    return prev;
+                }
+                return toggleCartSlot(prev, {
+                    courtId,
+                    courtName: selectedCourt.name || fallbackName || courtId,
+                    hour,
+                    endHour,
+                    hourlyRate,
+                });
+            });
+        };
+
+        if (initialSelectCourt && initialSelectHour) {
+            ensureSlotSelected(initialSelectCourt, initialSelectHour);
+        }
+
+        const handleQuickSelect = (event: Event) => {
+            const customEvent = event as CustomEvent<{
+                courtId?: string;
+                courtName?: string;
+                hour?: string;
+            }>;
+            const detail = customEvent.detail;
+            if (detail?.courtId && detail?.hour) {
+                ensureSlotSelected(detail.courtId, detail.hour, detail.courtName);
+            }
+        };
+
+        window.addEventListener("paddlix:select-slot", handleQuickSelect);
+        return () => {
+            window.removeEventListener("paddlix:select-slot", handleQuickSelect);
+        };
+    }, [masterCourts, hours, grid, initialSelectCourt, initialSelectHour]);
 
     const handleProceedCart = () => {
         if (selectedSlots.length === 0) return;
@@ -447,14 +510,19 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
 
                         {/* Summary Row */}
                         <div className="px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">
-                            {/* Slot count + total */}
+                            {/* Slot count + total + 4-player split */}
                             <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2 min-w-0">
                                 <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                                     {selectedSlots.length} {selectedSlots.length === 1 ? "Slot" : "Slots"}
                                 </span>
-                                <span className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-                                    ₱{cartTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                                </span>
+                                <div className="flex items-baseline gap-2 flex-wrap">
+                                    <span className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+                                        ₱{cartTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                    </span>
+                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400 tabular-nums">
+                                        (₱{Math.ceil(cartTotal / 4).toLocaleString("en-PH")}/player for 4)
+                                    </span>
+                                </div>
                             </div>
 
                             {/* Actions */}
