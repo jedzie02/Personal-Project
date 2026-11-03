@@ -16,6 +16,8 @@ function LoginContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const justRegistered = searchParams.get("registered") === "true"
+    const justConfirmed = searchParams.get("confirmed") === "true"
+    const queryError = searchParams.get("error")
 
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
@@ -190,14 +192,19 @@ function LoginContent() {
                                 </button>
                             </div>
                         </div>
-                        {justRegistered && (
-                            <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
+                        {justConfirmed && (
+                            <p className="text-sm font-medium text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 rounded-lg px-3.5 py-2.5">
+                                ✓ Email confirmed successfully! Please sign in with your credentials.
+                            </p>
+                        )}
+                        {justRegistered && !justConfirmed && (
+                            <p className="text-sm text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 rounded-lg px-3.5 py-2.5">
                                 Account created! Please check your email to confirm, then sign in.
                             </p>
                         )}
-                        {error && (
-                            <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-                                {error}
+                        {(error || queryError) && (
+                            <p className="text-sm text-rose-400 bg-rose-950/60 border border-rose-800/80 rounded-lg px-3.5 py-2.5">
+                                {error || queryError}
                             </p>
                         )}
                         <Button type="submit" className="w-full mt-1" disabled={loading}>

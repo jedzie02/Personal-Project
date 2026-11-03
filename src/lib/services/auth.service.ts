@@ -80,6 +80,10 @@ export async function signUp(
 ): Promise<LoginResult> {
     const supabase = createClient()
     try {
+        const redirectUrl = typeof window !== "undefined"
+            ? `${window.location.origin}/auth/callback`
+            : undefined
+
         const { error } = await supabase.auth.signUp({
             email,
             password,
@@ -87,6 +91,7 @@ export async function signUp(
                 data: {
                     full_name: fullName,
                 },
+                emailRedirectTo: redirectUrl,
             },
         })
         if (error) {

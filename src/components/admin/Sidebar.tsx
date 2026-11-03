@@ -14,7 +14,6 @@ import {
   LogOut,
   Menu,
   X,
-  Plus,
   ExternalLink,
 } from "lucide-react";
 import { cn } from "cn";
@@ -206,18 +205,6 @@ export function Sidebar() {
           >
             <X className="size-4" />
           </button>
-        </div>
-
-        {/* Quick Action: New Walk-in Booking */}
-        <div className="p-3 pb-1 shrink-0">
-          <Link
-            href="/admin/bookings/new"
-            onClick={() => setOpen(false)}
-            className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-xs tracking-wide shadow-xs hover:shadow-sm transition-all cursor-pointer"
-          >
-            <Plus className="size-4" />
-            <span>+ Walk-in Booking</span>
-          </Link>
         </div>
 
         {/* 2 & 3. Navigation Groups and Active States */}
