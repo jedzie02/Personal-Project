@@ -1,12 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getCurrentProfile } from "@/lib/services/auth.server";
 import { updateBookingPaymentReference } from "@/lib/services/booking.service";
 
 export async function submitPaymentReferenceAction(
     bookingId: string,
     formData: FormData
 ): Promise<{ success: boolean; error?: string }> {
+    const profile = await getCurrentProfile();
+    if (!profile) {
+        return { success: false, error: "Please log in to submit a payment reference." };
+    }
+
     const referenceNo = (formData.get("referenceNo") as string)?.trim();
 
     if (!referenceNo) {

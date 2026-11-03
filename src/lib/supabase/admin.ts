@@ -34,7 +34,9 @@ function normalizeKey(rawKey?: string): string {
 
 export function createAdminClient() {
     const url = normalizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
-    const key = normalizeKey(process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const key =
+        normalizeKey(process.env.SUPABASE_SERVICE_ROLE_KEY) ||
+        normalizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
     if (!url || !key) {
         throw new Error(

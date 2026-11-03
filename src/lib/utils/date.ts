@@ -33,7 +33,7 @@ export function formatTime(time: string | null): string {
  *  Special case: "00:00" / "00:00:00" is treated as 1440 (end-of-day midnight) so that
  *  loops like `start + duration <= closeMinutes` work correctly when close = midnight.
  */
-function timeToMinutes(time: string): number {
+export function timeToMinutes(time: string): number {
     const [h, m] = time.split(":").map(Number);
     const total = h * 60 + m;
     // 0 minutes = "00:00" = midnight close — treat as 1440 (24 × 60)
@@ -64,7 +64,10 @@ export function doTimeRangesOverlap(
     bStart: string,
     bEnd: string
 ): boolean {
-    return aStart < bEnd && aEnd > bStart;
+    return (
+        timeToMinutes(aStart) < timeToMinutes(bEnd) &&
+        timeToMinutes(aEnd) > timeToMinutes(bStart)
+    );
 }
 
 /**

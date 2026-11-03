@@ -36,24 +36,24 @@ import {
 import Link from "next/link";
 
 const STATUS_STYLES: Record<string, string> = {
-    confirmed: "bg-green-100 text-green-800 hover:bg-green-100",
-    pending:   "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
-    cancelled: "bg-gray-100 text-gray-600 hover:bg-gray-100",
+    confirmed: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/80",
+    pending:   "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/80",
+    cancelled: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800",
 };
 
 const PAYMENT_BADGES: Record<string, { label: string; cls: string }> = {
-    succeeded_card:  { label: "Paid (Card)", cls: "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100" },
-    succeeded_cash:  { label: "Paid (Cash)", cls: "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100" },
-    succeeded_gcash: { label: "Paid (GCash)", cls: "bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-100" },
-    pending_cash:    { label: "Pay at Desk", cls: "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100" },
-    pending_card:    { label: "Awaiting Card", cls: "bg-sky-100 text-sky-800 border-sky-200 hover:bg-sky-100" },
-    pending_gcash:   { label: "GCash Pending", cls: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-100" },
+    succeeded_card:  { label: "Paid (Card)", cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800" },
+    succeeded_cash:  { label: "Paid (Cash)", cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800" },
+    succeeded_gcash: { label: "Paid (GCash)", cls: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800" },
+    pending_cash:    { label: "Pay at Desk", cls: "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800" },
+    pending_card:    { label: "Awaiting Card", cls: "bg-sky-50 text-sky-800 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800" },
+    pending_gcash:   { label: "GCash Pending", cls: "bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800" },
 };
 
 const ALERT_STYLES: Record<string, { cls: string; Icon: React.ElementType }> = {
-    warning: { cls: "border-yellow-200 bg-yellow-50 text-yellow-800", Icon: AlertTriangle },
-    info:    { cls: "border-blue-200 bg-blue-50 text-blue-800",       Icon: Info           },
-    success: { cls: "border-green-200 bg-green-50 text-green-800",    Icon: CheckCircle2   },
+    warning: { cls: "border-yellow-200 dark:border-yellow-900/60 bg-yellow-50 dark:bg-yellow-950/40 text-yellow-800 dark:text-yellow-300", Icon: AlertTriangle },
+    info:    { cls: "border-blue-200 dark:border-blue-900/60 bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300",       Icon: Info           },
+    success: { cls: "border-green-200 dark:border-green-900/60 bg-green-50 dark:bg-green-950/40 text-green-800 dark:text-green-300",    Icon: CheckCircle2   },
 };
 
 const SAFE_DEFAULTS = {
@@ -183,7 +183,9 @@ export default async function AdminDashboardPage() {
                                             <TableRow key={r.id}>
                                                 <TableCell>
                                                     <p className="font-medium leading-none">{r.customer}</p>
-                                                    <p className="text-xs text-muted-foreground mt-0.5">{r.email}</p>
+                                                    {r.email && r.email !== "—" && (
+                                                        <p className="text-xs text-muted-foreground mt-0.5">{r.email}</p>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>{r.court}</TableCell>
                                                 <TableCell className="text-muted-foreground">{r.date}</TableCell>
@@ -204,7 +206,7 @@ export default async function AdminDashboardPage() {
                                                         {badge.label}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell className="text-right font-medium">
+                                                <TableCell className="text-right font-semibold tabular-nums text-slate-900 dark:text-white">
                                                     ₱{r.amount.toFixed(2)}
                                                 </TableCell>
                                             </TableRow>

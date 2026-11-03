@@ -2,14 +2,14 @@ import { redirect } from "next/navigation";
 import { getCourtById } from "@/lib/services/court.service";
 import { getCurrentProfile } from "@/lib/services/auth.server";
 import { confirmBookingAction } from "@/app/book/actions";
-import { formatTime } from "@/lib/utils/date";
+import { formatTime, timeToMinutes } from "@/lib/utils/date";
 import { PRICE_PER_HOUR } from "@/lib/config/booking-rules";
 import { Button } from "@/components/ui/button";
 
 function hoursBetween(start: string, end: string): number {
-    const [sh, sm] = start.split(":").map(Number);
-    const [eh, em] = end.split(":").map(Number);
-    return (eh * 60 + em - (sh * 60 + sm)) / 60;
+
+
+    return (timeToMinutes(end) - timeToMinutes(start)) / 60;
 }
 
 export default async function BookReviewPage({

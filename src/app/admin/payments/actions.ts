@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { refundPayment, markPaymentPaidInCash } from "@/lib/services/payment.service";
+import { requireAdmin } from "@/lib/services/auth.server";
 
 export async function refundPaymentAction(paymentId: string, bookingId?: string) {
+    await requireAdmin();
     const res = await refundPayment(paymentId, bookingId);
     revalidatePath("/admin/payments");
     revalidatePath("/admin/dashboard");
@@ -12,6 +14,7 @@ export async function refundPaymentAction(paymentId: string, bookingId?: string)
 }
 
 export async function markPaymentPaidInCashAction(paymentId: string, bookingId?: string) {
+    await requireAdmin();
     const res = await markPaymentPaidInCash(paymentId, bookingId);
     revalidatePath("/admin/payments");
     revalidatePath("/admin/dashboard");

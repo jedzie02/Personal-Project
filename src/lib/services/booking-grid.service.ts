@@ -47,7 +47,7 @@ export interface BookingGridData {
 
 
 /**
- * Peak hours: 6 PM – 12 AM (18:00 – 00:00) are peak on weekdays.
+ * Peak hours: 6 PM – 11 PM (18:00 – 23:00) are peak on weekdays.
  * Weekends: all day is peak.
  * This is a simplified heuristic matching the reference image's color bar.
  */
@@ -86,7 +86,7 @@ function generateHourSlots(open: string = "09:00", close: string = "00:00"): str
 
 /**
  * Builds the full grid data for the booking calendar view.
- * Standardizes Monday through Sunday with the exact same 9 AM to 12 AM schedule.
+ * Standardizes Monday through Sunday with the exact same 9 AM to 11 PM schedule.
  */
 export async function getBookingGridForDate(
     date: string
@@ -112,7 +112,7 @@ export async function getBookingGridForDate(
                 id: c.id,
                 name: c.name,
                 status,
-                hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 25,
+                hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
             };
         });
     } else {
@@ -142,9 +142,9 @@ export async function getBookingGridForDate(
         profiles: { full_name: string | null } | null;
     }>;
 
-    // Enforce 9 AM to 12 AM schedule (Monday - Sunday)
+    // Enforce 9 AM to 12 AM midnight schedule (Monday - Sunday)
     const openTime = "09:00";
-    const closeTime = "00:00";
+    const closeTime = "23:00";
     const hours = generateHourSlots(openTime, closeTime);
 
     // Figure out which hours are "passed" (in the past) in Philippine Time (UTC+8)
@@ -278,6 +278,6 @@ export async function getBookingGridForDate(
         hours,
         grid,
         operatingOpen: "09:00",
-        operatingClose: "00:00",
+        operatingClose: "23:00",
     };
 }

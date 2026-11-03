@@ -9,7 +9,7 @@
 export const SLOT_DURATION_MINUTES = 60;
 
 /** Flat rate applied to every court, every hour. SRS open question (MVP pricing). */
-export const PRICE_PER_HOUR = 25;
+export const PRICE_PER_HOUR = 300;
 
 /** How many hours before start time a customer can still self-cancel. BR-7 / SRS open question #2. */
 export const CANCELLATION_CUTOFF_HOURS = 2;

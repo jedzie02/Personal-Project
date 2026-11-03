@@ -78,3 +78,16 @@ export async function getCurrentProfile() {
         email: user.email ?? profile.email,
     }
 }
+
+/**
+ * Asserts that the authenticated caller has the "admin" role.
+ * Throws an error if not authenticated or not an admin.
+ */
+export async function requireAdmin() {
+    const profile = await getCurrentProfile();
+    if (!profile || profile.role !== "admin") {
+        throw new Error("Unauthorized: Admin privileges required.");
+    }
+    return profile;
+}
+

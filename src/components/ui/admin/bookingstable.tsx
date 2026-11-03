@@ -11,13 +11,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Banknote, QrCode, CheckCircle2 } from "lucide-react";
+import { Banknote, QrCode, CheckCircle2, CalendarX } from "lucide-react";
+
+function formatDisplayDate(dateStr: string) {
+  try {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    if (!y || !m || !d) return dateStr;
+    const dateObj = new Date(Date.UTC(y, m - 1, d));
+    return dateObj.toLocaleDateString("en-US", {
+      timeZone: "UTC",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
 
 const STATUS_STYLES: Record<Booking["status"], string> = {
-  pending: "bg-yellow-100 text-yellow-800 hover:bg-yellow-100",
-  confirmed: "bg-green-100 text-green-800 hover:bg-green-100",
-  cancelled: "bg-gray-100 text-gray-800 hover:bg-gray-100",
-  completed: "bg-blue-100 text-blue-800 hover:bg-blue-100",
+  pending: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-950/80",
+  confirmed: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/80",
+  cancelled: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800",
+  completed: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/80",
 };
 
 export function BookingsTable({
@@ -28,7 +44,17 @@ export function BookingsTable({
   showActions?: boolean;
 }) {
   if (bookings.length === 0) {
-    return <p className="text-muted-foreground p-4 text-sm">No bookings match these filters.</p>;
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center">
+        <div className="size-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 dark:text-slate-500 mb-3">
+          <CalendarX className="size-6" />
+        </div>
+        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No reservations found</p>
+        <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+          No bookings match the selected filters or date range.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -62,18 +88,20 @@ export function BookingsTable({
 
           return (
             <TableRow key={b.id} className="align-top">
-              <TableCell className="font-medium">{b.bookingDate}</TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="font-medium whitespace-nowrap">
+                {formatDisplayDate(b.bookingDate)}
+              </TableCell>
+              <TableCell className="text-muted-foreground whitespace-nowrap">
                 {formatTime(b.startTime)} – {formatTime(b.endTime)}
               </TableCell>
-              <TableCell>{b.courtName}</TableCell>
+              <TableCell className="font-medium">{b.courtName}</TableCell>
               <TableCell>
                 <div className="font-medium">{customerDisplayName}</div>
                 <div className="text-xs text-muted-foreground">{b.customerEmail}</div>
               </TableCell>
               <TableCell>
                 <Badge variant="secondary" className={STATUS_STYLES[b.status]}>
-                  {b.status}
+                  {b.status.charAt(0).toUpperCase() + b.status.slice(1)}
                 </Badge>
                 {b.status === "cancelled" && b.cancelledReason && (
                   <div className="mt-1 text-xs text-muted-foreground">
@@ -84,32 +112,32 @@ export function BookingsTable({
               <TableCell>
                 {b.paymentStatus === "succeeded" ? (
                   <div className="space-y-1">
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800">
                       {b.paymentMethod === "card" ? "Paid (Card)" : isGCash ? "Paid (GCash)" : "Paid (Cash)"}
                     </Badge>
                     {b.paymentReference && (
-                      <div className="text-[11px] font-mono text-slate-500">
+                      <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
                         Ref: #{b.paymentReference}
                       </div>
                     )}
                   </div>
                 ) : b.paymentStatus === "pending" ? (
                   <div className="space-y-1">
-                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">
+                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800">
                       {isGCash ? "GCash Pending" : "Pay at Desk"}
                     </Badge>
                     {b.paymentReference ? (
-                      <div className="text-[10px] font-mono font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200/60 inline-flex items-center gap-1">
+                      <div className="text-xs font-mono font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/50 px-1.5 py-0.5 rounded border border-blue-200/60 dark:border-blue-900/60 inline-flex items-center gap-1">
                         <QrCode className="size-2.5" /> Ref: {b.paymentReference}
                       </div>
                     ) : (
-                      <div className="text-[10px] text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {b.paymentMethod}
                       </div>
                     )}
                   </div>
                 ) : (
-                  <Badge variant="outline" className="bg-slate-100 text-slate-700">
+                  <Badge variant="outline" className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
                     {b.paymentStatus || "Unpaid"}
                   </Badge>
                 )}
@@ -148,9 +176,9 @@ export function BookingsTable({
                           name="reason"
                           placeholder="Reason"
                           required
-                          className="w-24 rounded-md border px-2 py-1 text-xs"
+                          className="w-28 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-xs text-slate-900 dark:text-slate-100 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-rose-500"
                         />
-                        <Button variant="outline" size="sm" type="submit" className="h-7 text-xs">
+                        <Button variant="outline" size="sm" type="submit" className="h-7 text-xs hover:border-rose-300 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer">
                           Cancel
                         </Button>
                       </form>

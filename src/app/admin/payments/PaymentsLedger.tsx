@@ -519,7 +519,7 @@ export function PaymentsLedger({ initialPayments }: PaymentsLedgerProps) {
                                   await markPaymentPaidInCashAction(payment.id, payment.bookingId);
                                   setPayments((prev) =>
                                     prev.map((p) =>
-                                      p.id === payment.id ? { ...p, status: "succeeded", method: "Cash" } : p
+                                      p.id === payment.id ? { ...p, status: "succeeded" } : p
                                     )
                                   );
                                   setIsProcessing(false);

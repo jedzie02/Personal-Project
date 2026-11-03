@@ -7,8 +7,10 @@ import {
   createBooking,
   findCustomerIdByEmail,
 } from "@/lib/services/booking.service";
+import { requireAdmin } from "@/lib/services/auth.server";
 
 export async function createBookingAction(formData: FormData) {
+  await requireAdmin();
   const customerEmail = formData.get("customerEmail") as string;
   const courtId = formData.get("courtId") as string;
   const bookingDate = formData.get("bookingDate") as string;
@@ -46,6 +48,7 @@ export async function createBookingAction(formData: FormData) {
 }
 
 export async function cancelBookingAction(bookingId: string, formData: FormData) {
+  await requireAdmin();
   const reason = formData.get("reason") as string;
 
   await cancelBooking(bookingId, reason);
@@ -54,49 +57,14 @@ export async function cancelBookingAction(bookingId: string, formData: FormData)
 }
 
 export async function markBookingPaidAction(bookingId: string) {
+  await requireAdmin();
   return markBookingPaidInCashAction(bookingId);
 }
 
 export async function markBookingPaidInCashAction(bookingId: string) {
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-
-  const { data: booking } = await supabase
-    .from("bookings")
-    .select("id, total_price")
-    .eq("id", bookingId)
-    .single();
-
-  await supabase
-    .from("bookings")
-    .update({
-      payment_status: "succeeded",
-      status: "confirmed",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", bookingId);
-
-  if (booking) {
-    const { data: existingPayment } = await supabase
-      .from("payments")
-      .select("id")
-      .eq("booking_id", bookingId)
-      .maybeSingle();
-
-    if (existingPayment) {
-      await supabase
-        .from("payments")
-        .update({ status: "succeeded", updated_at: new Date().toISOString() })
-        .eq("id", existingPayment.id);
-    } else {
-      await supabase.from("payments").insert({
-        booking_id: bookingId,
-        amount: booking.total_price,
-        currency: "PHP",
-        status: "succeeded",
-      });
-    }
-  }
+  await requireAdmin();
+  const { markPaymentPaidInCash } = await import("@/lib/services/payment.service");
+  await markPaymentPaidInCash(bookingId, bookingId);
 
   revalidatePath("/admin/dashboard");
   revalidatePath("/admin/bookings");

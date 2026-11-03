@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 export default function RegisterPage() {
     const router = useRouter()
@@ -53,7 +54,7 @@ export default function RegisterPage() {
 
     return (
         <div className="relative min-h-screen flex flex-col items-center justify-center px-4 bg-background">
-            {/* Home link */}
+            {/* Home link & Theme Toggle */}
             <Link
                 href="/"
                 className="absolute top-5 left-6 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
@@ -61,12 +62,16 @@ export default function RegisterPage() {
             >
                 ← Home
             </Link>
+            <div className="absolute top-5 right-6">
+                <ThemeToggle />
+            </div>
+
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 mb-8 group" aria-label="Paddlix Home">
-                <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-                    <CircleDotDashed className="size-5" />
+                <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/60 shadow-2xs">
+                    <CircleDotDashed className="size-6 text-blue-600 dark:text-blue-400" />
                 </div>
-                <span className="font-bold text-xl tracking-tight group-hover:text-blue-600 transition-colors">Paddlix</span>
+                <span className="font-bold text-xl tracking-tight text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Paddlix</span>
             </Link>
             <Card className="w-full max-w-sm shadow-lg border">
                 <CardHeader className="text-center pb-4">

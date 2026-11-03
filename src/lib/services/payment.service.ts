@@ -2,6 +2,7 @@ import { stripe } from "@/lib/stripe/client";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCustomerDisplayName } from "@/lib/services/customer.service";
+import { sendPaymentReceiptEmail } from "@/lib/services/email.service";
 import type { CheckoutResult, Payment } from "@/lib/types/domain";
 
 async function getDbClient() {
@@ -64,15 +65,14 @@ export async function createCheckoutSession(
             line_items: [
                 {
                     price_data: {
-                        currency: "usd",
+                        currency: "php",
                         product_data: {
                             // What the customer sees on Stripe's payment page —
                             // make it specific enough that they recognize the charge.
                             name: `${input.courtName} — ${input.bookingDate} ${input.startTime}-${input.endTime}`,
                         },
                         // Stripe always works in the smallest unit of the
-                        // currency (cents for USD), never dollars-and-cents as a
-                        // decimal — so $37.50 has to become 3750 here.
+                        // currency (centavos for PHP), so ₱300 becomes 30000.
                         unit_amount: Math.round(input.totalPrice * 100),
                     },
                     quantity: 1,
@@ -102,7 +102,7 @@ export async function createCheckoutSession(
             booking_id: input.bookingId,
             stripe_checkout_session_id: session.id,
             amount: input.totalPrice,
-            currency: "usd",
+            currency: "php",
             status: "pending",
         });
 
@@ -312,7 +312,8 @@ export async function refundPayment(
 }
 
 /**
- * Marks a pending payment as paid in cash.
+ * Marks a pending payment as paid. Preserves any existing payment method
+ * (such as GCash QR with reference) instead of overwriting it to Cash.
  */
 export async function markPaymentPaidInCash(
     paymentId: string,
@@ -321,28 +322,41 @@ export async function markPaymentPaidInCash(
     const supabase = await getDbClient();
     const targetBookingId = bookingId || paymentId;
 
+    // Retrieve existing booking to preserve its original payment_method (e.g. GCash with ref)
+    const { data: booking } = await supabase
+        .from("bookings")
+        .select("id, payment_method, total_price")
+        .eq("id", targetBookingId)
+        .maybeSingle();
+
+    const bookingMethod = booking?.payment_method || "Cash (Paid at Counter)";
+
     await supabase
         .from("bookings")
         .update({
             payment_status: "succeeded",
             status: "confirmed",
-            payment_method: "Cash (Paid at Counter)",
+            payment_method: bookingMethod,
             updated_at: new Date().toISOString(),
         })
         .eq("id", targetBookingId);
 
     const { data: existingPayment } = await supabase
         .from("payments")
-        .select("id")
+        .select("id, method")
         .or(`id.eq.${paymentId},booking_id.eq.${targetBookingId}`)
         .maybeSingle();
+
+    const paymentMethodToRecord =
+        existingPayment?.method ||
+        (bookingMethod.toLowerCase().includes("gcash") ? "GCash" : bookingMethod);
 
     if (existingPayment) {
         await supabase
             .from("payments")
             .update({
                 status: "succeeded",
-                method: "Cash",
+                method: paymentMethodToRecord,
             })
             .eq("id", existingPayment.id);
     } else {
@@ -351,32 +365,25 @@ export async function markPaymentPaidInCash(
             .insert({
                 booking_id: targetBookingId,
                 status: "succeeded",
-                method: "Cash",
+                amount: booking?.total_price || 0,
+                method: paymentMethodToRecord,
                 currency: "PHP",
             });
     }
+
+    await sendPaymentReceiptEmail(targetBookingId);
 
     return { success: true };
 }
 
 /**
- * Called ONLY from the webhook (route.ts), never from anything the
- * browser can trigger. This is the one place in the whole app that's
- * allowed to move a booking from 'pending' to 'confirmed'.
- *
- * Note: this deliberately writes its own small Supabase queries
- * using the ADMIN client, rather than reusing cancelBooking() or
- * other functions from booking.service.ts. Those functions all use
- * lib/supabase/server.ts, which expects a logged-in user's cookies —
- * something a webhook call from Stripe's servers simply doesn't
- * have. Mixing the two clients would be a subtle, easy-to-miss bug,
- * so this stays self-contained instead.
+ * Called ONLY from the webhook (route.ts) or confirmation return sync.
  */
 export async function markPaymentSucceeded(
     checkoutSessionId: string,
     paymentIntentId: string | null
 ): Promise<void> {
-    const supabase = createAdminClient();
+    const supabase = await getDbClient();
 
     const { data: payment } = await supabase
         .from("payments")
@@ -411,10 +418,40 @@ export async function markPaymentSucceeded(
             updated_at: new Date().toISOString(),
         })
         .eq("id", payment.booking_id)
-        // Only flip it if it's still pending — guards against a very odd
-        // edge case where a booking was already cancelled some other way
-        // (e.g. an admin cancelled it) before this event arrived.
-        .eq("status", "pending");
+        .neq("status", "cancelled");
+
+    await sendPaymentReceiptEmail(payment.booking_id);
+}
+
+/**
+ * Verifies a pending Stripe Checkout session when the customer returns to
+ * /book/confirmation so Card payments mark as paid and trigger receipts even
+ * when the Stripe CLI webhook listener is not running locally.
+ */
+export async function syncStripePaymentIfNeeded(bookingId: string): Promise<void> {
+    try {
+        const supabase = await getDbClient();
+        const { data: payment } = await supabase
+            .from("payments")
+            .select("stripe_checkout_session_id, status")
+            .eq("booking_id", bookingId)
+            .maybeSingle();
+
+        if (!payment || payment.status === "succeeded" || !payment.stripe_checkout_session_id) {
+            return;
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(payment.stripe_checkout_session_id);
+        if (session.payment_status === "paid") {
+            const paymentIntentId =
+                typeof session.payment_intent === "string"
+                    ? session.payment_intent
+                    : (session.payment_intent?.id ?? null);
+            await markPaymentSucceeded(session.id, paymentIntentId);
+        }
+    } catch {
+        // Non-fatal fallback
+    }
 }
 
 /**

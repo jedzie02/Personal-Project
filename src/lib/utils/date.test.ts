@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateTimeSlots, doTimeRangesOverlap } from "./date";
+import { generateTimeSlots, doTimeRangesOverlap, timeToMinutes } from "./date";
 
 /**
  * A quick primer, since this is the first test file in the project:
@@ -74,5 +74,21 @@ describe("doTimeRangesOverlap", () => {
         // At 12:00 PM slot (must NOT match)
         const isCoveredAt12 = bStart <= "12:00" && (bEnd > "12:00" || bEnd === "00:00");
         expect(isCoveredAt12).toBe(false);
+    });
+
+    it("correctly handles midnight (00:00) as end time for late-night slots", () => {
+        // 11:00 PM (23:00) to 12:00 AM midnight (00:00)
+        expect(timeToMinutes("23:00")).toBe(1380);
+        expect(timeToMinutes("00:00")).toBe(1440);
+        expect(timeToMinutes("23:00") < timeToMinutes("00:00")).toBe(true);
+
+        // Identical 23:00-00:00 slots must conflict
+        expect(doTimeRangesOverlap("23:00", "00:00", "23:00", "00:00")).toBe(true);
+
+        // 22:00-23:00 and 23:00-00:00 back-to-back must NOT conflict
+        expect(doTimeRangesOverlap("22:00", "23:00", "23:00", "00:00")).toBe(false);
+
+        // Partial overlap with midnight slot
+        expect(doTimeRangesOverlap("22:30", "23:30", "23:00", "00:00")).toBe(true);
     });
 });

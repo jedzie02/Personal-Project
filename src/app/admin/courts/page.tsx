@@ -32,11 +32,11 @@ const STATUS_OPTIONS: { value: CourtStatus; label: string }[] = [
 function statusBadge(status: CourtStatus) {
   switch (status) {
     case "Available":
-      return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Available</Badge>;
+      return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">Available</Badge>;
     case "Maintenance":
-      return <Badge className="bg-amber-100 text-amber-800 border-amber-200">Maintenance</Badge>;
+      return <Badge className="bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">Maintenance</Badge>;
     case "Not Available":
-      return <Badge variant="secondary">Unavailable</Badge>;
+      return <Badge variant="secondary" className="dark:bg-slate-800 dark:text-slate-300">Unavailable</Badge>;
   }
 }
 
@@ -179,13 +179,13 @@ export default function AdminCourtsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+          <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300">
             {countByStatus("Available")} Available
           </Badge>
-          <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+          <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:border-amber-800 dark:text-amber-300">
             {countByStatus("Maintenance")} Maintenance
           </Badge>
-          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+          <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-300">
             {countByStatus("Not Available")} Unavailable
           </Badge>
         </div>
@@ -253,10 +253,12 @@ export default function AdminCourtsPage() {
                 id="court-status"
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value as CourtStatus)}
-                className="w-full border rounded-md px-3 py-2 text-sm bg-white font-medium shadow-xs focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-slate-200 dark:border-slate-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium shadow-xs focus:ring-2 focus:ring-blue-500"
               >
                 {STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -284,8 +286,8 @@ export default function AdminCourtsPage() {
           <p className="mt-2 text-xs text-muted-foreground">Loading venue courts...</p>
         </div>
       ) : courts.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-200 p-12 text-center bg-slate-50/50">
-          <h3 className="font-semibold text-slate-900">No courts created yet</h3>
+        <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-12 text-center bg-slate-50/50 dark:bg-slate-900/50">
+          <h3 className="font-semibold text-slate-900 dark:text-white">No courts created yet</h3>
           <p className="mt-1 text-sm text-muted-foreground max-w-sm mx-auto">
             Add your first court above to set availability and start accepting reservations.
           </p>
@@ -297,7 +299,7 @@ export default function AdminCourtsPage() {
               <CardContent className="pt-6 space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold text-lg">{court.name}</h3>
+                    <h3 className="font-semibold text-lg text-slate-900 dark:text-white">{court.name}</h3>
                     <p className="text-sm text-muted-foreground">
                       {court.description || "No location notes provided"}
                     </p>
@@ -315,19 +317,21 @@ export default function AdminCourtsPage() {
                     value={court.status}
                     onChange={(e) => updateCourtStatus(court.id, e.target.value as CourtStatus)}
                     aria-label={`Change status for ${court.name}`}
-                    className="w-full border rounded-md px-3 py-1.5 text-sm bg-white font-medium shadow-xs focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-slate-200 dark:border-slate-700 rounded-md px-3 py-1.5 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium shadow-xs focus:ring-2 focus:ring-blue-500"
                   >
                     {STATUS_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      <option key={opt.value} value={opt.value} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+                        {opt.label}
+                      </option>
                     ))}
                   </select>
                 </div>
 
                 {/* Hourly Rate & Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
                   <div>
                     <span className="text-xs text-muted-foreground block">Hourly Rate</span>
-                    <span className="text-base font-bold text-slate-900">
+                    <span className="text-base font-bold text-slate-900 dark:text-white">
                       ₱{court.hourly_rate ?? 25}
                       <span className="text-xs font-normal text-muted-foreground">/hr</span>
                     </span>
@@ -373,12 +377,12 @@ export default function AdminCourtsPage() {
           aria-labelledby="edit-rate-title"
         >
           <div
-            className="relative w-full max-w-sm bg-white rounded-xl shadow-xl border border-slate-200 p-6 space-y-4"
+            className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-6 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center">
               <div>
-                <h3 id="edit-rate-title" className="font-semibold text-lg">
+                <h3 id="edit-rate-title" className="font-semibold text-lg text-slate-900 dark:text-white">
                   Edit Hourly Rate
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -388,7 +392,7 @@ export default function AdminCourtsPage() {
               <button
                 type="button"
                 onClick={() => setEditingCourt(null)}
-                className="text-gray-400 hover:text-gray-600 rounded p-1 cursor-pointer"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded p-1 cursor-pointer"
                 aria-label="Close dialog"
               >
                 <X className="w-4 h-4" />
@@ -401,7 +405,7 @@ export default function AdminCourtsPage() {
                   Hourly Rate (₱)
                 </Label>
                 <div className="relative flex items-center">
-                  <span className="absolute left-3 text-sm font-semibold text-slate-500">₱</span>
+                  <span className="absolute left-3 text-sm font-semibold text-slate-500 dark:text-slate-400">₱</span>
                   <Input
                     id="court-hourly-rate"
                     type="number"

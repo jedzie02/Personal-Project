@@ -210,7 +210,7 @@ Paddlix follows a tonal layering philosophy. Surfaces rest flat on the canvas bo
 - **Admin Sidebar:** Fixed vertical navigation (`w-64`), crisp section categories (MAIN, MANAGEMENT, FINANCE), active emerald indicator pill, and bottom-anchored logout trigger.
 
 ### Signature Component: The Booking Matrix Grid
-- **Structure:** Natural 4-court columns intersecting operating time slots (9:00 AM – 12:00 AM).
+- **Structure:** Natural 4-court columns intersecting operating time slots (9:00 AM – 11:00 PM).
 - **Cell States:** Available (white card with green status indicator and hourly rate), Booked (dimmed with locked icon), Maintenance (amber striped or dimmed), Selected (Matchpoint blue border and subtle glow).
 - **Feedback:** Real-time modal preview displaying court name, formatted 12-hour time (AM/PM), calculated fee in ₱, and instant reservation lock.
 

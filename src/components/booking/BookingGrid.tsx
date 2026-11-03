@@ -59,6 +59,7 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
     const { courts, hours, grid, date } = data;
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [selectedSlots, setSelectedSlots] = useState<SelectedGridSlot[]>([]);
+    const [mobileCourtFilter, setMobileCourtFilter] = useState<string>("all");
 
     // Memoize master list of 4 naturally sorted courts
     const masterCourts = useMemo(() => {
@@ -83,6 +84,12 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
     const courtMap = useMemo(() => {
         return new Map(masterCourts.map((court) => [court.id, court.name]));
     }, [masterCourts]);
+
+    const activeCourts = useMemo(() => {
+        if (mobileCourtFilter === "all") return masterCourts;
+        const matched = masterCourts.filter((c) => c.id === mobileCourtFilter);
+        return matched.length > 0 ? matched : masterCourts;
+    }, [masterCourts, mobileCourtFilter]);
 
     // Check authentication state (localStorage, cookies, or Supabase session)
     useEffect(() => {
@@ -223,65 +230,106 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
         <div className={`w-full space-y-3 ${selectedSlots.length > 0 ? "pb-28" : ""}`}>
             {/* First-time player quick onboarding guide */}
             {showGuide && (
-                <div className="flex items-center justify-between p-3.5 rounded-xl border border-border bg-muted/70 text-xs text-foreground transition-all shadow-2xs animate-in fade-in">
+                <div className="flex items-center justify-between p-3.5 rounded-xl border border-blue-100 dark:border-blue-900/60 bg-blue-50/70 dark:bg-blue-950/40 text-xs text-blue-950 dark:text-blue-200 transition-all shadow-xs animate-in fade-in">
                     <div className="flex items-center gap-2.5">
-                        <span className="size-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0 font-bold text-xs shadow-2xs">
+                        <span className="size-6 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0 font-bold text-xs shadow-xs">
                             ✓
                         </span>
                         <span>
-                            <strong>First time booking?</strong> Select any open slot below to inspect court details and reserve your game in seconds.
+                            <strong>First time booking?</strong> Select any open green slot below to inspect court details and reserve your game in seconds.
                         </span>
                     </div>
                     <button
                         type="button"
                         onClick={dismissGuide}
-                        className="text-xs text-muted-foreground hover:text-foreground font-medium px-2.5 py-1 rounded-md hover:bg-muted cursor-pointer ml-2 shrink-0 transition-colors"
+                        className="text-xs text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 font-semibold px-2.5 py-1 rounded-md hover:bg-blue-100/60 dark:hover:bg-blue-900/50 cursor-pointer ml-2 shrink-0 transition-colors"
                     >
                         Got it
                     </button>
                 </div>
             )}
 
-            <div className="w-full bg-card rounded-2xl border border-border overflow-hidden">
-                {/* Header Title */}
-                <div className="flex items-center gap-3 p-4 border-b border-border">
-                    <Clock className="w-5 h-5 text-muted-foreground" />
-                    <h2 className="text-lg font-bold text-foreground">Available Times</h2>
+            <div className="w-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+                {/* Header Title & Mobile Court Switcher */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 border-b border-slate-100 dark:border-slate-800 gap-3">
+                    <div className="flex items-center gap-2.5">
+                        <Clock className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Available Times</h2>
+                    </div>
+
+                    {/* Court Switcher (Pills on Mobile & Desktop) */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-0.5 sm:pb-0 pr-1">
+                        <button
+                            type="button"
+                            onClick={() => setMobileCourtFilter("all")}
+                            style={{ touchAction: "manipulation" }}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                                mobileCourtFilter === "all"
+                                    ? "bg-blue-600 text-white shadow-xs"
+                                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                            }`}
+                        >
+                            All Courts
+                        </button>
+                        {masterCourts.map((c) => (
+                            <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => setMobileCourtFilter(c.id)}
+                                style={{ touchAction: "manipulation" }}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                                    mobileCourtFilter === c.id
+                                        ? "bg-blue-600 text-white shadow-xs"
+                                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                }`}
+                            >
+                                {c.name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
+
+                {/* Mobile horizontal swipe helper hint */}
+                {mobileCourtFilter === "all" && (
+                    <div className="sm:hidden px-3.5 py-1.5 bg-blue-50/60 dark:bg-blue-950/30 text-xs text-blue-700 dark:text-blue-300 flex items-center justify-between border-b border-blue-100/60 dark:border-blue-900/40">
+                        <span>Swipe sideways to view Courts 1–4</span>
+                        <span aria-hidden="true">👉</span>
+                    </div>
+                )}
 
             {/* Grid */}
             <div className="relative overflow-x-auto w-full">
-                <div className="min-w-[700px]">
+                <div className={activeCourts.length === 1 ? "w-full min-w-0" : "min-w-[665px] sm:min-w-[700px]"}>
                     {/* Court headers */}
-                    <div className="grid grid-cols-[175px_repeat(4,1fr)] border-b border-border bg-card">
-                        <div className="py-4 px-2 text-center text-sm font-semibold text-muted-foreground border-r border-border flex items-center justify-center">
+                    <div className={`grid ${activeCourts.length === 1 ? "grid-cols-[105px_1fr]" : "grid-cols-[105px_repeat(4,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(4,1fr)]"} border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900`}>
+                        <div className="sticky left-0 z-20 py-3 sm:py-4 px-2 text-center text-xs sm:text-sm font-bold text-gray-500 dark:text-slate-400 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_4px_-1px_rgba(0,0,0,0.3)]">
                             Time
                         </div>
-                        {masterCourts.map((court) => {
+                        {activeCourts.map((court) => {
                             const isNotAvailable = court.status && court.status !== "Available";
                             return (
                                 <div
                                     key={court.id}
-                                    className={`py-4 px-2 text-center text-sm font-bold uppercase tracking-wider border-r last:border-r-0 border-border flex flex-col items-center justify-center ${
+                                    className={`py-3 sm:py-4 px-2 text-center text-xs sm:text-sm font-bold uppercase tracking-wider border-r last:border-r-0 border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center ${
                                         isNotAvailable
-                                            ? "opacity-60 bg-muted/60 text-muted-foreground"
-                                            : "bg-card text-foreground"
+                                            ? "opacity-60 bg-gray-100 dark:bg-slate-800/80 text-gray-500 dark:text-slate-400"
+                                            : "bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
                                     }`}
                                 >
                                     <div>{court.name}</div>
                                     {court.hourly_rate != null && (
-                                        <span className="text-xs font-semibold text-foreground normal-case tabular-nums">
+                                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 normal-case tabular-nums">
                                             ₱{court.hourly_rate}/hr
                                         </span>
                                     )}
                                     {court.status === "Maintenance" && (
-                                        <span className="inline-block mt-1 text-xs font-semibold tracking-normal normal-case text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                                            Currently in Maintenance
+                                        <span className="inline-block mt-1 text-xs font-semibold tracking-normal normal-case text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
+                                            Maintenance
                                         </span>
                                     )}
                                     {court.status === "Not Available" && (
-                                        <span className="inline-block mt-1 text-xs font-semibold tracking-normal normal-case text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded-full">
-                                            Not Available
+                                        <span className="inline-block mt-1 text-xs font-semibold tracking-normal normal-case text-gray-700 dark:text-slate-300 bg-gray-200 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 px-2 py-0.5 rounded-full">
+                                            Unavailable
                                         </span>
                                     )}
                                 </div>
@@ -290,7 +338,7 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                     </div>
 
                     {/* Time rows */}
-                    <div className="divide-y divide-border">
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
                         {hours.map((hour, hourIdx) => {
                             const hourNum = parseInt(hour.split(":")[0], 10);
                             const nextHourNum = (hourNum + 1) % 24;
@@ -299,17 +347,23 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                             return (
                                 <div
                                     key={hour}
-                                    className="grid grid-cols-[175px_repeat(4,1fr)] min-h-[58px]"
+                                    className={`grid ${activeCourts.length === 1 ? "grid-cols-[105px_1fr]" : "grid-cols-[105px_repeat(4,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(4,1fr)]"} min-h-[58px]`}
                                 >
-                                    {/* Time label */}
-                                    <div className="px-2 py-4 text-center flex items-center justify-center border-r border-border bg-card">
-                                        <span className="text-sm font-bold text-foreground whitespace-nowrap tabular-nums">
-                                            {formatAMPM(hour)} – {formatAMPM(nextHour)}
+                                    {/* Sticky Time label */}
+                                    <div className="sticky left-0 z-10 px-1 sm:px-2 py-3 sm:py-4 text-center flex flex-col sm:flex-row items-center justify-center border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_4px_-1px_rgba(0,0,0,0.3)]">
+                                        <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap tabular-nums">
+                                            {formatAMPM(hour)}
+                                        </span>
+                                        <span className="text-xs text-slate-400 sm:text-gray-900 dark:text-slate-500 sm:dark:text-white sm:mx-1 leading-none sm:leading-normal my-0.5 sm:my-0">
+                                            –
+                                        </span>
+                                        <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap tabular-nums">
+                                            {formatAMPM(nextHour)}
                                         </span>
                                     </div>
 
-                                    {/* Court cells: strictly one container div per court */}
-                                    {masterCourts.map((court) => {
+                                    {/* Court cells */}
+                                    {activeCourts.map((court) => {
                                         const fallbackStatus: GridCell["status"] =
                                             court.status === "Maintenance"
                                                 ? "maintenance"
@@ -331,7 +385,7 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                                         return (
                                             <div
                                                 key={court.id}
-                                                className="p-1.5 border-r last:border-r-0 border-border flex items-center justify-center bg-card min-w-0"
+                                                className="p-1.5 border-r last:border-r-0 border-slate-100 dark:border-slate-800 flex items-center justify-center bg-white dark:bg-slate-900 min-w-0"
                                             >
                                                 <CellContent
                                                     cell={cell}
@@ -356,18 +410,17 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
             {/* Floating Cart Bar */}
             {selectedSlots.length > 0 && (
                 <div
-                    className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none"
+                    className="fixed bottom-0 left-0 right-0 z-40 flex justify-center pointer-events-none px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-4"
                     style={{ animation: "slideUp 250ms ease-out" }}
                 >
-                    <div className="w-full max-w-2xl mx-4 mb-4 pointer-events-auto rounded-2xl border border-border bg-card/95 backdrop-blur-md shadow-2xl ring-1 ring-border/50 overflow-hidden">
+                    <div className="w-full max-w-2xl pointer-events-auto rounded-2xl border border-blue-200/70 dark:border-blue-900/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl ring-1 ring-blue-500/10 dark:ring-blue-400/10 overflow-hidden">
                         {/* Slot Pills */}
-                        <div className="px-4 pt-3 pb-2 flex flex-wrap gap-1.5 border-b border-border">
+                        <div className="px-3 sm:px-4 pt-2.5 pb-2 flex items-center gap-1.5 overflow-x-auto scrollbar-none border-b border-slate-100 dark:border-slate-800">
                             {sortedSlots.map((slot) => (
                                 <span
                                     key={`${slot.courtId}-${slot.hour}`}
-                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary text-primary-foreground shadow-2xs"
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white shadow-xs shrink-0"
                                 >
-                                    <span className="size-1.5 rounded-full bg-accent-court shrink-0" />
                                     {slot.courtName}
                                     <span className="opacity-80">
                                         {formatAMPM(slot.hour)}–{formatAMPM(slot.endHour)}
@@ -382,7 +435,7 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                                                 )
                                             )
                                         }
-                                        className="ml-0.5 rounded-full p-0.5 hover:bg-primary-foreground/20 transition-colors cursor-pointer"
+                                        className="ml-0.5 rounded-full p-0.5 hover:bg-white/20 transition-colors cursor-pointer"
                                     >
                                         <svg className="size-2.5" viewBox="0 0 10 10" fill="none">
                                             <path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
@@ -393,41 +446,39 @@ export default function BookingGrid({ data }: { data: BookingGridData }) {
                         </div>
 
                         {/* Summary Row */}
-                        <div className="px-4 py-3 flex items-center gap-3">
+                        <div className="px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">
                             {/* Slot count + total */}
-                            <div className="flex-1 min-w-0">
-                                <span className="text-sm font-bold text-foreground">
-                                    {selectedSlots.length} {selectedSlots.length === 1 ? "Slot" : "Slots"} Selected
+                            <div className="flex flex-col sm:flex-row sm:items-baseline gap-0.5 sm:gap-2 min-w-0">
+                                <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                                    {selectedSlots.length} {selectedSlots.length === 1 ? "Slot" : "Slots"}
                                 </span>
-                                <span className="ml-2 text-xs text-muted-foreground">
-                                    ₱300/slot
+                                <span className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+                                    ₱{cartTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                 </span>
                             </div>
 
-                            {/* Total price */}
-                            <span className="text-lg font-bold text-foreground tabular-nums shrink-0">
-                                ₱{cartTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                            </span>
+                            {/* Actions */}
+                            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedSlots([])}
+                                    className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                                    title="Clear all selected slots"
+                                    aria-label="Clear all slots"
+                                >
+                                    <Trash2 className="size-4" />
+                                </button>
 
-                            {/* Clear button */}
-                            <button
-                                type="button"
-                                onClick={() => setSelectedSlots([])}
-                                className="shrink-0 p-2 rounded-xl border border-border bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
-                                title="Clear all selected slots"
-                            >
-                                <Trash2 className="size-4" />
-                            </button>
-
-                            {/* Book CTA */}
-                            <button
-                                type="button"
-                                onClick={handleProceedCart}
-                                className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 active:bg-primary/80 text-primary-foreground text-sm font-semibold transition-colors shadow-sm cursor-pointer"
-                            >
-                                Review & Book ({selectedSlots.length})
-                                <ChevronRight className="size-4" />
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={handleProceedCart}
+                                    className="flex items-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs sm:text-sm font-semibold transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                                >
+                                    <span>Review & Book</span>
+                                    <span className="hidden xs:inline">({selectedSlots.length})</span>
+                                    <ChevronRight className="size-3.5 sm:size-4" />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -497,19 +548,19 @@ function CellContent({
         case "passed":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-muted/40 flex items-center justify-center py-2"
+                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center py-2"
                 >
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">Passed</span>
+                    <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">Passed</span>
                 </div>
             );
 
         case "booked":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-muted/60 flex flex-col items-center justify-center gap-0.5 py-2"
+                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 dark:bg-slate-800/70 flex flex-col items-center justify-center gap-0.5 py-2"
                 >
-                    <Lock className="size-3.5 text-muted-foreground" />
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    <Lock className="size-3.5 text-slate-400 dark:text-slate-500" />
+                    <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">
                         Booked
                     </span>
                 </div>
@@ -518,10 +569,10 @@ function CellContent({
         case "fulfilled":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-muted/60 flex flex-col items-center justify-center gap-0.5 py-2"
+                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 dark:bg-slate-800/70 flex flex-col items-center justify-center gap-0.5 py-2"
                 >
-                    <CheckCircle2 className="size-3.5 text-muted-foreground" />
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    <CheckCircle2 className="size-3.5 text-slate-400 dark:text-slate-500" />
+                    <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">
                         Fulfilled
                     </span>
                 </div>
@@ -538,19 +589,19 @@ function CellContent({
                             hour: cell.hour,
                         });
                     }}
-                    className={`w-full h-full min-h-[44px] rounded-[14px] py-2 flex items-center justify-center transition-all duration-150 cursor-pointer ${
+                    className={`w-full h-full min-h-[44px] rounded-[14px] py-2 flex items-center justify-center transition-all duration-200 cursor-pointer ${
                         isSelected
-                            ? "bg-primary text-primary-foreground border-2 border-primary shadow-xs"
-                            : "bg-card border border-border hover:bg-muted hover:border-foreground/30 group/cell"
+                            ? "bg-blue-600 dark:bg-blue-600 text-white border-2 border-blue-600 dark:border-blue-500 shadow-xs"
+                            : "bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-500 dark:hover:bg-blue-600 hover:border-blue-500 dark:hover:border-blue-600 group/cell"
                     }`}
                 >
                     {isSelected ? (
-                        <div className="flex items-center gap-1.5 text-xs font-bold animate-in zoom-in-95 duration-150">
-                            <Check className="size-3.5 stroke-[3] text-accent-court" />
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-white animate-in zoom-in-95 duration-150">
+                            <Check className="size-3.5 stroke-[3]" />
                             <span>Selected</span>
                         </div>
                     ) : (
-                        <span className="text-xs font-semibold text-muted-foreground group-hover/cell:text-foreground transition-colors duration-150 capitalize">
+                        <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 capitalize group-hover/cell:text-white transition-colors duration-200">
                             Available
                         </span>
                     )}
@@ -560,27 +611,27 @@ function CellContent({
         case "closed":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-muted/40 flex items-center justify-center py-2"
+                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center py-2"
                 >
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">Closed</span>
+                    <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">Closed</span>
                 </div>
             );
 
         case "maintenance":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-amber-500/10 border border-amber-500/30 flex flex-col items-center justify-center cursor-not-allowed py-2 text-center"
+                    className="w-full h-full min-h-[44px] rounded-[14px] bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex flex-col items-center justify-center cursor-not-allowed py-2 text-center"
                 >
-                    <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">Maintenance</span>
+                    <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">Maintenance</span>
                 </div>
             );
 
         case "not_available":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] opacity-60 bg-muted border border-border flex flex-col items-center justify-center cursor-not-allowed py-2 text-center"
+                    className="w-full h-full min-h-[44px] rounded-[14px] opacity-60 bg-gray-200 dark:bg-slate-800/80 border border-gray-300 dark:border-slate-700 flex flex-col items-center justify-center cursor-not-allowed py-2 text-center"
                 >
-                    <span className="text-xs font-semibold text-muted-foreground uppercase">Not Available</span>
+                    <span className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">Not Available</span>
                 </div>
             );
     }

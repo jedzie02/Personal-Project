@@ -1,9 +1,10 @@
 "use server";
 
-import { createBooking } from "@/lib/services/booking.service";
+import { createBooking, cancelBooking } from "@/lib/services/booking.service";
 import { getCurrentProfile } from "@/lib/services/auth.server";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
+import type { BookingSegment } from "@/lib/utils/court-jump";
 
 export interface ConfirmBookingInput {
     courtId: string;
@@ -17,6 +18,7 @@ export interface ConfirmBookingInput {
     userId?: string;
     userEmail?: string;
     userName?: string;
+    segments?: BookingSegment[];
 }
 
 export interface ConfirmBookingResult {
@@ -97,11 +99,11 @@ export async function submitConfirmBooking(input: ConfirmBookingInput): Promise<
         if (input.timeSlot && input.timeSlot.includes("-")) {
             const parts = input.timeSlot.split("-").map((s) => s.trim());
             const parseAmPm = (val: string) => {
-                const match = val.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                const match = val.match(/(\d+):(\d+)(?:\s*(AM|PM))?/i);
                 if (match) {
                     let h = parseInt(match[1], 10);
                     const m = match[2];
-                    const ampm = match[3].toUpperCase();
+                    const ampm = match[3]?.toUpperCase();
                     if (ampm === "PM" && h < 12) h += 12;
                     if (ampm === "AM" && h === 12) h = 0;
                     return `${h.toString().padStart(2, "0")}:${m}`;
@@ -110,11 +112,81 @@ export async function submitConfirmBooking(input: ConfirmBookingInput): Promise<
             };
             startTime = parseAmPm(parts[0]);
             endTime = parseAmPm(parts[1]);
+            if (startTime === "23:00" && endTime === "12:00") {
+                endTime = "00:00";
+            }
         }
     }
 
     if (!startTime || !endTime) {
         return { success: false, error: "Invalid time slot selected." };
+    }
+
+    if (input.segments && input.segments.length > 0) {
+        // Group consecutive segments on the same court into contiguous blocks
+        const mergedBlocks: {
+            courtId: string;
+            start: string;
+            end: string;
+            totalPrice: number;
+        }[] = [];
+
+        for (const seg of input.segments) {
+            const prev = mergedBlocks[mergedBlocks.length - 1];
+            if (prev && prev.courtId === seg.courtId && prev.end === seg.hour) {
+                prev.end = seg.endHour;
+                prev.totalPrice += seg.hourlyRate;
+            } else {
+                mergedBlocks.push({
+                    courtId: seg.courtId,
+                    start: seg.hour,
+                    end: seg.endHour,
+                    totalPrice: seg.hourlyRate,
+                });
+            }
+        }
+
+        // Shared payment reference linking court-jump segments together
+        const paymentReference = mergedBlocks.length > 1
+            ? `REF-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+            : undefined;
+
+        const createdBookingIds: string[] = [];
+
+        for (const block of mergedBlocks) {
+            const res = await createBooking({
+                courtId: block.courtId,
+                customerId,
+                customerName,
+                customerEmail: customerEmail ?? undefined,
+                bookingDate,
+                startTime: block.start,
+                endTime: block.end,
+                totalPrice: block.totalPrice,
+                markAsConfirmed: true,
+                paymentStatus: "pending",
+                paymentMethod: input.paymentMethod || "Cash walk in",
+                paymentReference,
+            });
+
+            if (!res.success || !res.bookingId) {
+                await Promise.all(
+                    createdBookingIds.map((id) =>
+                        cancelBooking(id, "Booking cancelled due to partial reservation failure")
+                    )
+                );
+                return {
+                    success: false,
+                    error: res.error ?? "Failed to reserve slot. One of the continuous hours was just booked.",
+                };
+            }
+            createdBookingIds.push(res.bookingId);
+        }
+
+        return {
+            success: true,
+            bookingId: createdBookingIds[0],
+        };
     }
 
     const result = await createBooking({
@@ -125,7 +197,7 @@ export async function submitConfirmBooking(input: ConfirmBookingInput): Promise<
         bookingDate,
         startTime,
         endTime,
-        totalPrice: Number(input.rate) || 25,
+        totalPrice: Number(input.rate) || 300,
         markAsConfirmed: true,
         paymentStatus: "pending",
         paymentMethod: input.paymentMethod || "Cash walk in",

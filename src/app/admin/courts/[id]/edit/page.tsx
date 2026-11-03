@@ -85,7 +85,7 @@ export default async function EditCourtPage({
                             </p>
                         </div>
 
-                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
                             <Link
                                 href="/admin/courts"
                                 className={buttonVariants({ variant: "outline" })}
@@ -101,4 +101,4 @@ export default async function EditCourtPage({
             </Card>
         </div>
     );
-}
+}

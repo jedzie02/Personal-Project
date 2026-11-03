@@ -18,7 +18,7 @@ Real-time, transparent court availability and hourly rate booking in Philippine 
 
 ## Operating Context
 - Responsive web app optimized for fast mobile bookings at the court and desk operations at the venue.
-- Operating hours standard: 9:00 AM – 12:00 AM daily across 4 master courts.
+- Operating hours standard: 9:00 AM – 11:00 PM daily across 4 master courts.
 - Currency standard: Philippine Peso (₱).
 - Authentication: Supabase Auth with customer and admin roles.
 

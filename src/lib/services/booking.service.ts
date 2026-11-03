@@ -9,7 +9,7 @@ import type {
 } from "@/lib/types/domain";
 import { getActiveCourts } from "@/lib/services/court.service";
 import { getOperatingHoursForDay } from "@/lib/services/schedule.service";
-import { generateTimeSlots, doTimeRangesOverlap } from "@/lib/utils/date";
+import { generateTimeSlots, doTimeRangesOverlap, timeToMinutes } from "@/lib/utils/date";
 import {
     SLOT_DURATION_MINUTES,
     CANCELLATION_CUTOFF_HOURS,
@@ -68,7 +68,7 @@ function mapBooking(
     if (!paymentRef && paymentMethod.includes("Ref:")) {
         const parts = paymentMethod.split("Ref:");
         paymentRef = parts[1]?.replace(/[()]/g, "").trim() || null;
-        paymentMethod = "GCash QR";
+        paymentMethod = parts[0]?.trim() || "GCash QR";
     }
 
     const effectiveCustomerId = row.customer_id || null;
@@ -132,12 +132,10 @@ export async function checkOverlap(
 
     let query = supabase
         .from("bookings")
-        .select("id")
+        .select("id, start_time, end_time")
         .eq("court_id", courtId)
         .eq("booking_date", bookingDate)
-        .in("status", ["pending", "confirmed"])
-        .lt("start_time", endTime)
-        .gt("end_time", startTime);
+        .in("status", ["pending", "confirmed"]);
 
     if (excludeBookingId) {
         query = query.neq("id", excludeBookingId);
@@ -150,7 +148,9 @@ export async function checkOverlap(
         return true;
     }
 
-    return (data?.length ?? 0) > 0;
+    return (data ?? []).some((b: any) =>
+        doTimeRangesOverlap(b.start_time.slice(0, 5), b.end_time.slice(0, 5), startTime, endTime)
+    );
 }
 
 export interface CreateBookingInput {
@@ -171,6 +171,7 @@ export interface CreateBookingInput {
     markAsConfirmed?: boolean;
     paymentStatus?: "pending" | "succeeded" | "failed" | "refunded";
     paymentMethod?: string;
+    paymentReference?: string;
 }
 
 export async function createBooking(
@@ -181,7 +182,7 @@ export async function createBooking(
     // UI at all — someone editing devtools, or POSTing directly to a
     // Server Action. The HTML `min`/`required` attributes on our forms
     // are a nice UX nicety, but they're not enforcement; this is.
-    if (input.startTime >= input.endTime) {
+    if (timeToMinutes(input.startTime) >= timeToMinutes(input.endTime)) {
         return { success: false, error: "End time must be after start time." };
     }
 
@@ -288,12 +289,31 @@ export async function createBooking(
         payment_status: input.paymentStatus || (input.markAsConfirmed ? "succeeded" : "pending"),
         payment_method: input.paymentMethod || "Cash walk in",
     };
+    if (input.paymentReference) {
+        bookingPayload.payment_reference = input.paymentReference;
+    }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from("bookings")
         .insert(bookingPayload)
         .select("id")
         .single();
+
+    // Fallback: If database schema lacks payment_reference column (PGRST204, 42703, or schema cache error),
+    // encode reference into payment_method string e.g. "GCash QR (Ref: REF-1234)"
+    if (error && (error.code === "42703" || error.code === "PGRST204" || error.message?.includes("payment_reference"))) {
+        delete bookingPayload.payment_reference;
+        if (input.paymentReference) {
+            bookingPayload.payment_method = `${bookingPayload.payment_method} (Ref: ${input.paymentReference})`;
+        }
+        const retry = await supabase
+            .from("bookings")
+            .insert(bookingPayload)
+            .select("id")
+            .single();
+        data = retry.data;
+        error = retry.error;
+    }
 
     if (error) {
         // Postgres error code 23P01 = "exclusion_violation" — this means
@@ -511,6 +531,33 @@ export async function getBookingById(id: string): Promise<Booking | null> {
     return mapBooking(row, profileMap);
 }
 
+/** Returns all booking rows sharing a given payment reference (e.g. multi-hour court jumps or parallel courts). */
+export async function getBookingsByPaymentReference(paymentRef: string): Promise<Booking[]> {
+    if (!paymentRef) return [];
+    const supabase = await getDbClient();
+
+    // 1. Try querying payment_reference column
+    const { data, error } = await supabase
+        .from("bookings")
+        .select(BOOKING_SELECT)
+        .eq("payment_reference", paymentRef)
+        .order("start_time", { ascending: true });
+
+    if (!error && data && data.length > 0) {
+        return data.map((row) => mapBooking(row as unknown as BookingRow));
+    }
+
+    // 2. Fallback: If column does not exist or has no rows, search by encoded reference in payment_method
+    const fallback = await supabase
+        .from("bookings")
+        .select(BOOKING_SELECT)
+        .ilike("payment_method", `%Ref: ${paymentRef}%`)
+        .order("start_time", { ascending: true });
+
+    if (!fallback.data || fallback.data.length === 0) return [];
+    return fallback.data.map((row) => mapBooking(row as unknown as BookingRow));
+}
+
 /** A customer's own booking history — powers the "My Bookings" page. */
 export async function getBookingsForCustomer(customerId: string): Promise<Booking[]> {
     const supabase = await createClient();
@@ -591,9 +638,9 @@ async function getActiveBookingsForDate(
  * if the venue's timezone differs from wherever this app is hosted.
  */
 export async function getAvailableSlotsForDate(date: string): Promise<AvailableSlot[]> {
-    // All 7 days (Monday - Sunday) use the exact same 09:00 AM to 12:00 AM schedule
+    // All 7 days (Monday - Sunday) use the exact same 09:00 AM to 11:00 PM schedule
     const openTime = "09:00";
-    const closeTime = "00:00";
+    const closeTime = "23:00";
 
     const [courts, activeBookings] = await Promise.all([
         getActiveCourts(),

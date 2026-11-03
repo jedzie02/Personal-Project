@@ -8,6 +8,7 @@ import {
     setCourtActiveStatus,
     updateCourt,
 } from "@/lib/services/court.service";
+import { requireAdmin } from "@/lib/services/auth.server";
 
 /**
  * revalidatePath() tells Next.js "the cached data behind this URL
@@ -18,6 +19,7 @@ import {
  */
 
 export async function createCourtAction(formData: FormData) {
+    await requireAdmin();
     const name = formData.get("name") as string;
     const description = (formData.get("description") as string) || null;
 
@@ -32,6 +34,7 @@ export async function createCourtAction(formData: FormData) {
 }
 
 export async function updateCourtAction(courtId: string, formData: FormData) {
+    await requireAdmin();
     const name = formData.get("name") as string;
     const description = (formData.get("description") as string) || null;
 
@@ -52,6 +55,7 @@ export async function setCourtActiveStatusAction(
     isActive: boolean,
     formData: FormData
 ) {
+    await requireAdmin();
     // "confirmed" only shows up in formData when it came from the
     // SECOND button ("Confirm deactivate anyway") — the normal button
     // doesn't include this hidden field at all, so it reads as false.
