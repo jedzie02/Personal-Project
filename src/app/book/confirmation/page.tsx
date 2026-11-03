@@ -211,11 +211,6 @@ export default async function BookingConfirmationPage({
                           <span className="font-bold text-blue-600 dark:text-blue-400">
                             {b.courtName}
                           </span>
-                          {i > 0 && b.courtId !== allSegments[i - 1].courtId && b.startTime === allSegments[i - 1].endTime && (
-                            <span className="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/80">
-                              Switch Court
-                            </span>
-                          )}
                         </div>
                         <span className="text-xs text-slate-400 dark:text-slate-500 font-medium tabular-nums">
                           ₱{Number(b.totalPrice).toFixed(2)}

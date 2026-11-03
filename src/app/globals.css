@@ -228,16 +228,21 @@
 
 @keyframes pickleball-rally {
   0%   { transform: translate(38px, 46px) scale(0.95); }
-  25%  { transform: translate(130px, 32px) scale(1.2); }
+  10%  { transform: translate(75px, 34px) scale(1.08); }
+  25%  { transform: translate(130px, 30px) scale(1.22); }
+  40%  { transform: translate(185px, 62px) scale(1.08); }
   50%  { transform: translate(222px, 98px) scale(0.95); }
-  75%  { transform: translate(130px, 78px) scale(1.2); }
+  60%  { transform: translate(185px, 80px) scale(1.08); }
+  75%  { transform: translate(130px, 72px) scale(1.22); }
+  90%  { transform: translate(75px, 54px) scale(1.08); }
   100% { transform: translate(38px, 46px) scale(0.95); }
 }
 
 @keyframes court-bounce-ring {
-  0%, 48%, 52%, 98%, 100% { transform: scale(0.4); opacity: 0; }
-  2%, 50% { transform: scale(1.8); opacity: 0.7; }
-  14%, 64% { transform: scale(2.6); opacity: 0; }
+  0%   { transform: scale(0.4); opacity: 0; }
+  3%   { transform: scale(1.6); opacity: 0.8; }
+  16%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
 }
 
 @keyframes step-beam-fill {
@@ -269,19 +274,19 @@
 }
 
 .animate-pickleball-rally {
-  animation: pickleball-rally 2.6s ease-in-out infinite;
+  animation: pickleball-rally 2.2s linear infinite;
 }
 
 .animate-bounce-ring {
   transform-box: fill-box;
   transform-origin: center;
-  animation: court-bounce-ring 2.6s ease-out infinite;
+  animation: court-bounce-ring 2.2s ease-out infinite;
 }
 
 .animate-bounce-ring-delayed {
   transform-box: fill-box;
   transform-origin: center;
-  animation: court-bounce-ring 2.6s ease-out infinite 1.3s;
+  animation: court-bounce-ring 2.2s ease-out infinite 1.1s;
 }
 
 .animate-step-beam {

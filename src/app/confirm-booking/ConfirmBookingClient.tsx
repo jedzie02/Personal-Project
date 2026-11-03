@@ -9,7 +9,6 @@ import {
     Clock,
     CreditCard,
     QrCode,
-    Banknote,
     Receipt,
     ShieldCheck,
     Loader2,
@@ -27,11 +26,10 @@ import type { BookingSegment } from "@/lib/utils/court-jump";
 import { submitConfirmBooking } from "./actions";
 import { startCardCheckoutAction } from "./checkout-actions";
 
-type PaymentMethodChoice = "GCash QR" | "Cash walk in" | "Credit Card";
+type PaymentMethodChoice = "GCash QR" | "Credit Card";
 
 const PAYMENT_OPTIONS: { id: PaymentMethodChoice; label: string; sublabel: string; icon: typeof QrCode }[] = [
     { id: "GCash QR", label: "GCash QR", sublabel: "Scan & Ref", icon: QrCode },
-    { id: "Cash walk in", label: "Cash", sublabel: "Pay at Desk", icon: Banknote },
     { id: "Credit Card", label: "Card", sublabel: "Debit / Credit", icon: CreditCard },
 ];
 
@@ -47,7 +45,6 @@ export default function ConfirmBookingClient() {
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodChoice>(() => {
         const param = searchParams.get("paymentMethod");
         if (param === "Credit Card" || param === "Card") return "Credit Card";
-        if (param === "Cash walk in" || param === "Cash") return "Cash walk in";
         return "GCash QR";
     });
     const date = searchParams.get("date") || "";
@@ -109,8 +106,7 @@ export default function ConfirmBookingClient() {
 
     const getPaymentIcon = () => {
         if (selectedPaymentMethod === "Credit Card") return CreditCard;
-        if (selectedPaymentMethod === "GCash QR") return QrCode;
-        return Banknote;
+        return QrCode;
     };
 
     const PaymentIcon = getPaymentIcon();
@@ -320,15 +316,9 @@ export default function ConfirmBookingClient() {
                                                         {seg.courtName}
                                                     </span>
                                                 </div>
-                                                {seg.isJump ? (
-                                                    <span className="text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/80">
-                                                        Switch Court
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-xs text-slate-400 dark:text-slate-500 font-medium tabular-nums">
-                                                        ₱{(seg.hourlyRate || 300).toFixed(2)}
-                                                    </span>
-                                                )}
+                                                <span className="text-xs text-slate-400 dark:text-slate-500 font-medium tabular-nums">
+                                                    ₱{(seg.hourlyRate || 300).toFixed(2)}
+                                                </span>
                                             </div>
                                         ))}
                                     </div>
@@ -345,13 +335,11 @@ export default function ConfirmBookingClient() {
                                 <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
                                     {selectedPaymentMethod === "GCash QR"
                                         ? "GCash QR"
-                                        : selectedPaymentMethod === "Cash walk in"
-                                        ? "Cash (Counter)"
                                         : "Credit / Debit Card"}
                                 </span>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-2 gap-2.5">
                                 {PAYMENT_OPTIONS.map((opt) => {
                                     const Icon = opt.icon;
                                     const isSelected = selectedPaymentMethod === opt.id;
@@ -389,8 +377,6 @@ export default function ConfirmBookingClient() {
                     <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
                         {selectedPaymentMethod === "GCash QR"
                             ? "After confirming, you'll scan the venue GCash QR code and submit your reference number."
-                            : selectedPaymentMethod === "Cash walk in"
-                            ? "Reservations are confirmed immediately. Please settle your cash payment at the front counter upon arrival."
                             : "You'll be redirected to Stripe to complete your card payment securely. Your slot is reserved once payment is confirmed."}
                     </p>
                 </CardContent>
