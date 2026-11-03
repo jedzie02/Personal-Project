@@ -105,7 +105,7 @@ export default function RegisterPage() {
                             />
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <Label htmlFor="phone">Phone Number (11 digits)</Label>
+                            <Label htmlFor="phone">Phone Number</Label>
                             <Input
                                 id="phone"
                                 type="tel"
