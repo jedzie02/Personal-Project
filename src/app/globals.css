@@ -218,12 +218,110 @@
   animation-range: entry 0% entry 40%;
 }
 
+/* ─── Court rally, step beam & icon float ─────────────────────────────────── */
+
+@keyframes court-line-draw {
+  0% { stroke-dashoffset: 640; opacity: 0.3; }
+  50% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.9; }
+}
+
+@keyframes pickleball-rally {
+  0%   { transform: translate(35px, 38px) scale(0.95); }
+  25%  { transform: translate(130px, 28px) scale(1.18); }
+  50%  { transform: translate(225px, 64px) scale(0.95); }
+  75%  { transform: translate(130px, 52px) scale(1.18); }
+  100% { transform: translate(35px, 38px) scale(0.95); }
+}
+
+@keyframes court-bounce-ring {
+  0%, 48%, 52%, 98%, 100% { transform: scale(0.4); opacity: 0; }
+  2%, 50% { transform: scale(1.8); opacity: 0.7; }
+  14%, 64% { transform: scale(2.6); opacity: 0; }
+}
+
+@keyframes step-beam-fill {
+  0% { width: 0%; }
+  35% { width: 50%; }
+  70%, 100% { width: 100%; }
+}
+
+@keyframes step-node-2 {
+  0%, 28% { transform: scale(1); box-shadow: none; }
+  35%, 90% { transform: scale(1.1); box-shadow: 0 0 0 4px rgb(37 99 235 / 0.2); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+
+@keyframes step-node-3 {
+  0%, 62% { transform: scale(1); box-shadow: none; }
+  70%, 90% { transform: scale(1.1); box-shadow: 0 0 0 4px rgb(5 150 105 / 0.25); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+
+@keyframes icon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-court-line {
+  stroke-dasharray: 640;
+  animation: court-line-draw 4s ease-out infinite;
+}
+
+.animate-pickleball-rally {
+  animation: pickleball-rally 2.6s ease-in-out infinite;
+}
+
+.animate-bounce-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: court-bounce-ring 2.6s ease-out infinite;
+}
+
+.animate-bounce-ring-delayed {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: court-bounce-ring 2.6s ease-out infinite 1.3s;
+}
+
+.animate-step-beam {
+  animation: step-beam-fill 3.6s ease-in-out infinite;
+}
+
+.animate-step-node-2 {
+  animation: step-node-2 3.6s ease-in-out infinite;
+}
+
+.animate-step-node-3 {
+  animation: step-node-3 3.6s ease-in-out infinite;
+}
+
+.animate-icon-float {
+  animation: icon-float 3.2s ease-in-out infinite;
+}
+
 /* Reduce spatial movement; keep opacity for meaningful state changes */
 @media (prefers-reduced-motion: reduce) {
   .animate-hero-rise,
   .animate-pill-pop,
-  .animate-card-reveal {
+  .animate-card-reveal,
+  .animate-court-line,
+  .animate-pickleball-rally,
+  .animate-bounce-ring,
+  .animate-bounce-ring-delayed,
+  .animate-step-node-2,
+  .animate-step-node-3,
+  .animate-icon-float {
     animation-name: none;
     opacity: 1;
+  }
+
+  .animate-step-beam {
+    animation-name: none;
+    width: 100%;
+  }
+
+  .animate-court-line {
+    stroke-dasharray: none;
   }
 }

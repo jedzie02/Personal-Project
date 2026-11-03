@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import DateSelector from "@/components/booking/DateSelector";
 import BookingGrid from "@/components/booking/BookingGrid";
 import HeroQuickSlots, { HeroLiveStatusBadge } from "@/components/booking/HeroQuickSlots";
+import HeroCourtRally from "@/components/booking/HeroCourtRally";
 import { getBookingGridForDate } from "@/lib/services/booking-grid.service";
 import { createClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
@@ -125,6 +126,8 @@ export default async function LandingPage({ searchParams }: PageProps) {
                             </a>
                         </div>
 
+                        <HeroCourtRally />
+
                         <HeroQuickSlots summary={quickSummary} activeDate={date} todayISO={today} />
 
                         <div className="pt-2 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -152,15 +155,17 @@ export default async function LandingPage({ searchParams }: PageProps) {
 
                         <div className="relative mt-12 grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-6">
                             {/* Desktop connecting line behind step indicators */}
-                            <div className="hidden sm:block absolute top-6 left-[18%] right-[18%] h-[2px] bg-slate-200 dark:bg-slate-800 -z-0" aria-hidden="true" />
+                            <div className="hidden sm:block absolute top-6 left-[18%] right-[18%] h-[3px] bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden -z-0" aria-hidden="true">
+                                <div className="h-full bg-gradient-to-r from-blue-600 via-blue-500 to-emerald-500 rounded-full animate-step-beam" />
+                            </div>
 
                             {[
-                                { step: "1", title: "Select your slot", body: "Pick your preferred date and tap any open 1-hour slot across our 4 master courts." },
-                                { step: "2", title: "Scan & pay", body: "Scan the venue GCash QR code and input your payment reference to lock the reservation." },
-                                { step: "3", title: "Take the court", body: "Show your confirmation upon arrival. Your net, court, and time are guaranteed." },
-                            ].map(({ step, title, body }) => (
+                                { step: "1", title: "Select your slot", body: "Pick your preferred date and tap any open 1-hour slot across our 4 master courts.", pulse: "" },
+                                { step: "2", title: "Scan & pay", body: "Scan the venue GCash QR code and input your payment reference to lock the reservation.", pulse: "animate-step-node-2" },
+                                { step: "3", title: "Take the court", body: "Show your confirmation upon arrival. Your net, court, and time are guaranteed.", pulse: "animate-step-node-3" },
+                            ].map(({ step, title, body, pulse }) => (
                                 <div key={step} className="relative z-10 flex flex-col items-center gap-3">
-                                    <div className="flex items-center justify-center size-12 rounded-full bg-white dark:bg-slate-900 border-2 border-blue-600 text-blue-600 dark:text-blue-400 font-bold text-sm shadow-xs">
+                                    <div className={`flex items-center justify-center size-12 rounded-full bg-white dark:bg-slate-900 border-2 border-blue-600 text-blue-600 dark:text-blue-400 font-bold text-sm shadow-xs ${pulse}`}>
                                         {step}
                                     </div>
                                     <h3 className="font-bold text-slate-900 dark:text-white text-base mt-1">{title}</h3>
@@ -300,13 +305,13 @@ export default async function LandingPage({ searchParams }: PageProps) {
                             ].map(({ icon, title, body, tag }, idx) => (
                                 <div
                                     key={title}
-                                    className={`p-8 sm:p-10 flex flex-col justify-between gap-6 hover:bg-slate-50/60 dark:hover:bg-slate-900/30 transition-colors ${
+                                    className={`animate-card-reveal p-8 sm:p-10 flex flex-col justify-between gap-6 hover:bg-slate-50/60 dark:hover:bg-slate-900/30 transition-colors ${
                                         idx % 2 === 0 ? "md:border-r border-slate-200/80 dark:border-slate-800" : ""
                                     } ${idx < 2 ? "md:border-b border-slate-200/80 dark:border-slate-800" : ""}`}
                                 >
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center justify-center size-10 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/50">
+                                            <div className="animate-icon-float flex items-center justify-center size-10 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900/50" style={{ animationDelay: `${idx * 400}ms` }}>
                                                 {icon}
                                             </div>
                                             <span className="text-xs font-semibold tracking-wider uppercase text-slate-400 dark:text-slate-500">
