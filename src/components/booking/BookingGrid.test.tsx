@@ -20,7 +20,8 @@ vi.mock("@/lib/supabase", () => ({
 const mockGridData: BookingGridData = {
     date: "2026-11-04",
     isClosed: false,
-    operatingHours: { open: "09:00", close: "11:00" },
+    operatingOpen: "09:00",
+    operatingClose: "11:00",
     courts: [
         { id: "court-1", name: "Court 1", status: "Available", hourly_rate: 300 },
         { id: "court-2", name: "Court 2", status: "Available", hourly_rate: 300 },
