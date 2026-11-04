@@ -58,16 +58,18 @@ export default function BookingGrid({
     data,
     initialSelectCourt,
     initialSelectHour,
+    initialCourtFilter,
 }: {
     data: BookingGridData;
     initialSelectCourt?: string;
     initialSelectHour?: string;
+    initialCourtFilter?: string;
 }) {
     const router = useRouter();
     const { courts, hours, grid, date } = data;
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [selectedSlots, setSelectedSlots] = useState<SelectedGridSlot[]>([]);
-    const [mobileCourtFilter, setMobileCourtFilter] = useState<string>("all");
+    const [mobileCourtFilter, setMobileCourtFilter] = useState<string>(initialCourtFilter || "all");
 
     // Memoize master list of 4 naturally sorted courts
     const masterCourts = useMemo(() => {
@@ -399,7 +401,7 @@ export default function BookingGrid({
             <div className="relative overflow-x-auto w-full">
                 <div className={activeCourts.length === 1 ? "w-full min-w-0" : "min-w-[665px] sm:min-w-[700px]"}>
                     {/* Court headers */}
-                    <div className={`grid ${activeCourts.length === 1 ? "grid-cols-[105px_1fr]" : "grid-cols-[105px_repeat(4,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(4,1fr)]"} border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900`}>
+                    <div className={`grid ${activeCourts.length === 1 ? "grid-cols-[115px_1fr] sm:grid-cols-[180px_1fr]" : "grid-cols-[105px_repeat(4,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(4,1fr)]"} border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900`}>
                         <div className="sticky left-0 z-20 py-3 sm:py-4 px-2 text-center text-xs sm:text-sm font-bold text-gray-500 dark:text-slate-400 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_4px_-1px_rgba(0,0,0,0.3)]">
                             Time
                         </div>
@@ -445,7 +447,7 @@ export default function BookingGrid({
                             return (
                                 <div
                                     key={hour}
-                                    className={`grid ${activeCourts.length === 1 ? "grid-cols-[105px_1fr]" : "grid-cols-[105px_repeat(4,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(4,1fr)]"} min-h-[58px]`}
+                                    className={`grid ${activeCourts.length === 1 ? "grid-cols-[115px_1fr] sm:grid-cols-[180px_1fr]" : "grid-cols-[105px_repeat(4,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(4,1fr)]"} min-h-[58px]`}
                                 >
                                     {/* Sticky Time label */}
                                     <div className="sticky left-0 z-10 px-1 sm:px-2 py-3 sm:py-4 text-center flex flex-col sm:flex-row items-center justify-center border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_4px_-1px_rgba(0,0,0,0.3)]">
