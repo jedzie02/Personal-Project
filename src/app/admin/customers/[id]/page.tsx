@@ -6,6 +6,7 @@ import { updateCustomerPhoneByAdminAction } from "@/app/bookings/actions";
 import { BookingsTable } from "@/components/ui/admin/bookingstable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Mail, Phone, Calendar, Trophy, Coins } from "lucide-react";
+import { getMembershipTier } from "../page";
 
 export default async function AdminCustomerDetailPage({
     params,
@@ -30,6 +31,8 @@ export default async function AdminCustomerDetailPage({
     const activeBookingsCount = bookings.filter(
         (b) => b.status === "confirmed" || b.status === "completed"
     ).length;
+
+    const tier = getMembershipTier(bookings.length);
 
     const memberSince = customer.createdAt
         ? new Date(customer.createdAt).toLocaleDateString("en-US", {
@@ -138,10 +141,10 @@ export default async function AdminCustomerDetailPage({
                     </CardHeader>
                     <CardContent>
                         <p className="text-2xl font-bold tracking-tight">
-                            {bookings.length >= 20 ? "VIP Member" : bookings.length >= 5 ? "Regular" : "Guest"}
+                            {tier.label}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                            {bookings.length >= 20 ? "Top frequent player" : bookings.length >= 5 ? "Frequent player" : "Occasional player"}
+                            {tier.description}
                         </p>
                     </CardContent>
                 </Card>
