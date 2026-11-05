@@ -4,12 +4,13 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, AlertCircle } from "lucide-react";
+import { AddCourtModal } from "@/components/ui/admin/AddCourtModal";
 
 type CourtStatus = "Available" | "Not Available" | "Maintenance";
 
@@ -45,10 +46,7 @@ export default function AdminCourtsPage() {
   const [courts, setCourts] = useState<Court[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [newStatus, setNewStatus] = useState<CourtStatus>("Available");
-  const [hourlyRate, setHourlyRate] = useState("25");
+  const [isAddCourtOpen, setIsAddCourtOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Edit Rate dialog state
@@ -65,9 +63,12 @@ export default function AdminCourtsPage() {
 
     if (!error && data) {
       setCourts(
-        data
-          .map((c: any) => ({
-            ...c,
+        (data as Partial<Court>[])
+          .map((c) => ({
+            id: c.id ?? "",
+            name: c.name ?? "",
+            description: c.description ?? null,
+            is_active: c.is_active ?? true,
             hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 25,
             status: c.status || (c.is_active ? "Available" : "Not Available"),
           }))
@@ -80,8 +81,39 @@ export default function AdminCourtsPage() {
   }, []);
 
   useEffect(() => {
-    fetchCourts();
-  }, [fetchCourts]);
+    let ignore = false;
+
+    async function load() {
+      const { data, error } = await supabase
+        .from("courts")
+        .select("id, name, description, is_active, status, hourly_rate, created_at")
+        .order("name", { ascending: true });
+
+      if (ignore) return;
+      if (!error && data) {
+        setCourts(
+          (data as Partial<Court>[])
+            .map((c) => ({
+              id: c.id ?? "",
+              name: c.name ?? "",
+              description: c.description ?? null,
+              is_active: c.is_active ?? true,
+              hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 25,
+              status: c.status || (c.is_active ? "Available" : "Not Available"),
+            }))
+            .sort((a: Court, b: Court) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+        );
+      } else if (error) {
+        setErrorMessage("Unable to load courts. Please refresh the page to try again.");
+      }
+      setLoading(false);
+    }
+
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const updateCourtStatus = async (courtId: string, status: CourtStatus) => {
     setErrorMessage(null);
@@ -110,28 +142,29 @@ export default function AdminCourtsPage() {
     }
   };
 
-  const handleCreateCourt = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
+  const handleCreateCourt = async (courtData: {
+    name: string;
+    description: string;
+    hourlyRate: string;
+    status: CourtStatus;
+  }) => {
+    if (!courtData.name.trim()) return;
 
     setCreating(true);
     setErrorMessage(null);
 
     const { error } = await supabase.from("courts").insert({
-      name: name.trim(),
-      description: description.trim() || null,
-      status: newStatus,
-      is_active: newStatus === "Available",
-      hourly_rate: parseFloat(hourlyRate) || 25,
+      name: courtData.name.trim(),
+      description: courtData.description.trim() || null,
+      status: courtData.status,
+      is_active: courtData.status === "Available",
+      hourly_rate: parseFloat(courtData.hourlyRate) || 200,
     });
 
     setCreating(false);
 
     if (!error) {
-      setName("");
-      setDescription("");
-      setHourlyRate("25");
-      setNewStatus("Available");
+      setIsAddCourtOpen(false);
       fetchCourts();
     } else {
       setErrorMessage("Unable to add court. Please verify the court name is unique and try again.");
@@ -190,6 +223,13 @@ export default function AdminCourtsPage() {
           <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-300">
             {countByStatus("Not Available")} Unavailable
           </Badge>
+          <Button
+            onClick={() => setIsAddCourtOpen(true)}
+            size="sm"
+            className="h-8 text-xs font-semibold gap-1.5 ml-1"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Court
+          </Button>
         </div>
       </div>
 
@@ -209,77 +249,6 @@ export default function AdminCourtsPage() {
           </button>
         </div>
       )}
-
-      {/* Add Court Form */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Add Court</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleCreateCourt} className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-            <div>
-              <Label htmlFor="court-name">Court Name</Label>
-              <Input
-                id="court-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Court 3"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="court-description">Location / Notes (Optional)</Label>
-              <Input
-                id="court-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g., Indoor near entrance"
-              />
-            </div>
-            <div>
-              <Label htmlFor="court-rate">Hourly Rate (₱)</Label>
-              <Input
-                id="court-rate"
-                type="number"
-                min="0"
-                step="any"
-                value={hourlyRate}
-                onChange={(e) => setHourlyRate(e.target.value)}
-                placeholder="25"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="court-status">Initial Status</Label>
-              <select
-                id="court-status"
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value as CourtStatus)}
-                className="w-full border border-slate-200 dark:border-slate-700 rounded-md px-3 py-2 text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-medium shadow-xs focus:ring-2 focus:ring-blue-500"
-              >
-                {STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100">
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end">
-              <Button type="submit" className="w-full" disabled={creating}>
-                {creating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Adding...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4 mr-2" /> Add Court
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
 
       {/* Courts List */}
       {loading ? (
@@ -449,6 +418,15 @@ export default function AdminCourtsPage() {
           </div>
         </div>
       )}
+
+      {/* Add Court Dialog */}
+      <AddCourtModal
+        isOpen={isAddCourtOpen}
+        onClose={() => setIsAddCourtOpen(false)}
+        onSubmit={handleCreateCourt}
+        isSubmitting={creating}
+        errorMessage={errorMessage}
+      />
     </div>
   );
 }

@@ -27,13 +27,12 @@ export interface AddCourtModalProps {
   errorMessage?: string | null;
 }
 
-export function AddCourtModal({
-  isOpen,
+function AddCourtModalContent({
   onClose,
   onSubmit,
   isSubmitting = false,
   errorMessage = null,
-}: AddCourtModalProps) {
+}: Omit<AddCourtModalProps, "isOpen">) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [hourlyRate, setHourlyRate] = useState("200");
@@ -41,8 +40,6 @@ export function AddCourtModal({
 
   // Handle Escape key to close dialog
   useEffect(() => {
-    if (!isOpen) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && !isSubmitting) {
         onClose();
@@ -51,21 +48,7 @@ export function AddCourtModal({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isSubmitting, onClose]);
-
-  // Reset form when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setName("");
-      setDescription("");
-      setHourlyRate("200");
-      setStatus("Available");
-    }
-  }, [isOpen]);
-
-  if (!isOpen) {
-    return null;
-  }
+  }, [isSubmitting, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,5 +200,26 @@ export function AddCourtModal({
         </form>
       </div>
     </div>
+  );
+}
+
+export function AddCourtModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  isSubmitting = false,
+  errorMessage = null,
+}: AddCourtModalProps) {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <AddCourtModalContent
+      onClose={onClose}
+      onSubmit={onSubmit}
+      isSubmitting={isSubmitting}
+      errorMessage={errorMessage}
+    />
   );
 }

@@ -24,3 +24,4 @@ describe("AddCourtModal", () => {
     expect(html).toContain('Hourly Rate (₱)');
   });
 });
+
