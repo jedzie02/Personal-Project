@@ -10,9 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, AlertCircle } from "lucide-react";
-import { AddCourtModal } from "@/components/ui/admin/AddCourtModal";
-
-type CourtStatus = "Available" | "Not Available" | "Maintenance";
+import { AddCourtModal, CourtStatus, STATUS_OPTIONS } from "@/components/ui/admin/AddCourtModal";
 
 interface Court {
   id: string;
@@ -23,12 +21,6 @@ interface Court {
   hourly_rate?: number | null;
   created_at?: string;
 }
-
-const STATUS_OPTIONS: { value: CourtStatus; label: string }[] = [
-  { value: "Available", label: "Available (Open for player reservations)" },
-  { value: "Maintenance", label: "Maintenance (Temporarily closed for court maintenance)" },
-  { value: "Not Available", label: "Not Available (Hidden from booking grid)" },
-];
 
 function statusBadge(status: CourtStatus) {
   switch (status) {
@@ -153,12 +145,13 @@ export default function AdminCourtsPage() {
     setCreating(true);
     setErrorMessage(null);
 
+    const parsedRate = parseFloat(courtData.hourlyRate);
     const { error } = await supabase.from("courts").insert({
       name: courtData.name.trim(),
       description: courtData.description.trim() || null,
       status: courtData.status,
       is_active: courtData.status === "Available",
-      hourly_rate: parseFloat(courtData.hourlyRate) || 200,
+      hourly_rate: Number.isNaN(parsedRate) ? 200 : parsedRate,
     });
 
     setCreating(false);
@@ -224,7 +217,10 @@ export default function AdminCourtsPage() {
             {countByStatus("Not Available")} Unavailable
           </Badge>
           <Button
-            onClick={() => setIsAddCourtOpen(true)}
+            onClick={() => {
+              setErrorMessage(null);
+              setIsAddCourtOpen(true);
+            }}
             size="sm"
             className="h-8 text-xs font-semibold gap-1.5 ml-1"
           >
@@ -422,7 +418,10 @@ export default function AdminCourtsPage() {
       {/* Add Court Dialog */}
       <AddCourtModal
         isOpen={isAddCourtOpen}
-        onClose={() => setIsAddCourtOpen(false)}
+        onClose={() => {
+          setErrorMessage(null);
+          setIsAddCourtOpen(false);
+        }}
         onSubmit={handleCreateCourt}
         isSubmitting={creating}
         errorMessage={errorMessage}
