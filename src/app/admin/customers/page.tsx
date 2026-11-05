@@ -16,14 +16,13 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Search, UserCircle } from "lucide-react";
-import type { CustomerSummary } from "@/lib/types/domain";
+import { Search } from "lucide-react";
 
 // Dynamically derive membership tier from live booking count
-function getMembershipTier(count: number): { label: string; cls: string } {
-    if (count >= 20) return { label: "VIP Member",     cls: "bg-purple-100 text-purple-800 hover:bg-purple-100 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800" };
-    if (count >= 5)  return { label: "Regular Member", cls: "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800"       };
-    return              { label: "Guest",              cls: "bg-gray-100 text-gray-600 hover:bg-gray-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"       };
+export function getMembershipTier(count: number): { label: string; cls: string; description: string } {
+    if (count >= 20) return { label: "VIP Player",     cls: "bg-purple-100 text-purple-800 hover:bg-purple-100 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800", description: "Top frequent player" };
+    if (count >= 5)  return { label: "Regular Player", cls: "bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800",       description: "Active returning player" };
+    return              { label: "New Player",         cls: "bg-slate-100 text-slate-700 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",   description: "First-time or occasional player" };
 }
 
 function getInitials(name: string | null): string {
@@ -64,9 +63,9 @@ export default async function AdminCustomersPage({ searchParams }: AdminCustomer
             {/* Membership Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {[
-                    { label: "VIP Members",     count: customers.filter((c) => c.bookingCount >= 20).length, cls: "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300" },
-                    { label: "Regular Members", count: customers.filter((c) => c.bookingCount >= 5 && c.bookingCount < 20).length, cls: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" },
-                    { label: "Guests",          count: customers.filter((c) => c.bookingCount < 5).length,  cls: "bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300"   },
+                    { label: "VIP Players",     count: customers.filter((c) => c.bookingCount >= 20).length, cls: "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300" },
+                    { label: "Regular Players", count: customers.filter((c) => c.bookingCount >= 5 && c.bookingCount < 20).length, cls: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" },
+                    { label: "New Players",     count: customers.filter((c) => c.bookingCount < 5).length,  cls: "bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300"   },
                 ].map(({ label, count, cls }) => (
                     <Card key={label} className="shadow-sm">
                         <CardContent className="py-4">
@@ -166,4 +165,4 @@ export default async function AdminCustomersPage({ searchParams }: AdminCustomer
             </Card>
         </div>
     );
-}
+}
