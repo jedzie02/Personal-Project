@@ -84,24 +84,24 @@ export async function proxy(request: NextRequest) {
             }
         );
 
-        // --- Session refresh (always runs) ---
-        const {
-            data: { user },
-        } = await supabase.auth.getUser();
-
         const pathname = request.nextUrl.pathname;
 
-        // --- Unauthenticated user trying to access /admin/* ---
-        if (!user && pathname.startsWith("/admin")) {
-            const url = request.nextUrl.clone();
-            url.pathname = "/auth/login";
-            url.searchParams.set("redirectTo", pathname);
-            return NextResponse.redirect(url);
-        }
+        // --- Protected admin routes guard ---
+        // Only verify user & role when accessing /admin/* to avoid remote auth latency on public pages.
+        if (pathname.startsWith("/admin")) {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
 
-        // --- Non-admin guard for /admin/* ---
-        // Only query the profile when the route actually needs a role check.
-        if (user && pathname.startsWith("/admin")) {
+            // Unauthenticated user trying to access /admin/*
+            if (!user) {
+                const url = request.nextUrl.clone();
+                url.pathname = "/auth/login";
+                url.searchParams.set("redirectTo", pathname);
+                return NextResponse.redirect(url);
+            }
+
+            // Non-admin guard for /admin/*
             const { data: profile } = await supabase
                 .from("profiles")
                 .select("role")

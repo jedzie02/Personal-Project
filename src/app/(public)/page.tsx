@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
 import { extractQuickSlotsSummary } from "@/lib/utils/quick-slots";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 10;
 
 function addOneDayISO(isoDate: string): string {
     const [y, m, d] = isoDate.split("-").map(Number);
