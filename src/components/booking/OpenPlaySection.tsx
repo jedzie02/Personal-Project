@@ -13,7 +13,7 @@ export default function OpenPlaySection({
     return (
         <section
             id="open-play"
-            className="py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-200/70 dark:border-slate-800/80 bg-white dark:bg-slate-950"
+            className="scroll-mt-20 py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-200/70 dark:border-slate-800/80 bg-white dark:bg-slate-950"
             aria-labelledby="open-play-heading"
         >
             <div className="mx-auto max-w-5xl">

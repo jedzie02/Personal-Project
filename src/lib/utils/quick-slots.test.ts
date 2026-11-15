@@ -57,13 +57,19 @@ describe("extractQuickSlotsSummary", () => {
         expect(res.slots).toEqual([]);
     });
 
-    it("counts total open slots and extracts top 3 upcoming hours with badges and 4-player splits", () => {
-        const res = extractQuickSlotsSummary(makeGridData());
+    it("counts total open slots and extracts slots across all available courts", () => {
+        const res = extractQuickSlotsSummary(makeGridData(), 4);
         expect(res.totalOpenSlots).toBe(6);
         expect(res.openCourtsCount).toBe(3);
         expect(res.lowestHourlyRate).toBe(300);
         expect(res.lowestSplitPerPlayer).toBe(75);
-        expect(res.slots).toHaveLength(3);
+        expect(res.slots).toHaveLength(4);
+
+        // Every available court (c1, c2, c4) must be represented
+        const courtIds = res.slots.map((s) => s.courtId);
+        expect(courtIds).toContain("c1");
+        expect(courtIds).toContain("c2");
+        expect(courtIds).toContain("c4");
 
         expect(res.slots[0]).toMatchObject({
             courtId: "c1",
@@ -81,24 +87,37 @@ describe("extractQuickSlotsSummary", () => {
         expect(res.slots[1]).toMatchObject({
             courtId: "c2",
             courtName: "Court 2",
+            hour: "16:00",
+            endHour: "17:00",
+            timeLabel: "04:00 PM – 05:00 PM",
+            badgeLabel: "Next Available",
+            badgeTone: "emerald",
+        });
+
+        expect(res.slots[2]).toMatchObject({
+            courtId: "c2",
+            courtName: "Court 2",
             hour: "17:00",
             endHour: "18:00",
             timeLabel: "05:00 PM – 06:00 PM",
+            hourlyRate: 300,
+            splitPerPlayer: 75,
+            openCourtsAtHour: 2,
             badgeLabel: "Prime Time",
             badgeTone: "amber",
         });
 
-        expect(res.slots[2]).toMatchObject({
+        expect(res.slots[3]).toMatchObject({
             courtId: "c4",
             courtName: "Court 4",
-            hour: "18:00",
-            endHour: "19:00",
-            timeLabel: "06:00 PM – 07:00 PM",
+            hour: "17:00",
+            endHour: "18:00",
+            timeLabel: "05:00 PM – 06:00 PM",
             hourlyRate: 400,
             splitPerPlayer: 100,
-            openCourtsAtHour: 1,
-            badgeLabel: "Only 1 Court Left!",
-            badgeTone: "rose",
+            openCourtsAtHour: 2,
+            badgeLabel: "Prime Time",
+            badgeTone: "amber",
         });
     });
 

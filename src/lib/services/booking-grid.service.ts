@@ -32,6 +32,8 @@ export interface GridCell {
         endTime: string;
         durationHours: number;
         customerName: string | null;
+        customerId?: string;
+        status?: string;
     };
     /** Whether this hour falls within peak hours (for the accent bar) */
     isPeak: boolean;
@@ -128,7 +130,7 @@ export async function getBookingGridForDate(
     const { data: bookingRows } = await supabase
         .from("bookings")
         .select(
-            "id, court_id, start_time, end_time, status, customer_id, profiles ( full_name )"
+            "id, court_id, start_time, end_time, status, customer_id, created_at, profiles ( full_name )"
         )
         .eq("booking_date", date)
         .in("status", ["pending", "confirmed", "completed"]);
@@ -141,6 +143,7 @@ export async function getBookingGridForDate(
         end_time: string;
         status: string;
         customer_id: string;
+        created_at?: string;
         profiles: { full_name: string | null } | null;
     }>;
 
@@ -171,11 +174,18 @@ export async function getBookingGridForDate(
         const hourNum = parseInt(hour.split(":")[0], 10);
         const nextHour = `${(hourNum + 1).toString().padStart(2, "0")}:00`;
 
+        const HOLD_WINDOW_MS = 15 * 60 * 1000;
+        const nowTime = Date.now();
+
         return courts.map((court) => {
             // Find if there's a booking that covers this hour on this court
             // Normalizing to HH:MM prevents string length mismatch ('11:00:00' > '11:00') that causes off-by-one-hour shifts
             const booking = bookings.find((b) => {
                 if (b.court_id !== court.id) return false;
+                if (b.status === "pending" && b.created_at) {
+                    const elapsed = nowTime - new Date(b.created_at).getTime();
+                    if (elapsed > HOLD_WINDOW_MS) return false;
+                }
                 const bStart = b.start_time.slice(0, 5);
                 const bEnd = b.end_time.slice(0, 5);
                 return bStart <= hour && (bEnd > hour || bEnd === "00:00");
@@ -272,6 +282,8 @@ export async function getBookingGridForDate(
                         endTime: booking.end_time,
                         durationHours: duration,
                         customerName: booking.profiles?.full_name ?? null,
+                        customerId: booking.customer_id,
+                        status: booking.status,
                     },
                 };
             }

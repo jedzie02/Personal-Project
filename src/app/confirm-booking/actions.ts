@@ -163,7 +163,7 @@ export async function submitConfirmBooking(input: ConfirmBookingInput): Promise<
                 startTime: block.start,
                 endTime: block.end,
                 totalPrice: block.totalPrice,
-                markAsConfirmed: true,
+                markAsConfirmed: false,
                 paymentStatus: "pending",
                 paymentMethod: input.paymentMethod || "Cash walk in",
                 paymentReference,
@@ -198,7 +198,7 @@ export async function submitConfirmBooking(input: ConfirmBookingInput): Promise<
         startTime,
         endTime,
         totalPrice: Number(input.rate) || 300,
-        markAsConfirmed: true,
+        markAsConfirmed: false,
         paymentStatus: "pending",
         paymentMethod: input.paymentMethod || "Cash walk in",
     });

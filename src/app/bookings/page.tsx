@@ -7,7 +7,7 @@ import { cancelOwnBookingAction } from "@/app/bookings/actions";
 import { formatTime } from "@/lib/utils/date";
 import { CANCELLATION_CUTOFF_HOURS, canCancelBooking } from "@/lib/config/booking-rules";
 import { Button } from "@/components/ui/button";
-import { Clock, XCircle, CalendarCheck, Receipt, Users } from "lucide-react";
+import { Clock, XCircle, CalendarCheck, Receipt, Users, QrCode } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 
 export default async function MyBookingsPage({
@@ -197,18 +197,32 @@ export default async function MyBookingsPage({
                                         <span className="text-xs text-slate-500 dark:text-slate-400">
                                             {isPaid
                                                 ? `Official receipt ready (${booking.paymentMethod || "Paid"})`
+                                                : booking.status === "pending"
+                                                ? "Payment not yet completed"
                                                 : `Payment method: ${booking.paymentMethod || "Cash walk in"}`}
                                         </span>
-                                        <Link href={`/book/confirmation?bookingId=${booking.id}`}>
-                                            <Button
-                                                variant={isPaid ? "default" : "outline"}
-                                                size="sm"
-                                                className={isPaid ? "h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer" : "h-8 text-xs gap-1.5 cursor-pointer"}
-                                            >
-                                                <Receipt className="size-3.5" />
-                                                {isPaid ? "View Official Receipt" : "View Booking / Pay"}
-                                            </Button>
-                                        </Link>
+                                        {booking.status === "pending" ? (
+                                            <Link href={`/book/payment?bookingId=${booking.id}`}>
+                                                <Button
+                                                    size="sm"
+                                                    className="h-8 text-xs gap-1.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold cursor-pointer shadow-xs"
+                                                >
+                                                    <QrCode className="size-3.5" />
+                                                    Resume Payment
+                                                </Button>
+                                            </Link>
+                                        ) : (
+                                            <Link href={`/book/confirmation?bookingId=${booking.id}`}>
+                                                <Button
+                                                    variant={isPaid ? "default" : "outline"}
+                                                    size="sm"
+                                                    className={isPaid ? "h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer" : "h-8 text-xs gap-1.5 cursor-pointer"}
+                                                >
+                                                    <Receipt className="size-3.5" />
+                                                    {isPaid ? "View Official Receipt" : "View Booking"}
+                                                </Button>
+                                            </Link>
+                                        )}
                                     </div>
                                 )}
 

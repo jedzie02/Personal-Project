@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, CheckCircle2, Clock, ChevronRight, Check, Trash2, CalendarX } from "lucide-react";
+import { Lock, CheckCircle2, Clock, ChevronRight, Check, Trash2, CalendarX, Play } from "lucide-react";
 import type { BookingGridData, GridCell } from "@/lib/services/booking-grid.service";
 import { PRICE_PER_HOUR } from "@/lib/config/booking-rules";
 import { supabase } from "@/lib/supabase";
@@ -68,8 +68,27 @@ export default function BookingGrid({
     const router = useRouter();
     const { courts, hours, grid, date } = data;
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [selectedSlots, setSelectedSlots] = useState<SelectedGridSlot[]>([]);
     const [mobileCourtFilter, setMobileCourtFilter] = useState<string>(initialCourtFilter || "all");
+    const [showPassed, setShowPassed] = useState(false);
+
+    // Reset showPassed and selected slots if date changes
+    useEffect(() => {
+        setSelectedSlots([]);
+        setShowPassed(false);
+    }, [date]);
+
+    const isRowPassed = (hourIdx: number) => {
+        const row = grid[hourIdx];
+        return Boolean(row && row.length > 0 && row.every((c) => c.status === "passed"));
+    };
+
+    const passedHoursCount = useMemo(() => {
+        return hours.filter((_, idx) => isRowPassed(idx)).length;
+    }, [hours, grid]);
+
+    const isAllPassed = passedHoursCount === hours.length && hours.length > 0;
 
     // Memoize master list of 4 naturally sorted courts
     const masterCourts = useMemo(() => {
@@ -116,12 +135,14 @@ export default function BookingGrid({
                 const { data } = await supabase.auth.getSession();
                 if (data?.session?.user) {
                     setIsLoggedIn(true);
+                    setCurrentUserId(data.session.user.id);
                     return;
                 }
             } catch {
                 // Ignore session lookup errors
             }
             setIsLoggedIn(false);
+            setCurrentUserId(null);
         };
 
         checkAuth();
@@ -130,6 +151,10 @@ export default function BookingGrid({
         const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session?.user) {
                 setIsLoggedIn(true);
+                setCurrentUserId(session.user.id);
+            } else {
+                setIsLoggedIn(false);
+                setCurrentUserId(null);
             }
         });
 
@@ -437,9 +462,33 @@ export default function BookingGrid({
                         })}
                     </div>
 
+                    {/* Toggle bar for passed hours */}
+                    {passedHoursCount > 0 && !isAllPassed && (
+                        <div className="flex items-center justify-between px-3 sm:px-4 py-2 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 text-xs">
+                            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
+                                <Clock className="size-3.5 text-slate-400 dark:text-slate-500" />
+                                <span>
+                                    {passedHoursCount} earlier {passedHoursCount === 1 ? "hour" : "hours"} passed
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowPassed((prev) => !prev)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 transition-colors cursor-pointer"
+                            >
+                                <span>{showPassed ? "Hide passed times" : "Show passed times"}</span>
+                                <ChevronRight className={`size-3 transition-transform ${showPassed ? "-rotate-90" : "rotate-90"}`} />
+                            </button>
+                        </div>
+                    )}
+
                     {/* Time rows */}
                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
                         {hours.map((hour, hourIdx) => {
+                            if (!showPassed && !isAllPassed && isRowPassed(hourIdx)) {
+                                return null;
+                            }
+
                             const hourNum = parseInt(hour.split(":")[0], 10);
                             const nextHourNum = (hourNum + 1) % 24;
                             const nextHour = `${nextHourNum.toString().padStart(2, "0")}:00`;
@@ -494,6 +543,7 @@ export default function BookingGrid({
                                                     isSelected={isSelected}
                                                     onSelectSlot={handleToggleSlot}
                                                     isLoggedIn={isLoggedIn}
+                                                    currentUserId={currentUserId}
                                                     router={router}
                                                 />
                                             </div>
@@ -631,6 +681,7 @@ function CellContent({
     isSelected = false,
     onSelectSlot,
     isLoggedIn,
+    currentUserId,
     router,
 }: {
     cell: BookingGridData["grid"][0][0];
@@ -639,6 +690,7 @@ function CellContent({
     isSelected?: boolean;
     onSelectSlot: (slot: SelectedSlot) => void;
     isLoggedIn: boolean;
+    currentUserId?: string | null;
     router: ReturnType<typeof useRouter>;
 }) {
     // Priority: court-level Maintenance / Not Available status takes precedence
@@ -660,6 +712,33 @@ function CellContent({
             );
 
         case "booked":
+            if (cell.booking && cell.booking.status === "pending") {
+                const isOwner = isLoggedIn && !!currentUserId && currentUserId === cell.booking.customerId;
+                if (isOwner) {
+                    return (
+                        <button
+                            type="button"
+                            onClick={() => router.push(`/book/payment?bookingId=${cell.booking!.id}`)}
+                            className="w-full h-full min-h-[44px] rounded-[14px] py-2 flex items-center justify-center bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-xs gap-1.5 shadow-xs cursor-pointer transition-all animate-in zoom-in-95 duration-150"
+                        >
+                            <Play className="size-3 fill-current" />
+                            <span>Resume</span>
+                        </button>
+                    );
+                }
+
+                return (
+                    <div
+                        className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 dark:bg-slate-800/70 flex flex-col items-center justify-center gap-0.5 py-2 cursor-not-allowed"
+                    >
+                        <Lock className="size-3.5 text-slate-400 dark:text-slate-500" />
+                        <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">
+                            Held
+                        </span>
+                    </div>
+                );
+            }
+
             return (
                 <div
                     className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 dark:bg-slate-800/70 flex flex-col items-center justify-center gap-0.5 py-2"

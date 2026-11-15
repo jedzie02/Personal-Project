@@ -39,7 +39,7 @@ function addOneHour(timeStr: string): string {
 
 export function extractQuickSlotsSummary(
     gridData: BookingGridData | null,
-    maxCards: number = 3
+    maxCards: number = 4
 ): QuickSlotsSummary {
     if (!gridData || gridData.isClosed || !Array.isArray(gridData.hours) || !Array.isArray(gridData.grid)) {
         return {
@@ -68,50 +68,123 @@ export function extractQuickSlotsSummary(
     const lowestSplitPerPlayer = Math.ceil(lowestHourlyRate / 4);
 
     let totalOpenSlots = 0;
-    const slots: QuickSlotCard[] = [];
-
     for (let hourIdx = 0; hourIdx < gridData.hours.length; hourIdx++) {
-        const hour = gridData.hours[hourIdx];
         const row = gridData.grid[hourIdx] ?? [];
-
         const openCellsInRow = row.filter(
             (cell) => cell.status === "available" && availableCourtMap.has(cell.courtId)
         );
-
         totalOpenSlots += openCellsInRow.length;
+    }
 
-        if (openCellsInRow.length > 0 && slots.length < maxCards) {
-            const firstCell = openCellsInRow[0];
-            const courtMeta = availableCourtMap.get(firstCell.courtId)!;
-            const endHour = addOneHour(hour);
-            const hourNum = parseInt(hour.split(":")[0], 10);
-            const isPrimeHour = hourNum >= 17 && hourNum <= 20;
+    // 1. Gather the earliest available slot for each available court
+    const courtSlots: QuickSlotCard[] = [];
+    const usedSlotKeys = new Set<string>();
 
-            let badgeLabel: QuickSlotCard["badgeLabel"] = "Next Available";
-            let badgeTone: QuickSlotCard["badgeTone"] = "emerald";
+    for (const [courtId, courtMeta] of availableCourtMap.entries()) {
+        for (let hourIdx = 0; hourIdx < gridData.hours.length; hourIdx++) {
+            const hour = gridData.hours[hourIdx];
+            const row = gridData.grid[hourIdx] ?? [];
+            const cell = row.find((c) => c.courtId === courtId && c.status === "available");
+            if (cell) {
+                const openCellsInRow = row.filter(
+                    (c) => c.status === "available" && availableCourtMap.has(c.courtId)
+                );
+                const endHour = addOneHour(hour);
+                const hourNum = parseInt(hour.split(":")[0], 10);
+                const isPrimeHour = hourNum >= 17 && hourNum <= 20;
 
-            if (openCellsInRow.length === 1) {
-                badgeLabel = "Only 1 Court Left!";
-                badgeTone = "rose";
-            } else if (isPrimeHour) {
-                badgeLabel = "Prime Time";
-                badgeTone = "amber";
+                let badgeLabel: QuickSlotCard["badgeLabel"] = "Next Available";
+                let badgeTone: QuickSlotCard["badgeTone"] = "emerald";
+
+                if (openCellsInRow.length === 1) {
+                    badgeLabel = "Only 1 Court Left!";
+                    badgeTone = "rose";
+                } else if (isPrimeHour) {
+                    badgeLabel = "Prime Time";
+                    badgeTone = "amber";
+                }
+
+                courtSlots.push({
+                    courtId,
+                    courtName: courtMeta.name || cell.courtName,
+                    hour,
+                    endHour,
+                    timeLabel: `${formatAMPM(hour)} – ${formatAMPM(endHour)}`,
+                    hourlyRate: courtMeta.hourlyRate,
+                    splitPerPlayer: Math.ceil(courtMeta.hourlyRate / 4),
+                    openCourtsAtHour: openCellsInRow.length,
+                    badgeLabel,
+                    badgeTone,
+                    date: gridData.date,
+                });
+                usedSlotKeys.add(`${courtId}-${hour}`);
+                break;
             }
-
-            slots.push({
-                courtId: firstCell.courtId,
-                courtName: courtMeta.name || firstCell.courtName,
-                hour,
-                endHour,
-                timeLabel: `${formatAMPM(hour)} – ${formatAMPM(endHour)}`,
-                hourlyRate: courtMeta.hourlyRate,
-                splitPerPlayer: Math.ceil(courtMeta.hourlyRate / 4),
-                openCourtsAtHour: openCellsInRow.length,
-                badgeLabel,
-                badgeTone,
-                date: gridData.date,
-            });
         }
+    }
+
+    // Sort court slots by hour, then naturally by court name
+    courtSlots.sort((a, b) => {
+        const hourDiff = a.hour.localeCompare(b.hour);
+        if (hourDiff !== 0) return hourDiff;
+        return a.courtName.localeCompare(b.courtName, undefined, { numeric: true });
+    });
+
+    const slots: QuickSlotCard[] = [...courtSlots];
+
+    // 2. If slots < maxCards, fill remaining slots with other upcoming open slots
+    if (slots.length < maxCards) {
+        for (let hourIdx = 0; hourIdx < gridData.hours.length; hourIdx++) {
+            if (slots.length >= maxCards) break;
+            const hour = gridData.hours[hourIdx];
+            const row = gridData.grid[hourIdx] ?? [];
+            const openCells = row.filter(
+                (c) => c.status === "available" && availableCourtMap.has(c.courtId)
+            );
+
+            for (const cell of openCells) {
+                if (slots.length >= maxCards) break;
+                const key = `${cell.courtId}-${hour}`;
+                if (usedSlotKeys.has(key)) continue;
+
+                const courtMeta = availableCourtMap.get(cell.courtId)!;
+                const endHour = addOneHour(hour);
+                const hourNum = parseInt(hour.split(":")[0], 10);
+                const isPrimeHour = hourNum >= 17 && hourNum <= 20;
+
+                let badgeLabel: QuickSlotCard["badgeLabel"] = "Next Available";
+                let badgeTone: QuickSlotCard["badgeTone"] = "emerald";
+
+                if (openCells.length === 1) {
+                    badgeLabel = "Only 1 Court Left!";
+                    badgeTone = "rose";
+                } else if (isPrimeHour) {
+                    badgeLabel = "Prime Time";
+                    badgeTone = "amber";
+                }
+
+                slots.push({
+                    courtId: cell.courtId,
+                    courtName: courtMeta.name || cell.courtName,
+                    hour,
+                    endHour,
+                    timeLabel: `${formatAMPM(hour)} – ${formatAMPM(endHour)}`,
+                    hourlyRate: courtMeta.hourlyRate,
+                    splitPerPlayer: Math.ceil(courtMeta.hourlyRate / 4),
+                    openCourtsAtHour: openCells.length,
+                    badgeLabel,
+                    badgeTone,
+                    date: gridData.date,
+                });
+                usedSlotKeys.add(key);
+            }
+        }
+
+        slots.sort((a, b) => {
+            const hourDiff = a.hour.localeCompare(b.hour);
+            if (hourDiff !== 0) return hourDiff;
+            return a.courtName.localeCompare(b.courtName, undefined, { numeric: true });
+        });
     }
 
     return {
@@ -120,7 +193,7 @@ export function extractQuickSlotsSummary(
         openCourtsCount: availableCourtMap.size,
         lowestHourlyRate,
         lowestSplitPerPlayer,
-        slots,
+        slots: slots.slice(0, maxCards),
     };
 }
 

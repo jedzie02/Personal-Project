@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Zap, ArrowRight, Users } from "lucide-react";
 import type { QuickSlotsSummary, QuickSlotCard } from "@/lib/utils/quick-slots";
@@ -57,30 +58,13 @@ export default function HeroQuickSlots({
     const isTomorrowPreview = Boolean(summary.date && summary.date > todayISO);
 
     const handleSelectQuickSlot = (slot: QuickSlotCard) => {
-        if (slot.date === activeDate) {
-            window.dispatchEvent(
-                new CustomEvent("paddlix:select-slot", {
-                    detail: {
-                        courtId: slot.courtId,
-                        courtName: slot.courtName,
-                        hour: slot.hour,
-                    },
-                })
-            );
-            const target = document.getElementById("book-a-court");
-            if (target) {
-                target.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-            return;
-        }
-
-        const url = `/?date=${encodeURIComponent(slot.date)}&selectCourt=${encodeURIComponent(slot.courtId)}&selectHour=${encodeURIComponent(slot.hour)}#book-a-court`;
+        const url = `/book?date=${encodeURIComponent(slot.date)}&selectCourt=${encodeURIComponent(slot.courtId)}&selectHour=${encodeURIComponent(slot.hour)}`;
         router.push(url);
     };
 
     return (
         <div
-            className="animate-hero-rise mt-6 w-full max-w-3xl mx-auto rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 p-4 sm:p-5 text-left shadow-xs"
+            className="animate-hero-rise mt-6 w-full max-w-4xl lg:max-w-5xl mx-auto rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 p-4 sm:p-5 text-left shadow-xs"
             style={{ animationDelay: "360ms" }}
         >
             <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
@@ -95,16 +79,16 @@ export default function HeroQuickSlots({
                         · Tap any slot to add to your booking cart
                     </span>
                 </div>
-                <a
-                    href="#book-a-court"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                <Link
+                    href="/book"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors cursor-pointer"
                 >
                     <span>Full Schedule</span>
                     <ArrowRight className="size-3.5" />
-                </a>
+                </Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
                 {summary.slots.map((slot) => {
                     const badgeClasses =
                         slot.badgeTone === "rose"

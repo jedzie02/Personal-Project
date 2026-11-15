@@ -192,8 +192,8 @@ export default function ConfirmBookingClient() {
                 return;
             }
 
-            // GCash QR / Cash: go straight to confirmation
-            router.push(`/book/confirmation?bookingId=${res.bookingId}`);
+            // QR Ph / GCash: proceed to dedicated payment screen
+            router.push(`/book/payment?bookingId=${res.bookingId}`);
         } catch (err: any) {
             setError(err?.message || "An unexpected error occurred while booking.");
             setIsSubmitting(false);
@@ -326,41 +326,14 @@ export default function ConfirmBookingClient() {
                             </div>
                         )}
 
-                        {/* 3. Payment Method Choice Selector */}
-                        <div className="pt-3 pb-1 space-y-2.5">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-                                    <PaymentIcon className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Payment Method
-                                </span>
-                                <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold">
-                                    {selectedPaymentMethod === "GCash QR"
-                                        ? "GCash QR"
-                                        : "Credit / Debit Card"}
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2.5">
-                                {PAYMENT_OPTIONS.map((opt) => {
-                                    const Icon = opt.icon;
-                                    const isSelected = selectedPaymentMethod === opt.id;
-                                    return (
-                                        <button
-                                            key={opt.id}
-                                            type="button"
-                                            onClick={() => setSelectedPaymentMethod(opt.id)}
-                                            className={`flex flex-col items-center justify-center p-2.5 sm:p-3 rounded-xl border min-h-[58px] transition-all cursor-pointer text-center select-none ${
-                                                isSelected
-                                                    ? "border-2 border-blue-600 bg-blue-50/80 dark:bg-blue-950/70 text-blue-900 dark:text-blue-200 shadow-xs scale-[1.02]"
-                                                    : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                                            }`}
-                                        >
-                                            <Icon className={`size-4 mb-1.5 ${isSelected ? "text-blue-600 dark:text-blue-400" : "text-slate-500 dark:text-slate-400"}`} />
-                                            <span className="text-xs font-bold leading-tight">{opt.label}</span>
-                                            <span className="text-xs text-muted-foreground mt-0.5 leading-tight">{opt.sublabel}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                        {/* 3. Payment Method Display (Card option removed from UI; QR Ph is default) */}
+                        <div className="flex items-center justify-between pt-2.5 pb-1">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                <QrCode className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Payment Method
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300">
+                                <QrCode className="size-3" /> QR Ph
+                            </span>
                         </div>
 
                         {/* 4. Total Rate / Price in Philippine Peso */}
@@ -375,9 +348,7 @@ export default function ConfirmBookingClient() {
                     </div>
 
                     <p className="text-xs text-slate-400 dark:text-slate-500 text-center">
-                        {selectedPaymentMethod === "GCash QR"
-                            ? "After confirming, you'll scan the venue GCash QR code and submit your reference number."
-                            : "You'll be redirected to Stripe to complete your card payment securely. Your slot is reserved once payment is confirmed."}
+                        Lock in your reservation now. You&apos;ll scan and complete your payment via QR Ph on the next step.
                     </p>
                 </CardContent>
 
@@ -391,10 +362,13 @@ export default function ConfirmBookingClient() {
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                {selectedPaymentMethod === "Credit Card" ? "Redirecting to Stripe…" : "Reserving Court…"}
+                                Reserving Court…
                             </>
                         ) : (
-                            selectedPaymentMethod === "Credit Card" ? "Confirm & Pay with Card" : "Confirm Booking"
+                            <>
+                                <QrCode className="w-4 h-4" />
+                                <span>₱{rate} with QR Ph</span>
+                            </>
                         )}
                     </Button>
 

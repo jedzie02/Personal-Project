@@ -127,18 +127,26 @@ export default function TermsPage() {
                 {/* Footer Back Link */}
                 <div className="mt-12 pt-6 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
                     <Link
-                        href="/"
+                        href="/book"
                         className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                     >
                         <ArrowLeft className="size-4" />
-                        Return to Court Booking
+                        Book a Court
                     </Link>
-                    <Link
-                        href="/privacy"
-                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                        View Privacy Policy →
-                    </Link>
+                    <div className="flex items-center gap-4 text-sm">
+                        <Link
+                            href="/#faq"
+                            className="text-slate-400 hover:text-white transition-colors"
+                        >
+                            FAQ
+                        </Link>
+                        <Link
+                            href="/privacy"
+                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                            View Privacy Policy →
+                        </Link>
+                    </div>
                 </div>
             </main>
         </div>

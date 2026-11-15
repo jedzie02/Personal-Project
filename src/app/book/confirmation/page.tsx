@@ -5,7 +5,6 @@ import { getCurrentProfile } from "@/lib/services/auth.server";
 import { getGCashSettings } from "@/lib/services/settings.service";
 import { formatTime } from "@/lib/utils/date";
 import { Button } from "@/components/ui/button";
-import { GCashPaymentCard } from "@/components/booking/GCashPaymentCard";
 import { Navbar } from "@/components/Navbar";
 import {
   Card,
@@ -253,17 +252,17 @@ export default async function BookingConfirmationPage({
               </div>
             </div>
 
-            {/* Context-Sensitive Payment Instruction / GCash QR Card */}
+            {/* Context-Sensitive Payment Instruction / QR Ph Receipt Card */}
             {!isCancelled ? (
               isGCash && booking.paymentStatus !== "succeeded" ? (
-                <GCashPaymentCard
-                  bookingId={booking.id}
-                  totalPrice={totalBookingPrice}
-                  initialReference={booking.paymentReference}
-                  gcashNumber={gcashSettings?.gcash_number}
-                  gcashName={gcashSettings?.gcash_name}
-                  gcashQrUrl={gcashSettings?.gcash_qr_url}
-                />
+                <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/70 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-800/80 dark:text-emerald-200 space-y-1">
+                  <div className="font-semibold flex items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300">
+                    <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" /> QR Ph Payment Recorded
+                  </div>
+                  <p className="text-xs leading-relaxed opacity-95 dark:text-slate-300">
+                    Your QR Ph payment has been marked as submitted. Please present this confirmation screen or your banking receipt at the front desk upon arrival.
+                  </p>
+                </div>
               ) : isGCash && booking.paymentStatus === "succeeded" ? (
                 <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/70 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-800/80 dark:text-emerald-200 space-y-1">
                   <div className="font-semibold flex items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300">

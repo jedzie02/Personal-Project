@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   CircleDotDashed,
   LogOut,
@@ -312,6 +313,103 @@ export function Navbar() {
     );
   }, [profile.fullName]);
 
+  type NavKey = "home" | "open-play" | "book" | "about" | "";
+  const pathname = usePathname();
+  const [activeNav, setActiveNav] = useState<NavKey>("home");
+
+  useEffect(() => {
+    if (pathname === "/book" || pathname?.startsWith("/book")) {
+      setActiveNav("book");
+      return;
+    }
+    if (pathname === "/about") {
+      setActiveNav("about");
+      return;
+    }
+    if (pathname !== "/") {
+      setActiveNav("");
+      return;
+    }
+
+    const handleScroll = () => {
+      if (window.scrollY < 150) {
+        setActiveNav("home");
+        return;
+      }
+      const aboutEl = document.getElementById("about");
+      const openPlayEl = document.getElementById("open-play");
+      const scrollBottom = window.innerHeight + window.scrollY;
+      const docHeight = document.documentElement.scrollHeight;
+
+      if (
+        (aboutEl && aboutEl.getBoundingClientRect().top <= 250) ||
+        docHeight - scrollBottom < 80
+      ) {
+        setActiveNav("about");
+      } else if (openPlayEl && openPlayEl.getBoundingClientRect().top <= 250) {
+        setActiveNav("open-play");
+      } else {
+        setActiveNav("home");
+      }
+    };
+
+    if (typeof window !== "undefined") {
+      if (window.location.hash === "#open-play") {
+        setActiveNav("open-play");
+      } else if (window.location.hash === "#about") {
+        setActiveNav("about");
+      } else {
+        handleScroll();
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [pathname]);
+
+  const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    setActiveNav("home");
+    if (pathname === "/" || pathname === "") {
+      e.preventDefault();
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.history.pushState(null, "", "/");
+      }
+    }
+  };
+
+  const handleHashNav = (e: React.MouseEvent<HTMLAnchorElement>, hash: string) => {
+    if (hash === "open-play" || hash === "about") {
+      setActiveNav(hash);
+    }
+    if (typeof window !== "undefined" && (pathname === "/" || pathname === "")) {
+      const el = document.getElementById(hash);
+      if (el) {
+        e.preventDefault();
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.history.pushState(null, "", `/#${hash}`);
+      }
+    }
+  };
+
+  const getDesktopNavLinkClass = (key: NavKey) => {
+    const isActive = activeNav === key;
+    return `text-xs px-4 py-1.5 rounded-full transition-all ${
+      isActive
+        ? "font-semibold text-white bg-slate-800 shadow-none"
+        : "font-medium text-slate-400 hover:text-white hover:bg-slate-800/60"
+    }`;
+  };
+
+  const getMobileNavLinkClass = (key: NavKey) => {
+    const isActive = activeNav === key;
+    return `w-full text-xs py-2 px-3 rounded-xl cursor-pointer transition-colors ${
+      isActive
+        ? "font-semibold text-white bg-slate-800"
+        : "font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+    }`;
+  };
+
   return (
     <header className="flex items-center w-full px-4 sm:px-6 py-3 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-50">
       {/* Left: Brand */}
@@ -329,29 +427,37 @@ export function Navbar() {
       <nav className="hidden sm:flex items-center gap-1 bg-slate-900/80 p-1 rounded-full border border-slate-800/80" aria-label="Primary navigation">
         <Link
           href="/"
-          className="text-xs font-semibold px-4 py-1.5 rounded-full text-white bg-slate-800 shadow-none transition-all"
+          onClick={handleHomeClick}
+          className={getDesktopNavLinkClass("home")}
           aria-label="Home"
+          aria-current={activeNav === "home" ? "page" : undefined}
         >
           Home
         </Link>
         <Link
           href="/#open-play"
-          className="text-xs font-medium px-4 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all"
+          onClick={(e) => handleHashNav(e, "open-play")}
+          className={getDesktopNavLinkClass("open-play")}
           aria-label="Open Play"
+          aria-current={activeNav === "open-play" ? "page" : undefined}
         >
           Open Play
         </Link>
         <Link
-          href="#book-a-court"
-          className="text-xs font-medium px-4 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all"
+          href="/book"
+          onClick={() => setActiveNav("book")}
+          className={getDesktopNavLinkClass("book")}
           aria-label="Book a Court"
+          aria-current={activeNav === "book" ? "page" : undefined}
         >
           Book Court
         </Link>
         <Link
-          href="#about"
-          className="text-xs font-medium px-4 py-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all"
+          href="/#about"
+          onClick={(e) => handleHashNav(e, "about")}
+          className={getDesktopNavLinkClass("about")}
           aria-label="About Pickleball"
+          aria-current={activeNav === "about" ? "page" : undefined}
         >
           About
         </Link>
@@ -375,26 +481,51 @@ export function Navbar() {
               className="w-48 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl p-1.5"
             >
               <DropdownMenuItem className="p-0">
-                <Link href="/" className="w-full text-xs font-semibold py-2 px-3 rounded-xl cursor-pointer">
+                <Link
+                  href="/"
+                  onClick={handleHomeClick}
+                  className={getMobileNavLinkClass("home")}
+                >
                   Home
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="p-0">
-                <Link href="/#open-play" className="w-full text-xs font-medium py-2 px-3 rounded-xl cursor-pointer">
+                <Link
+                  href="/#open-play"
+                  onClick={(e) => handleHashNav(e, "open-play")}
+                  className={getMobileNavLinkClass("open-play")}
+                >
                   Open Play
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="p-0">
-                <Link href="/#book-a-court" className="w-full text-xs font-medium py-2 px-3 rounded-xl cursor-pointer">
+                <Link
+                  href="/book"
+                  onClick={() => setActiveNav("book")}
+                  className={getMobileNavLinkClass("book")}
+                >
                   Book a Court
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="p-0">
-                <Link href="/#about" className="w-full text-xs font-medium py-2 px-3 rounded-xl cursor-pointer">
+                <Link
+                  href="/#about"
+                  onClick={(e) => handleHashNav(e, "about")}
+                  className={getMobileNavLinkClass("about")}
+                >
                   About Pickleball
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="my-1" />
+              <DropdownMenuItem className="p-0">
+                <Link
+                  href="/#faq"
+                  onClick={(e) => handleHashNav(e, "faq")}
+                  className="w-full text-xs font-medium py-2 px-3 rounded-xl text-slate-500 cursor-pointer"
+                >
+                  FAQ
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuItem className="p-0">
                 <Link href="/privacy" className="w-full text-xs font-medium py-2 px-3 rounded-xl text-slate-500 cursor-pointer">
                   Privacy Policy
@@ -538,9 +669,9 @@ export function Navbar() {
                   ) : bookings.length === 0 ? (
                     <div className="py-3 px-2 text-center rounded-xl bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-800">
                       <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">No active bookings yet.</p>
-                      <a href="#book-a-court" className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block font-semibold">
+                      <Link href="/book" className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block font-semibold">
                         Reserve a court →
-                      </a>
+                      </Link>
                     </div>
                   ) : (
                     bookings.map((booking) => (
