@@ -49,7 +49,7 @@ describe("NewBookingModal", () => {
     expect(html).toContain("Registered Member");
     expect(html).toContain("Cash Paid Now");
     expect(html).toContain("GCash QR Paid");
-    expect(html).toContain("Pay at Desk");
+    expect(html).not.toContain("Pay at Desk");
     expect(html).toContain("Total Due:");
   });
 });

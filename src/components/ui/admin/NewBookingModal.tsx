@@ -105,7 +105,7 @@ export function NewBookingModal({
   const [loadingProfiles, setLoadingProfiles] = useState(false);
 
   // Payment states
-  const [paymentOption, setPaymentOption] = useState<"cash_paid" | "gcash_paid" | "pay_at_desk">("cash_paid");
+  const [paymentOption, setPaymentOption] = useState<"cash_paid" | "gcash_paid">("cash_paid");
   const [gcashReference, setGcashReference] = useState("");
   const [customPrice, setCustomPrice] = useState<string>("");
 
@@ -612,7 +612,7 @@ export function NewBookingModal({
               Settlement & Payment
             </Label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => setPaymentOption("cash_paid")}
@@ -644,23 +644,6 @@ export function NewBookingModal({
                 </div>
                 <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   Scanned at desk QR
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentOption("pay_at_desk")}
-                className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                  paymentOption === "pay_at_desk"
-                    ? "border-amber-600 bg-amber-50 dark:bg-amber-950/50 text-amber-950 dark:text-amber-200 shadow-2xs"
-                    : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/40"
-                }`}
-              >
-                <div className="font-bold text-xs flex items-center gap-1.5">
-                  <Clock className="size-3.5 text-amber-600 dark:text-amber-400" /> Pay at Desk
-                </div>
-                <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Settles on arrival
                 </span>
               </button>
             </div>
