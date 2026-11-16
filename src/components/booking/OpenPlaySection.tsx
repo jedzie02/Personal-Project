@@ -5,15 +5,19 @@ import JoinOpenPlayButton from "./JoinOpenPlayButton";
 
 export default function OpenPlaySection({
     sessions,
+    borderTop = true,
 }: {
     sessions: OpenPlaySessionView[];
+    borderTop?: boolean;
 }) {
     const hasSessions = sessions && sessions.length > 0;
 
     return (
         <section
             id="open-play"
-            className="scroll-mt-20 py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-200/70 dark:border-slate-800/80 bg-white dark:bg-slate-950"
+            className={`scroll-mt-20 py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-slate-950 ${
+                borderTop ? "border-t border-slate-200/70 dark:border-slate-800/80" : ""
+            }`}
             aria-labelledby="open-play-heading"
         >
             <div className="mx-auto max-w-5xl">
