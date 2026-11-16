@@ -26,7 +26,7 @@ export default function JoinOpenPlayButton({
         setError(null);
 
         startTransition(async () => {
-            const res = await joinOpenPlayAction(sessionId, "GCash QR");
+            const res = await joinOpenPlayAction(sessionId, "QR Ph");
             if (res.needsLogin) {
                 router.push("/login");
                 return;

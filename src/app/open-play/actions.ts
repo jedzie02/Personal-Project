@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import { getCurrentProfile } from "@/lib/services/auth.server";
 import {
     startOpenPlayJoin,
+    completeOpenPlayPayment,
     submitOpenPlayGCashReference,
+    type OpenPlayPaymentMethod,
 } from "@/lib/services/open-play.service";
 
 export async function joinOpenPlayAction(
     sessionId: string,
-    paymentMethod: "GCash QR" | "Cash walk in" = "GCash QR"
+    paymentMethod: OpenPlayPaymentMethod = "QR Ph"
 ): Promise<{ url?: string; error?: string; needsLogin?: boolean }> {
     const profile = await getCurrentProfile();
     if (!profile) {
@@ -27,10 +29,39 @@ export async function joinOpenPlayAction(
     }
 
     revalidatePath("/");
+    revalidatePath("/open-play");
     revalidatePath("/bookings");
     revalidatePath("/admin/open-play");
 
     return { url: res.url };
+}
+
+export async function completeOpenPlayPaymentAction(
+    entryId: string
+): Promise<{ success: boolean; error?: string }> {
+    if (!entryId || typeof entryId !== "string" || !entryId.trim()) {
+        return { success: false, error: "Missing entry identifier." };
+    }
+
+    const profile = await getCurrentProfile();
+    if (!profile) {
+        return { success: false, error: "Please log in to complete your payment." };
+    }
+
+    const res = await completeOpenPlayPayment(entryId.trim(), profile.id);
+    if (!res.ok) {
+        return { success: false, error: res.error || "Failed to confirm payment." };
+    }
+
+    revalidatePath("/");
+    revalidatePath("/open-play");
+    revalidatePath("/open-play/payment");
+    revalidatePath("/open-play/confirmation");
+    revalidatePath("/bookings");
+    revalidatePath("/admin/open-play");
+    revalidatePath("/admin/dashboard");
+
+    return { success: true };
 }
 
 export async function submitOpenPlayPaymentReferenceAction(

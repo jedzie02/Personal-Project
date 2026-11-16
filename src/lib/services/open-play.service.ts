@@ -25,6 +25,8 @@ export interface OpenPlaySessionView {
     status: "scheduled" | "cancelled";
 }
 
+export type OpenPlayPaymentMethod = "QR Ph" | "GCash QR" | "Cash walk in";
+
 export interface AdminSessionView extends OpenPlaySessionView {
     players: {
         entryId: string;
@@ -34,23 +36,29 @@ export interface AdminSessionView extends OpenPlaySessionView {
         status: "pending" | "paid" | "cancelled" | "needs_refund";
         isRefunded?: boolean;
         amount: number;
-        paymentMethod: "GCash QR" | "Cash walk in";
+        paymentMethod: OpenPlayPaymentMethod;
         paymentReference: string | null;
     }[];
 }
 
 export function parseEntryPaymentMeta(raw?: string | null): {
-    paymentMethod: "GCash QR" | "Cash walk in";
+    paymentMethod: OpenPlayPaymentMethod;
     paymentReference: string | null;
     isRefunded: boolean;
 } {
     if (!raw) {
-        return { paymentMethod: "GCash QR", paymentReference: null, isRefunded: false };
+        return { paymentMethod: "QR Ph", paymentReference: null, isRefunded: false };
     }
     const isRefunded = raw.toLowerCase().includes("[refunded]");
     const cleaned = raw.replace(/\[refunded\]/gi, "").trim();
     const lower = cleaned.toLowerCase();
-    if (lower.includes("gcash") || lower.includes("qr")) {
+    if (lower.startsWith("qrph-")) {
+        return { paymentMethod: "QR Ph", paymentReference: cleaned, isRefunded };
+    }
+    if (lower === "qr ph") {
+        return { paymentMethod: "QR Ph", paymentReference: null, isRefunded };
+    }
+    if (lower.includes("gcash")) {
         if (cleaned.includes("Ref:")) {
             const ref = cleaned.split("Ref:")[1]?.replace(/[()]/g, "").trim() || null;
             return { paymentMethod: "GCash QR", paymentReference: ref, isRefunded };
@@ -60,7 +68,10 @@ export function parseEntryPaymentMeta(raw?: string | null): {
     if (lower.includes("cash")) {
         return { paymentMethod: "Cash walk in", paymentReference: null, isRefunded };
     }
-    return { paymentMethod: "GCash QR", paymentReference: null, isRefunded };
+    if (lower.includes("qr")) {
+        return { paymentMethod: "QR Ph", paymentReference: null, isRefunded };
+    }
+    return { paymentMethod: "QR Ph", paymentReference: null, isRefunded };
 }
 
 async function getDbClient() {
@@ -237,7 +248,7 @@ export async function startOpenPlayJoin(
     sessionId: string,
     customerId: string,
     _customerEmail: string | null,
-    paymentMethod: "GCash QR" | "Cash walk in" = "GCash QR"
+    paymentMethod: OpenPlayPaymentMethod = "QR Ph"
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
     const supabase = await getDbClient();
 
@@ -261,7 +272,7 @@ export async function startOpenPlayJoin(
         };
     }
 
-    // Atomically claim a spot via RPC (525600 mins = 1 year hold so spot stays reserved for GCash/Cash)
+    // Atomically claim a spot via RPC (525600 mins = 1 year hold so spot stays reserved for QR Ph/GCash/Cash)
     const { data: claimResult, error: rpcError } = await supabase.rpc(
         "claim_open_play_spot",
         {
@@ -294,8 +305,30 @@ export async function startOpenPlayJoin(
 
     return {
         ok: true,
-        url: `/open-play/confirmation?entryId=${encodeURIComponent(entryId)}`,
+        url: `/open-play/payment?entryId=${encodeURIComponent(entryId)}`,
     };
+}
+
+export async function completeOpenPlayPayment(
+    entryId: string,
+    customerId: string
+): Promise<{ ok: boolean; error?: string }> {
+    const supabase = await getDbClient();
+    const referenceToken = `QRPH-${entryId.slice(0, 8).toUpperCase()}`;
+
+    const { error } = await supabase
+        .from("open_play_entries")
+        .update({
+            status: "paid",
+            stripe_checkout_session_id: referenceToken,
+        })
+        .eq("id", entryId)
+        .eq("customer_id", customerId);
+
+    if (error) {
+        return { ok: false, error: error.message || "Failed to complete payment." };
+    }
+    return { ok: true };
 }
 
 export async function submitOpenPlayGCashReference(

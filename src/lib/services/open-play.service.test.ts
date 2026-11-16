@@ -3,6 +3,16 @@ import { toSessionView, isUpcoming, parseEntryPaymentMeta } from "./open-play.se
 
 describe("open-play.service pure mappers", () => {
     it("parseEntryPaymentMeta extracts GCash QR, GCash Ref #, Cash walk in, and [Refunded] tag", () => {
+        expect(parseEntryPaymentMeta("QR Ph")).toEqual({
+            paymentMethod: "QR Ph",
+            paymentReference: null,
+            isRefunded: false,
+        });
+        expect(parseEntryPaymentMeta("QRPH-10293847")).toEqual({
+            paymentMethod: "QR Ph",
+            paymentReference: "QRPH-10293847",
+            isRefunded: false,
+        });
         expect(parseEntryPaymentMeta("GCash QR")).toEqual({
             paymentMethod: "GCash QR",
             paymentReference: null,
