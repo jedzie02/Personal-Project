@@ -12,11 +12,8 @@ import {
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { GCashPaymentCard } from "@/components/booking/GCashPaymentCard";
 import { getCurrentProfile } from "@/lib/services/auth.server";
-import { getGCashSettings } from "@/lib/services/settings.service";
 import { getEntryForCustomer } from "@/lib/services/open-play.service";
-import { submitOpenPlayPaymentReferenceAction } from "@/app/open-play/actions";
 import { formatTime } from "@/lib/utils/date";
 
 export const dynamic = "force-dynamic";
@@ -59,11 +56,16 @@ export default async function OpenPlayConfirmationPage({ searchParams }: PagePro
         );
     }
 
-    const shortRef = `#${entryId.slice(0, 8).toUpperCase()}`;
     const isPaid = entry.status === "paid";
     const isNeedsRefund = entry.status === "needs_refund";
-    const isGCash = entry.paymentMethod === "GCash QR";
-    const gcashSettings = isGCash ? await getGCashSettings() : null;
+
+    // If spot is still pending payment, route player to the payment step
+    if (!isPaid && !isNeedsRefund) {
+        redirect(`/open-play/payment?entryId=${encodeURIComponent(entryId)}`);
+    }
+
+    const shortRef = `#${entryId.slice(0, 8).toUpperCase()}`;
+    const displayRef = entry.paymentReference || shortRef;
 
     return (
         <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
@@ -82,7 +84,7 @@ export default async function OpenPlayConfirmationPage({ searchParams }: PagePro
                                 Session Cancelled
                             </h1>
                             <p className="text-sm text-slate-600 dark:text-slate-400">
-                                This Open Play session was cancelled by the venue. Your payment ({shortRef}) has been flagged for a full refund.
+                                This Open Play session was cancelled by the venue. Your payment ({displayRef}) has been flagged for a full refund.
                             </p>
                         </div>
                     ) : (
@@ -91,21 +93,17 @@ export default async function OpenPlayConfirmationPage({ searchParams }: PagePro
                                 <CheckCircle2 className="size-6" />
                             </div>
                             <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
-                                {isPaid ? "Spot Reserved & Paid" : "Open Play Spot Reserved!"}
+                                Spot Reserved & Paid
                             </span>
                             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white pt-1">
                                 You&apos;re in for Open Play!
                             </h1>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                                {isPaid
-                                    ? "Your payment has been verified and an official receipt was sent to your email."
-                                    : isGCash
-                                    ? "Scan the GCash QR code below and submit your 13-digit reference number."
-                                    : "Your Open Play spot is reserved. Please settle your cash payment at the reception counter upon arrival."}
+                                Your Open Play spot has been reserved and confirmed. Present this pass at the counter upon arrival.
                             </p>
                             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 font-mono">
                                 <Hash className="size-3 text-slate-400" />
-                                <span>Ref: {shortRef}</span>
+                                <span>Ref: {displayRef}</span>
                             </div>
                         </div>
                     )}
@@ -142,10 +140,10 @@ export default async function OpenPlayConfirmationPage({ searchParams }: PagePro
                                 Payment Method
                             </span>
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200">
-                                {isGCash ? (
-                                    <QrCode className="size-3 text-blue-600 dark:text-blue-400" />
-                                ) : (
+                                {entry.paymentMethod === "Cash walk in" ? (
                                     <Banknote className="size-3 text-emerald-600 dark:text-emerald-400" />
+                                ) : (
+                                    <QrCode className="size-3 text-blue-600 dark:text-blue-400" />
                                 )}
                                 {entry.paymentMethod}
                             </span>
@@ -153,7 +151,7 @@ export default async function OpenPlayConfirmationPage({ searchParams }: PagePro
                         {entry.paymentReference && (
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                    GCash Ref #
+                                    Reference #
                                 </span>
                                 <span className="font-mono text-xs font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
                                     {entry.paymentReference}
@@ -171,37 +169,15 @@ export default async function OpenPlayConfirmationPage({ searchParams }: PagePro
                     </div>
 
                     {!isNeedsRefund && (
-                        isGCash && !isPaid ? (
-                            <GCashPaymentCard
-                                bookingId={entryId}
-                                totalPrice={entry.amount}
-                                initialReference={entry.paymentReference}
-                                gcashNumber={gcashSettings?.gcash_number}
-                                gcashName={gcashSettings?.gcash_name}
-                                gcashQrUrl={gcashSettings?.gcash_qr_url}
-                                submitAction={submitOpenPlayPaymentReferenceAction}
-                            />
-                        ) : isGCash && isPaid ? (
-                            <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/70 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-800/80 dark:text-emerald-200 space-y-1">
-                                <div className="font-semibold flex items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300">
-                                    <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" /> GCash Payment Verified — Official Receipt
-                                </div>
-                                <p className="text-xs leading-relaxed opacity-95 dark:text-slate-300">
-                                    Your GCash transfer{entry.paymentReference ? ` (Ref #${entry.paymentReference})` : ""} has been verified by the administrator. Present this receipt at the front desk upon arrival.
-                                </p>
+                        <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/70 text-emerald-950 dark:bg-emerald-950/40 dark:border-emerald-800/80 dark:text-emerald-200 space-y-1">
+                            <div className="font-semibold flex items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300">
+                                <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+                                Payment Completed — Official Spot Confirmation
                             </div>
-                        ) : (
-                            <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/70 text-amber-950 dark:bg-slate-800/80 dark:border-slate-700 space-y-1">
-                                <div className="font-semibold flex items-center gap-1.5 text-xs text-amber-800 dark:text-slate-200">
-                                    <Banknote className="size-4 text-amber-700 dark:text-amber-400" /> Cash Walk-In Payment
-                                </div>
-                                <p className="text-xs leading-relaxed opacity-95 dark:text-slate-300">
-                                    {isPaid
-                                        ? "Your cash payment has been recorded at the reception desk. Present this official receipt when entering the court."
-                                        : "Please settle your cash payment at the reception counter before entering the court."}
-                                </p>
-                            </div>
-                        )
+                            <p className="text-xs leading-relaxed opacity-95 dark:text-slate-300">
+                                Your spot is officially secured for this session. Present this pass at the reception counter upon arrival.
+                            </p>
+                        </div>
                     )}
 
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
@@ -211,11 +187,11 @@ export default async function OpenPlayConfirmationPage({ searchParams }: PagePro
                             </Button>
                         </Link>
                         <Link
-                            href="/"
+                            href="/open-play"
                             className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                         >
                             <ArrowLeft className="size-3.5" />
-                            Back to Home
+                            Back to Open Play
                         </Link>
                     </div>
                 </div>
