@@ -32,6 +32,7 @@ import {
   getManilaNow,
   generateTimeSlots,
   DAY_LABELS,
+  timeToMinutes,
 } from "@/lib/utils/date";
 import type { OperatingHours } from "@/lib/types/domain";
 import { updateScheduleAction } from "@/app/admin/schedule/actions";
@@ -627,33 +628,44 @@ export function ScheduleTimeline({
               ))}
             </div>
 
-            {/* Time Slot Rows */}
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
-              {timeSlots.map((slot) => {
-                const slotLabel = `${formatTime(slot.start)} – ${formatTime(slot.end)}`;
-                const isCurrentHourSlot = Boolean(
-                  isViewingToday && currentHourPadded && slot.start === currentHourPadded
-                );
-                const isPastSlot = Boolean(
-                  isViewingPastDate ||
-                    (isViewingToday && currentHourPadded && slot.start < currentHourPadded)
-                );
+            {/* Master Schedule Grid */}
+            <div
+              className={cn(
+                "grid",
+                visibleCourts.length === 1
+                  ? "grid-cols-[130px_1fr] sm:grid-cols-[165px_1fr]"
+                  : "grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)]"
+              )}
+              style={{
+                gridAutoRows: "minmax(68px, auto)",
+              }}
+            >
+              {(() => {
+                const occupiedSlotMap = new Set<string>();
+                const cells: React.ReactNode[] = [];
 
-                return (
-                  <div
-                    key={`${slot.start}-${slot.end}`}
-                    className={cn(
-                      "grid min-h-[68px] transition-colors",
-                      visibleCourts.length === 1
-                        ? "grid-cols-[130px_1fr] sm:grid-cols-[165px_1fr]"
-                        : "grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)]",
-                      isCurrentHourSlot && "bg-rose-500/5 dark:bg-rose-500/10"
-                    )}
-                  >
-                    {/* Sticky Time Y-Axis Column */}
+                timeSlots.forEach((slot, slotIndex) => {
+                  const slotLabel = `${formatTime(slot.start)} – ${formatTime(slot.end)}`;
+                  const isCurrentHourSlot = Boolean(
+                    isViewingToday && currentHourPadded && slot.start === currentHourPadded
+                  );
+                  const isPastSlot = Boolean(
+                    isViewingPastDate ||
+                      (isViewingToday && currentHourPadded && slot.start < currentHourPadded)
+                  );
+                  const isLastRow = slotIndex === timeSlots.length - 1;
+
+                  // 1. Time Column Cell
+                  cells.push(
                     <div
+                      key={`time-${slot.start}`}
+                      style={{
+                        gridColumn: 1,
+                        gridRow: slotIndex + 1,
+                      }}
                       className={cn(
-                        "sticky left-0 z-10 flex flex-col items-center justify-center p-2.5 border-r border-slate-200 dark:border-slate-800 select-none text-center shadow-[2px_0_4px_-1px_rgba(0,0,0,0.04)]",
+                        "sticky left-0 z-10 flex flex-col items-center justify-center p-2.5 border-r border-b border-slate-200 dark:border-slate-800 select-none text-center shadow-[2px_0_4px_-1px_rgba(0,0,0,0.04)]",
+                        isLastRow && "border-b-0",
                         isCurrentHourSlot
                           ? "bg-rose-50 dark:bg-rose-950/60"
                           : "bg-white dark:bg-slate-900"
@@ -676,147 +688,195 @@ export function ScheduleTimeline({
                         </span>
                       )}
                     </div>
+                  );
 
-                    {/* Court Cells */}
-                    {visibleCourts.map((court) => {
-                      if (court.status === "Maintenance") {
-                        return (
-                          <div
-                            key={court.id}
-                            className="border-r last:border-r-0 border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center"
-                          >
-                            <div className="w-full h-full min-h-[54px] rounded-xl px-2.5 py-1.5 flex items-center justify-center gap-1.5 text-center select-none bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 text-amber-800 dark:text-amber-300">
-                              <Wrench className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                              <span className="font-semibold text-xs">Maintenance</span>
-                            </div>
-                          </div>
-                        );
-                      }
+                  // 2. Court Columns
+                  visibleCourts.forEach((court, cIdx) => {
+                    const col = cIdx + 2;
+                    const isLastCol = cIdx === visibleCourts.length - 1;
+                    const courtSlotKey = `${court.id}-${slot.start}`;
 
-                      if (court.status === "Not Available") {
-                        return (
-                          <div
-                            key={court.id}
-                            className="border-r last:border-r-0 border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center"
-                          >
-                            <div className="w-full h-full min-h-[54px] rounded-xl px-2.5 py-1.5 flex items-center justify-center text-center select-none bg-slate-100/60 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500">
-                              <span className="font-semibold text-xs">Not Available</span>
-                            </div>
-                          </div>
-                        );
-                      }
+                    // If this slot is covered by an earlier multi-hour booking, skip!
+                    if (occupiedSlotMap.has(courtSlotKey)) {
+                      return;
+                    }
 
-                      // Check live booking for this court & time
-                      const liveBooking = initialBookings.find((b) => {
-                        if (b.courtId !== court.id) return false;
-                        const bStart = b.startTime.slice(0, 5);
-                        const bEnd = b.endTime.slice(0, 5);
-                        return bStart <= slot.start && (bEnd > slot.start || bEnd === "00:00");
-                      });
-
-                      if (liveBooking) {
-                        const isPaid =
-                          liveBooking.paymentStatus === "succeeded" ||
-                          liveBooking.paymentStatus === "paid";
-                        const bStart = liveBooking.startTime.slice(0, 5);
-                        const bEnd = liveBooking.endTime.slice(0, 5);
-                        const bookingSpanLabel = `${formatTime(bStart)} – ${formatTime(bEnd)}`;
-                        const methodTag = formatPaymentMethodTag(liveBooking.paymentMethod);
-
-                        return (
-                          <div
-                            key={court.id}
-                            className="border-r last:border-r-0 border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center"
-                          >
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setActiveBookingSlot({
-                                  court,
-                                  slotLabel,
-                                  booking: liveBooking,
-                                })
-                              }
-                              className="w-full h-full min-h-[54px] rounded-xl px-3 py-2 flex flex-col justify-between text-left select-none bg-blue-50/75 dark:bg-blue-950/40 hover:bg-blue-100/80 dark:hover:bg-blue-900/50 border border-blue-200/80 dark:border-blue-900/60 transition-colors cursor-pointer group"
-                            >
-                              <div className="flex items-center justify-between gap-1.5 w-full">
-                                <span className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300">
-                                  {liveBooking.customerName}
-                                </span>
-                                <span
-                                  className={cn(
-                                    "px-1.5 py-0.5 rounded-full text-xs font-semibold shrink-0",
-                                    isPaid
-                                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                      : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                  )}
-                                >
-                                  {isPaid ? "Paid" : "Pending"}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-1 w-full tabular-nums">
-                                <span className="truncate">
-                                  {methodTag} · {bookingSpanLabel}
-                                </span>
-                                <span className="font-semibold text-slate-700 dark:text-slate-200 shrink-0 ml-1">
-                                  ₱{Number(liveBooking.totalPrice).toFixed(0)}
-                                </span>
-                              </div>
-                            </button>
-                          </div>
-                        );
-                      }
-
-                      if (isVenueClosedToday) {
-                        return (
-                          <div
-                            key={court.id}
-                            className="border-r last:border-r-0 border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center"
-                          >
-                            <div className="w-full h-full min-h-[54px] rounded-xl px-2.5 py-1.5 flex items-center justify-center text-center select-none bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 text-slate-400 dark:text-slate-500">
-                              <span className="font-medium text-xs">Closed</span>
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      // Passed unbooked slot (muted at rest, still clickable for admin logging)
-                      if (isPastSlot) {
-                        return (
-                          <div
-                            key={court.id}
-                            className="border-r last:border-r-0 border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center"
-                          >
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setActiveAvailableSlot({
-                                  court,
-                                  slotStart: slot.start,
-                                  slotEnd: slot.end,
-                                  slotLabel,
-                                })
-                              }
-                              className="w-full h-full min-h-[54px] rounded-xl px-2 py-1.5 flex items-center justify-center text-center select-none bg-slate-50/70 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800/60 transition-colors cursor-pointer group"
-                            >
-                              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 group-hover:hidden">
-                                Passed
-                              </span>
-                              <span className="hidden group-hover:inline-flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                <Plus className="size-3.5" />
-                                Log Walk-in
-                              </span>
-                            </button>
-                          </div>
-                        );
-                      }
-
-                      // Slot is Available
-                      return (
+                    if (court.status === "Maintenance") {
+                      cells.push(
                         <div
-                          key={court.id}
-                          className="border-r last:border-r-0 border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center"
+                          key={`maint-${court.id}-${slot.start}`}
+                          style={{
+                            gridColumn: col,
+                            gridRow: `${slotIndex + 1} / span 1`,
+                          }}
+                          className={cn(
+                            "border-r border-b border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center",
+                            isLastCol && "border-r-0",
+                            isLastRow && "border-b-0"
+                          )}
+                        >
+                          <div className="w-full h-full min-h-[54px] rounded-xl px-2.5 py-1.5 flex items-center justify-center gap-1.5 text-center select-none bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 text-amber-800 dark:text-amber-300">
+                            <Wrench className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <span className="font-semibold text-xs">Maintenance</span>
+                          </div>
+                        </div>
+                      );
+                      return;
+                    }
+
+                    if (court.status === "Not Available") {
+                      cells.push(
+                        <div
+                          key={`notavail-${court.id}-${slot.start}`}
+                          style={{
+                            gridColumn: col,
+                            gridRow: `${slotIndex + 1} / span 1`,
+                          }}
+                          className={cn(
+                            "border-r border-b border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center",
+                            isLastCol && "border-r-0",
+                            isLastRow && "border-b-0"
+                          )}
+                        >
+                          <div className="w-full h-full min-h-[54px] rounded-xl px-2.5 py-1.5 flex items-center justify-center text-center select-none bg-slate-100/60 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500">
+                            <span className="font-semibold text-xs">Not Available</span>
+                          </div>
+                        </div>
+                      );
+                      return;
+                    }
+
+                    // Check live booking starting at this slot (or active at first slot)
+                    const liveBooking = initialBookings.find((b) => {
+                      if (b.courtId !== court.id) return false;
+                      const bStart = b.startTime.slice(0, 5);
+                      const bEnd = b.endTime.slice(0, 5);
+                      if (bStart === slot.start) return true;
+                      if (slotIndex === 0 && bStart < slot.start && (bEnd > slot.start || bEnd === "00:00")) return true;
+                      return false;
+                    });
+
+                    if (liveBooking) {
+                      const isPaid =
+                        liveBooking.paymentStatus === "succeeded" ||
+                        liveBooking.paymentStatus === "paid";
+                      const bStart = liveBooking.startTime.slice(0, 5);
+                      const bEnd = liveBooking.endTime.slice(0, 5);
+
+                      // Calculate span duration in 1-hour slots
+                      const startMin = timeToMinutes(bStart);
+                      const endMin = timeToMinutes(bEnd);
+                      const durationHours = Math.max(
+                        1,
+                        Math.round((endMin - startMin) / 60)
+                      );
+                      const maxRemaining = timeSlots.length - slotIndex;
+                      const span = Math.min(durationHours, maxRemaining);
+
+                      // Mark subsequent hours as occupied so they are not rendered
+                      for (let i = 1; i < span; i++) {
+                        if (timeSlots[slotIndex + i]) {
+                          occupiedSlotMap.add(`${court.id}-${timeSlots[slotIndex + i].start}`);
+                        }
+                      }
+
+                      const bookingSpanLabel = `${formatTime(bStart)} – ${formatTime(bEnd)}${span > 1 ? ` (${span}h)` : ""}`;
+                      const methodTag = formatPaymentMethodTag(liveBooking.paymentMethod);
+                      const isEndRow = slotIndex + span >= timeSlots.length;
+
+                      cells.push(
+                        <div
+                          key={`booking-${liveBooking.id}-${court.id}-${slot.start}`}
+                          style={{
+                            gridColumn: col,
+                            gridRow: `${slotIndex + 1} / span ${span}`,
+                          }}
+                          className={cn(
+                            "border-r border-b border-slate-100 dark:border-slate-800/80 p-1.5 flex flex-col justify-stretch",
+                            isLastCol && "border-r-0",
+                            isEndRow && "border-b-0"
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveBookingSlot({
+                                court,
+                                slotLabel: bookingSpanLabel,
+                                booking: liveBooking,
+                              })
+                            }
+                            className={cn(
+                              "w-full h-full min-h-[54px] rounded-xl px-3 py-2 flex flex-col justify-between text-left select-none bg-blue-50/75 dark:bg-blue-950/40 hover:bg-blue-100/80 dark:hover:bg-blue-900/50 border border-blue-200/80 dark:border-blue-900/60 transition-colors cursor-pointer group",
+                              span > 1 && "py-2.5"
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-1.5 w-full">
+                              <span className="font-semibold text-xs text-slate-900 dark:text-slate-100 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300">
+                                {liveBooking.customerName}
+                              </span>
+                              <span
+                                className={cn(
+                                  "px-1.5 py-0.5 rounded-full text-xs font-semibold shrink-0",
+                                  isPaid
+                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                    : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                )}
+                              >
+                                {isPaid ? "Paid" : "Pending"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mt-1 w-full tabular-nums">
+                              <span className="truncate">
+                                {methodTag} · {bookingSpanLabel}
+                              </span>
+                              <span className="font-semibold text-slate-700 dark:text-slate-200 shrink-0 ml-1">
+                                ₱{Number(liveBooking.totalPrice).toFixed(0)}
+                              </span>
+                            </div>
+                          </button>
+                        </div>
+                      );
+                      return;
+                    }
+
+                    if (isVenueClosedToday) {
+                      cells.push(
+                        <div
+                          key={`closed-${court.id}-${slot.start}`}
+                          style={{
+                            gridColumn: col,
+                            gridRow: `${slotIndex + 1} / span 1`,
+                          }}
+                          className={cn(
+                            "border-r border-b border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center",
+                            isLastCol && "border-r-0",
+                            isLastRow && "border-b-0"
+                          )}
+                        >
+                          <div className="w-full h-full min-h-[54px] rounded-xl px-2.5 py-1.5 flex items-center justify-center text-center select-none bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 text-slate-400 dark:text-slate-500">
+                            <span className="font-medium text-xs">Closed</span>
+                          </div>
+                        </div>
+                      );
+                      return;
+                    }
+
+                    // Passed unbooked slot (muted at rest, still clickable for admin logging)
+                    if (isPastSlot) {
+                      cells.push(
+                        <div
+                          key={`past-${court.id}-${slot.start}`}
+                          style={{
+                            gridColumn: col,
+                            gridRow: `${slotIndex + 1} / span 1`,
+                          }}
+                          className={cn(
+                            "border-r border-b border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center",
+                            isLastCol && "border-r-0",
+                            isLastRow && "border-b-0"
+                          )}
                         >
                           <button
                             type="button"
@@ -828,23 +888,63 @@ export function ScheduleTimeline({
                                 slotLabel,
                               })
                             }
-                            className="w-full h-full min-h-[54px] rounded-xl px-2 py-1.5 flex items-center justify-center text-center select-none bg-white dark:bg-slate-900 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-slate-200/80 hover:border-emerald-300 dark:border-slate-800 dark:hover:border-emerald-700/60 transition-colors cursor-pointer group"
+                            className="w-full h-full min-h-[54px] rounded-xl px-2 py-1.5 flex items-center justify-center text-center select-none bg-slate-50/70 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800/60 transition-colors cursor-pointer group"
                           >
-                            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 group-hover:hidden">
-                              <span className="size-1.5 rounded-full bg-emerald-500" />
-                              Available
+                            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 group-hover:hidden">
+                              Passed
                             </span>
-                            <span className="hidden group-hover:inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                            <span className="hidden group-hover:inline-flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
                               <Plus className="size-3.5" />
-                              Reserve
+                              Log Walk-in
                             </span>
                           </button>
                         </div>
                       );
-                    })}
-                  </div>
-                );
-              })}
+                      return;
+                    }
+
+                    // Slot is Available
+                    cells.push(
+                      <div
+                        key={`avail-${court.id}-${slot.start}`}
+                        style={{
+                          gridColumn: col,
+                          gridRow: `${slotIndex + 1} / span 1`,
+                        }}
+                        className={cn(
+                          "border-r border-b border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center",
+                          isLastCol && "border-r-0",
+                          isLastRow && "border-b-0"
+                        )}
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveAvailableSlot({
+                              court,
+                              slotStart: slot.start,
+                              slotEnd: slot.end,
+                              slotLabel,
+                            })
+                          }
+                          className="w-full h-full min-h-[54px] rounded-xl px-2 py-1.5 flex items-center justify-center text-center select-none bg-white dark:bg-slate-900 hover:bg-emerald-50/80 dark:hover:bg-emerald-950/30 border border-slate-200/80 hover:border-emerald-300 dark:border-slate-800 dark:hover:border-emerald-700/60 transition-colors cursor-pointer group"
+                        >
+                          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 group-hover:hidden">
+                            <span className="size-1.5 rounded-full bg-emerald-500" />
+                            Available
+                          </span>
+                          <span className="hidden group-hover:inline-flex items-center gap-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                            <Plus className="size-3.5" />
+                            Reserve
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  });
+                });
+
+                return cells;
+              })()}
             </div>
           </div>
         </div>

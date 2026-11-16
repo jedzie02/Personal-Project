@@ -62,8 +62,9 @@ describe("ScheduleTimeline Multi-Hour Spanning", () => {
     expect(customerMatches.length).toBe(1);
 
     // Should indicate time span and total fee
-    expect(html).toContain("18:00");
-    expect(html).toContain("21:00");
+    expect(html).toContain("6:00 PM");
+    expect(html).toContain("9:00 PM");
+    expect(html).toContain("(3h)");
     expect(html).toContain("₱900");
 
     // Grid row span attribute or inline style indicating span 3
