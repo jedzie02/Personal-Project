@@ -863,7 +863,7 @@ export function ScheduleTimeline({
                       return;
                     }
 
-                    // Passed unbooked slot (muted at rest, still clickable for admin logging)
+                    // Passed unbooked slot: static, not bookable
                     if (isPastSlot) {
                       cells.push(
                         <div
@@ -878,26 +878,11 @@ export function ScheduleTimeline({
                             isLastRow && "border-b-0"
                           )}
                         >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setActiveAvailableSlot({
-                                court,
-                                slotStart: slot.start,
-                                slotEnd: slot.end,
-                                slotLabel,
-                              })
-                            }
-                            className="w-full h-full min-h-[54px] rounded-xl px-2 py-1.5 flex items-center justify-center text-center select-none bg-slate-50/70 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800/60 transition-colors cursor-pointer group"
-                          >
-                            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 group-hover:hidden">
+                          <div className="w-full h-full min-h-[54px] rounded-xl px-2 py-1.5 flex items-center justify-center text-center select-none bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 cursor-not-allowed">
+                            <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
                               Passed
                             </span>
-                            <span className="hidden group-hover:inline-flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                              <Plus className="size-3.5" />
-                              Log Walk-in
-                            </span>
-                          </button>
+                          </div>
                         </div>
                       );
                       return;
