@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, CheckCircle2, Clock, ChevronRight, Check, Trash2, CalendarX, Play } from "lucide-react";
+import { Lock, CheckCircle2, Clock, ChevronRight, Check, Trash2, CalendarX, Play, Users } from "lucide-react";
 import type { BookingGridData, GridCell } from "@/lib/services/booking-grid.service";
 import { PRICE_PER_HOUR } from "@/lib/config/booking-rules";
 import { supabase } from "@/lib/supabase";
@@ -748,6 +748,27 @@ function CellContent({
                         Booked
                     </span>
                 </div>
+            );
+
+        case "open_play":
+            const openPlayPrice = cell.openPlay?.pricePerPlayer ?? 150;
+            return (
+                <button
+                    type="button"
+                    onClick={() => router.push("/#open-play")}
+                    className="w-full h-full min-h-[44px] rounded-[14px] py-1.5 px-2 flex flex-col items-center justify-center bg-emerald-500/15 dark:bg-emerald-950/50 hover:bg-emerald-500/25 dark:hover:bg-emerald-900/60 active:scale-[0.98] border border-emerald-500/40 dark:border-emerald-600/50 text-emerald-800 dark:text-emerald-300 transition-all cursor-pointer group shadow-2xs"
+                    aria-label={`Open Play session on ${courtName} at ${cell.hour}, ₱${openPlayPrice} per player. Tap to join.`}
+                >
+                    <div className="flex items-center gap-1">
+                        <Users className="size-3 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                        <span className="text-[11px] font-extrabold tracking-wide uppercase">
+                            OPEN PLAY
+                        </span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-emerald-700/80 dark:text-emerald-400/90 mt-0.5 tabular-nums">
+                        ₱{openPlayPrice}/player
+                    </span>
+                </button>
             );
 
         case "fulfilled":

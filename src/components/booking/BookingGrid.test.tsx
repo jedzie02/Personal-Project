@@ -170,4 +170,29 @@ describe("BookingGrid single-court layout", () => {
         expect(html).toContain("09:00 AM");
         expect(html).toContain("10:00 AM");
     });
+
+    it("renders OPEN PLAY button with price and links to /#open-play", () => {
+        const openPlayGridData: BookingGridData = {
+            date: "2026-11-04",
+            isClosed: false,
+            operatingOpen: "09:00",
+            operatingClose: "10:00",
+            courts: [{ id: "court-1", name: "Court 1", status: "Available", hourly_rate: 300 }],
+            hours: ["09:00"],
+            grid: [[{
+                courtId: "court-1",
+                courtName: "Court 1",
+                hour: "09:00",
+                status: "open_play",
+                isPeak: false,
+                openPlay: { sessionId: "op-1", pricePerPlayer: 150 },
+            }]],
+        };
+
+        const html = renderToStaticMarkup(
+            <BookingGrid data={openPlayGridData} />
+        );
+        expect(html).toContain("OPEN PLAY");
+        expect(html).toContain("₱150/player");
+    });
 });
