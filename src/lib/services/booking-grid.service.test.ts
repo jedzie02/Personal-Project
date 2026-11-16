@@ -1,8 +1,21 @@
 import { describe, it, expect, vi } from "vitest";
 import { getBookingGridForDate } from "./booking-grid.service";
+import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
 
 const mockCourts = [
     { id: "court-1", name: "Court 1", is_active: true, status: "Available", hourly_rate: 300 },
+];
+
+const mockOpenPlaySessions = [
+    {
+        id: "ops-1",
+        court_id: "court-1",
+        session_date: "2099-01-01",
+        start_time: "18:00:00",
+        end_time: "20:00:00",
+        price_per_player: 200,
+        status: "scheduled",
+    },
 ];
 
 const mockBookings = [
@@ -27,18 +40,46 @@ const mockBookings = [
         created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
         profiles: { full_name: "Expired Player" },
     },
+    {
+        id: "b-open-play-1",
+        court_id: "court-1",
+        start_time: "18:00:00",
+        end_time: "20:00:00",
+        status: "confirmed",
+        customer_id: "admin-1",
+        payment_method: OPEN_PLAY_HOLD_LABEL,
+        created_at: new Date().toISOString(),
+        profiles: { full_name: "Admin Hold" },
+    },
 ];
 
 vi.mock("@/lib/supabase/server", () => ({
     createClient: vi.fn().mockResolvedValue({
-        from: (table: string) => ({
-            select: () => ({
-                order: () => Promise.resolve({ data: mockCourts }),
-                eq: () => ({
-                    in: () => Promise.resolve({ data: mockBookings }),
+        from: (table: string) => {
+            if (table === "courts") {
+                return {
+                    select: () => ({
+                        order: () => Promise.resolve({ data: mockCourts }),
+                    }),
+                };
+            }
+            if (table === "open_play_sessions") {
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            neq: () => Promise.resolve({ data: mockOpenPlaySessions }),
+                        }),
+                    }),
+                };
+            }
+            return {
+                select: () => ({
+                    eq: () => ({
+                        in: () => Promise.resolve({ data: mockBookings }),
+                    }),
                 }),
-            }),
-        }),
+            };
+        },
     }),
 }));
 
@@ -70,5 +111,16 @@ describe("booking-grid.service pending holds", () => {
         expect(slot16).toBeDefined();
         expect(slot16?.status).toBe("available");
         expect(slot16?.booking).toBeUndefined();
+    });
+
+    it("assigns status: 'open_play' and openPlay details when booking has OPEN_PLAY_HOLD_LABEL", async () => {
+        const gridData = await getBookingGridForDate(futureDate);
+        expect(gridData).not.toBeNull();
+
+        const slot18 = gridData!.grid.find((row) => row[0].hour === "18:00")?.[0];
+        expect(slot18).toBeDefined();
+        expect(slot18?.status).toBe("open_play");
+        expect(slot18?.openPlay?.pricePerPlayer).toBe(200);
+        expect(slot18?.openPlay?.sessionId).toBe("ops-1");
     });
 });

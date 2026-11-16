@@ -2,6 +2,7 @@ import { getActiveCourts } from "@/lib/services/court.service";
 import { createClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
 import { getOperatingHoursForDate } from "@/lib/services/schedule.service";
+import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
 
 /**
  * A single cell in the booking grid — represents what's happening
@@ -14,13 +15,14 @@ export interface GridCell {
     /**
      * - "available": slot is open for booking
      * - "booked": there's a pending/confirmed booking here
+     * - "open_play": court is hosting a community open play session
      * - "fulfilled": the booking is completed
      * - "passed": the hour is in the past (can't book anymore)
      * - "closed": outside operating hours
      * - "maintenance": court is in maintenance
      * - "not_available": court is not available
      */
-    status: "available" | "booked" | "fulfilled" | "passed" | "closed" | "maintenance" | "not_available";
+    status: "available" | "booked" | "open_play" | "fulfilled" | "passed" | "closed" | "maintenance" | "not_available";
     /** If this cell is the START of a multi-hour booking block, how many rows it spans */
     rowSpan?: number;
     /** If this cell is in the middle of a booking block, skip rendering it */
@@ -34,6 +36,11 @@ export interface GridCell {
         customerName: string | null;
         customerId?: string;
         status?: string;
+    };
+    /** Open Play session metadata when status is open_play */
+    openPlay?: {
+        sessionId?: string;
+        pricePerPlayer?: number;
     };
     /** Whether this hour falls within peak hours (for the accent bar) */
     isPeak: boolean;
@@ -130,11 +137,10 @@ export async function getBookingGridForDate(
     const { data: bookingRows } = await supabase
         .from("bookings")
         .select(
-            "id, court_id, start_time, end_time, status, customer_id, created_at, profiles ( full_name )"
+            "id, court_id, start_time, end_time, status, customer_id, payment_method, created_at, profiles ( full_name )"
         )
         .eq("booking_date", date)
         .in("status", ["pending", "confirmed", "completed"]);
-
 
     const bookings = (bookingRows ?? []) as unknown as Array<{
         id: string;
@@ -143,8 +149,25 @@ export async function getBookingGridForDate(
         end_time: string;
         status: string;
         customer_id: string;
+        payment_method?: string | null;
         created_at?: string;
         profiles: { full_name: string | null } | null;
+    }>;
+
+    // Fetch active open play sessions for the date
+    const { data: openPlaySessionRows } = await supabase
+        .from("open_play_sessions")
+        .select("id, court_id, start_time, end_time, price_per_player, status")
+        .eq("session_date", date)
+        .neq("status", "cancelled");
+
+    const openPlaySessions = (openPlaySessionRows ?? []) as unknown as Array<{
+        id: string;
+        court_id: string;
+        start_time: string;
+        end_time: string;
+        price_per_player: number;
+        status: string;
     }>;
 
     // Query operating hours for this specific date
@@ -250,6 +273,29 @@ export async function getBookingGridForDate(
             // 3. Current / Future Bookings
             if (booking) {
                 const duration = hoursBetween(booking.start_time, booking.end_time);
+
+                // Open Play Hold reservations
+                if (booking.payment_method === OPEN_PLAY_HOLD_LABEL) {
+                    const matchingSession = openPlaySessions.find((s) => {
+                        if (s.court_id !== court.id) return false;
+                        const sStart = String(s.start_time).slice(0, 5);
+                        const sEnd = String(s.end_time).slice(0, 5);
+                        return sStart <= hour && (sEnd > hour || sEnd === "00:00");
+                    });
+
+                    return {
+                        courtId: court.id,
+                        courtName: court.name,
+                        hour,
+                        status: "open_play" as const,
+                        isPeak,
+                        rowSpan: 1,
+                        openPlay: {
+                            sessionId: matchingSession?.id,
+                            pricePerPlayer: Number(matchingSession?.price_per_player) || 150,
+                        },
+                    };
+                }
 
                 if (booking.status === "completed") {
                     return {
