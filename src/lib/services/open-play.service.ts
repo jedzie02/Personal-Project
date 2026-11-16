@@ -663,10 +663,11 @@ export async function getEntryForCustomer(
     entryId: string,
     customerId: string
 ): Promise<{
+    id: string;
     status: string;
     session: OpenPlaySessionView;
     amount: number;
-    paymentMethod: "GCash QR" | "Cash walk in";
+    paymentMethod: OpenPlayPaymentMethod;
     paymentReference: string | null;
 } | null> {
     try {
@@ -696,6 +697,7 @@ export async function getEntryForCustomer(
         );
 
         return {
+            id: entry.id,
             status: entry.status,
             session: sessionView,
             amount: Number(entry.amount) || 0,
@@ -715,7 +717,7 @@ export async function listPaidEntriesForCustomer(
         status: string;
         session: OpenPlaySessionView;
         amount: number;
-        paymentMethod: "GCash QR" | "Cash walk in";
+        paymentMethod: OpenPlayPaymentMethod;
         paymentReference: string | null;
     }[]
 > {
