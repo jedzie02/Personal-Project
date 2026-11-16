@@ -322,6 +322,10 @@ export function Navbar() {
       setActiveNav("book");
       return;
     }
+    if (pathname === "/open-play" || pathname?.startsWith("/open-play")) {
+      setActiveNav("open-play");
+      return;
+    }
     if (pathname === "/about") {
       setActiveNav("about");
       return;
@@ -337,7 +341,6 @@ export function Navbar() {
         return;
       }
       const aboutEl = document.getElementById("about");
-      const openPlayEl = document.getElementById("open-play");
       const scrollBottom = window.innerHeight + window.scrollY;
       const docHeight = document.documentElement.scrollHeight;
 
@@ -346,17 +349,13 @@ export function Navbar() {
         docHeight - scrollBottom < 80
       ) {
         setActiveNav("about");
-      } else if (openPlayEl && openPlayEl.getBoundingClientRect().top <= 250) {
-        setActiveNav("open-play");
       } else {
         setActiveNav("home");
       }
     };
 
     if (typeof window !== "undefined") {
-      if (window.location.hash === "#open-play") {
-        setActiveNav("open-play");
-      } else if (window.location.hash === "#about") {
+      if (window.location.hash === "#about") {
         setActiveNav("about");
       } else {
         handleScroll();
@@ -435,8 +434,8 @@ export function Navbar() {
           Home
         </Link>
         <Link
-          href="/#open-play"
-          onClick={(e) => handleHashNav(e, "open-play")}
+          href="/open-play"
+          onClick={() => setActiveNav("open-play")}
           className={getDesktopNavLinkClass("open-play")}
           aria-label="Open Play"
           aria-current={activeNav === "open-play" ? "page" : undefined}
@@ -491,8 +490,8 @@ export function Navbar() {
               </DropdownMenuItem>
               <DropdownMenuItem className="p-0">
                 <Link
-                  href="/#open-play"
-                  onClick={(e) => handleHashNav(e, "open-play")}
+                  href="/open-play"
+                  onClick={() => setActiveNav("open-play")}
                   className={getMobileNavLinkClass("open-play")}
                 >
                   Open Play

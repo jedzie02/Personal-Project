@@ -755,7 +755,7 @@ function CellContent({
             return (
                 <button
                     type="button"
-                    onClick={() => router.push("/#open-play")}
+                    onClick={() => router.push("/open-play")}
                     className="w-full h-full min-h-[44px] rounded-[14px] py-1.5 px-2 flex flex-col items-center justify-center bg-emerald-500/15 dark:bg-emerald-950/50 hover:bg-emerald-500/25 dark:hover:bg-emerald-900/60 active:scale-[0.98] border border-emerald-500/40 dark:border-emerald-600/50 text-emerald-800 dark:text-emerald-300 transition-all cursor-pointer group shadow-2xs"
                     aria-label={`Open Play session on ${courtName} at ${cell.hour}, ₱${openPlayPrice} per player. Tap to join.`}
                 >

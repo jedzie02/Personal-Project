@@ -171,7 +171,7 @@ describe("BookingGrid single-court layout", () => {
         expect(html).toContain("10:00 AM");
     });
 
-    it("renders OPEN PLAY button with price and links to /#open-play", () => {
+    it("renders OPEN PLAY button with price and links to /open-play", () => {
         const openPlayGridData: BookingGridData = {
             date: "2026-11-04",
             isClosed: false,

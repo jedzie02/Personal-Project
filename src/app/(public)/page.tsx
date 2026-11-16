@@ -4,9 +4,7 @@ import { MapPin, Mail, Phone, Zap, Users, Trophy, CalendarCheck, ChevronDown } f
 import { Navbar } from "@/components/Navbar";
 import HeroQuickSlots, { HeroLiveStatusBadge } from "@/components/booking/HeroQuickSlots";
 import HeroCourtRally from "@/components/booking/HeroCourtRally";
-import OpenPlaySection from "@/components/booking/OpenPlaySection";
 import { getBookingGridForDate } from "@/lib/services/booking-grid.service";
-import { listUpcomingSessions, type OpenPlaySessionView } from "@/lib/services/open-play.service";
 import { getManilaNow } from "@/lib/utils/date";
 import { extractQuickSlotsSummary } from "@/lib/utils/quick-slots";
 
@@ -21,14 +19,9 @@ function addOneDayISO(isoDate: string): string {
 export default async function LandingPage() {
     const today = getManilaNow().todayISO;
     let quickSummary = extractQuickSlotsSummary(null);
-    let openPlaySessions: OpenPlaySessionView[] = [];
 
     try {
-        const [grid, sessions] = await Promise.all([
-            getBookingGridForDate(today),
-            listUpcomingSessions(),
-        ]);
-        openPlaySessions = sessions;
+        const grid = await getBookingGridForDate(today);
         quickSummary = extractQuickSlotsSummary(grid);
 
         if (quickSummary.totalOpenSlots === 0) {
@@ -121,8 +114,6 @@ export default async function LandingPage() {
                         </div>
                     </div>
                 </section>
-
-                <OpenPlaySection sessions={openPlaySessions} />
 
                 {/* About Pickleball Section (Bottom) */}
                 <section
