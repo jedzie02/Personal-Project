@@ -24,22 +24,11 @@ export default async function AdminOpenPlayPage() {
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                    Open Play Sessions
-                </h1>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                    Schedule venue-hosted Open Play sessions, verify GCash &amp; Cash registrations, and manage session capacity.
-                </p>
-            </div>
-
-            <OpenPlayAdmin
-                sessions={sessions}
-                courts={courts}
-                todayISO={todayISO}
-            />
-        </div>
+        <OpenPlayAdmin
+            sessions={sessions}
+            courts={courts}
+            todayISO={todayISO}
+        />
     );
 }
 

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Users, Plus, AlertTriangle, XCircle, CheckCircle2, QrCode, Banknote } from "lucide-react";
+import { Users, Plus, AlertTriangle, AlertCircle, XCircle, CheckCircle2, QrCode, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CreateOpenPlaySessionModal } from "@/components/ui/admin/CreateOpenPlaySessionModal";
 import type { AdminSessionView } from "@/lib/services/open-play.service";
 import { formatTime } from "@/lib/utils/date";
 import {
@@ -11,15 +12,6 @@ import {
     markOpenPlayEntryPaidAction,
     markOpenPlayEntryRefundedAction,
 } from "./actions";
-
-const START_HOURS = [
-    "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00",
-    "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00",
-];
-const END_HOURS = [
-    "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00",
-    "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00",
-];
 
 export default function OpenPlayAdmin({
     sessions,
@@ -31,6 +23,7 @@ export default function OpenPlayAdmin({
     todayISO: string;
 }) {
     const [isPending, startTransition] = useTransition();
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
     const [formSuccess, setFormSuccess] = useState<string | null>(null);
     const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
@@ -47,20 +40,20 @@ export default function OpenPlayAdmin({
             }))
     );
 
-    const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+    const handleCreateSubmit = async (formData: FormData): Promise<{ ok: boolean; error?: string }> => {
         setFormError(null);
         setFormSuccess(null);
-        const form = e.currentTarget;
-        const formData = new FormData(form);
 
-        startTransition(async () => {
-            const res = await createOpenPlaySessionAction(formData);
-            if (!res.ok) {
-                setFormError(res.error || "Could not create session.");
-            } else {
-                setFormSuccess("Open Play session created and court reserved.");
-            }
+        return new Promise((resolve) => {
+            startTransition(async () => {
+                const res = await createOpenPlaySessionAction(formData);
+                if (!res.ok) {
+                    resolve({ ok: false, error: res.error || "Could not create session." });
+                } else {
+                    setFormSuccess("Open Play session created and court reserved.");
+                    resolve({ ok: true });
+                }
+            });
         });
     };
 
@@ -96,7 +89,66 @@ export default function OpenPlayAdmin({
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
+            {/* Header with Title and Create Session Action */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        Open Play Sessions
+                    </h1>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                        Schedule venue-hosted Open Play sessions, verify registrations, and manage court capacity.
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Button
+                        type="button"
+                        onClick={() => {
+                            setFormError(null);
+                            setIsCreateModalOpen(true);
+                        }}
+                        size="sm"
+                        className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold gap-1.5 shadow-xs cursor-pointer"
+                    >
+                        <Plus className="size-3.5" />
+                        <span>Create Session</span>
+                    </Button>
+                </div>
+            </div>
+
+            {/* Notification Banners */}
+            {formSuccess && (
+                <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50 dark:bg-emerald-950/40 p-4 text-xs font-medium text-emerald-800 dark:text-emerald-300 flex items-center justify-between gap-2 shadow-2xs">
+                    <div className="flex items-center gap-2">
+                        <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <span>{formSuccess}</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setFormSuccess(null)}
+                        className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 text-xs font-semibold cursor-pointer"
+                    >
+                        Dismiss
+                    </button>
+                </div>
+            )}
+
+            {formError && (
+                <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 p-4 text-xs font-medium text-red-700 dark:text-red-300 flex items-center justify-between gap-2 shadow-2xs">
+                    <div className="flex items-center gap-2">
+                        <AlertCircle className="size-4 text-red-600 dark:text-red-400 shrink-0" />
+                        <span>{formError}</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setFormError(null)}
+                        className="text-red-700 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 text-xs font-semibold cursor-pointer"
+                    >
+                        Dismiss
+                    </button>
+                </div>
+            )}
+
             {/* Needs Refund Alert Box */}
             {needsRefundEntries.length > 0 && (
                 <div className="rounded-2xl border border-amber-200 dark:border-amber-800/70 bg-amber-50/80 dark:bg-amber-950/40 p-5 space-y-3">
@@ -149,147 +201,35 @@ export default function OpenPlayAdmin({
                 </div>
             )}
 
-            {/* Create Open Play Session Form */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4">
-                <div className="flex items-center gap-2">
-                    <Plus className="size-4 text-blue-600 dark:text-blue-400" />
-                    <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                        Create Open Play Session
-                    </h2>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Creating a session automatically places a hold on that court and time window so private bookings cannot overlap it.
-                </p>
-
-                {formError && (
-                    <div className="rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 px-4 py-2.5 text-xs font-medium text-red-700 dark:text-red-300">
-                        {formError}
-                    </div>
-                )}
-
-                {formSuccess && (
-                    <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50 dark:bg-emerald-950/40 px-4 py-2.5 text-xs font-medium text-emerald-800 dark:text-emerald-300">
-                        {formSuccess}
-                    </div>
-                )}
-
-                <form onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Court
-                        </label>
-                        <select
-                            name="courtId"
-                            required
-                            defaultValue={courts[0]?.id ?? ""}
-                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white"
-                        >
-                            {courts.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Date
-                        </label>
-                        <input
-                            type="date"
-                            name="date"
-                            required
-                            min={todayISO}
-                            defaultValue={todayISO}
-                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white tabular-nums"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Start Time
-                        </label>
-                        <select
-                            name="startTime"
-                            defaultValue="18:00"
-                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white tabular-nums"
-                        >
-                            {START_HOURS.map((h) => (
-                                <option key={h} value={h}>
-                                    {formatTime(h)}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            End Time
-                        </label>
-                        <select
-                            name="endTime"
-                            defaultValue="20:00"
-                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white tabular-nums"
-                        >
-                            {END_HOURS.map((h) => (
-                                <option key={h} value={h}>
-                                    {formatTime(h)}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Price / Player (₱)
-                        </label>
-                        <input
-                            type="number"
-                            name="pricePerPlayer"
-                            required
-                            min={0}
-                            step={1}
-                            defaultValue={100}
-                            className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white tabular-nums"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                            Player Cap
-                        </label>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="number"
-                                name="playerCap"
-                                required
-                                min={1}
-                                step={1}
-                                defaultValue={8}
-                                className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-white tabular-nums"
-                            />
-                            <Button
-                                type="submit"
-                                disabled={isPending || courts.length === 0}
-                                className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 shrink-0 cursor-pointer"
-                            >
-                                {isPending ? "Saving…" : "Create"}
-                            </Button>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
             {/* Sessions List */}
             <div className="space-y-4">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                    Open Play Sessions ({sessions.length})
-                </h2>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                        Open Play Sessions ({sessions.length})
+                    </h2>
+                </div>
 
                 {sessions.length === 0 ? (
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-10 text-center text-sm text-slate-500 dark:text-slate-400">
-                        No open play sessions created yet. Use the form above to schedule your first session.
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center space-y-3">
+                        <div className="size-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
+                            <Users className="size-6" />
+                        </div>
+                        <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                            No Open Play Sessions Scheduled
+                        </h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                            Schedule your first venue-hosted Open Play session to place court holds and open registrations for players.
+                        </p>
+                        <div className="pt-2">
+                            <Button
+                                type="button"
+                                onClick={() => setIsCreateModalOpen(true)}
+                                className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 gap-1.5 cursor-pointer shadow-xs"
+                            >
+                                <Plus className="size-3.5" />
+                                <span>Schedule First Session</span>
+                            </Button>
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -467,6 +407,15 @@ export default function OpenPlayAdmin({
                     </div>
                 )}
             </div>
+            {/* Create Open Play Session Modal */}
+            <CreateOpenPlaySessionModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSubmit={handleCreateSubmit}
+                courts={courts}
+                todayISO={todayISO}
+                isSubmitting={isPending}
+            />
         </div>
     );
 }
