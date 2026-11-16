@@ -38,7 +38,7 @@
   - `completeOpenPlayPaymentAction(entryId: string): Promise<{ success: boolean; error?: string }>` in `src/app/open-play/payment/actions.ts` (or `src/app/open-play/actions.ts`)
   - Updated `startOpenPlayJoin(sessionId, customerId, customerEmail, paymentMethod = "QR Ph")` returning `url: /open-play/payment?entryId=${entryId}`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```typescript
 // in src/lib/services/open-play.service.test.ts
@@ -56,12 +56,12 @@ it("parseEntryPaymentMeta recognizes QR Ph payment tokens", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/lib/services/open-play.service.test.ts`
 Expected: FAIL if QR Ph parser is not matching or returning correct defaults.
 
-- [ ] **Step 3: Implement `completeOpenPlayPayment` and update `startOpenPlayJoin`**
+- [x] **Step 3: Implement `completeOpenPlayPayment` and update `startOpenPlayJoin`**
 
 In `src/lib/services/open-play.service.ts`:
 - Update `parseEntryPaymentMeta` to support `"QR Ph"` and `"QRPH-"` prefixes.
@@ -74,12 +74,12 @@ In `src/lib/services/open-play.service.ts`:
 In `src/app/open-play/actions.ts`:
 - Add `completeOpenPlayPaymentAction(entryId: string)` verifying `getCurrentProfile()` and revalidating `/open-play`, `/open-play/confirmation`, `/bookings`, and `/admin/open-play`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run src/lib/services/open-play.service.test.ts`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/services/open-play.service.ts src/app/open-play/actions.ts src/lib/services/open-play.service.test.ts
@@ -98,7 +98,7 @@ git commit -m "feat(open-play): add completeOpenPlayPayment service and action"
 - Consumes: `completeOpenPlayPaymentAction` from `src/app/open-play/actions.ts`
 - Produces: `OpenPlayPaymentClient({ entryId, totalPrice, courtName, sessionDate, startTime, endTime, qrImageUrl, gcashName, gcashNumber, completeAction })`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // in src/app/open-play/payment/OpenPlayPaymentClient.test.tsx
@@ -126,12 +126,12 @@ describe("OpenPlayPaymentClient", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/app/open-play/payment/OpenPlayPaymentClient.test.tsx`
 Expected: FAIL (file doesn't exist).
 
-- [ ] **Step 3: Implement `OpenPlayPaymentClient.tsx`**
+- [x] **Step 3: Implement `OpenPlayPaymentClient.tsx`**
 
 Build client component patterned off `PaymentClient.tsx`:
 - Header with QR icon and "Scan QR Ph to Pay".
@@ -142,12 +142,12 @@ Build client component patterned off `PaymentClient.tsx`:
 - "I've Completed Payment" button with `Loader2` transition and navigation to `/open-play/confirmation?entryId=${entryId}`.
 - "Cancel" button linking back to `/open-play`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/app/open-play/payment/OpenPlayPaymentClient.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/open-play/payment/OpenPlayPaymentClient.tsx src/app/open-play/payment/OpenPlayPaymentClient.test.tsx
@@ -170,7 +170,7 @@ git commit -m "feat(open-play): create OpenPlayPaymentClient component"
   - `getGCashSettings()` from `@/lib/services/settings.service`
   - `OpenPlayPaymentClient` from `./OpenPlayPaymentClient`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // in src/app/open-play/payment/page.test.tsx
@@ -215,12 +215,12 @@ describe("OpenPlayPaymentPage", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/app/open-play/payment/page.test.tsx`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement `src/app/open-play/payment/page.tsx` and `loading.tsx`**
+- [x] **Step 3: Implement `src/app/open-play/payment/page.tsx` and `loading.tsx`**
 
 Implement page:
 - Verifies user authentication; redirects to `/login` if not signed in.
@@ -230,12 +230,12 @@ Implement page:
 - Otherwise fetches `getGCashSettings()` and renders `OpenPlayPaymentClient`.
 - Implement matching `loading.tsx` skeleton.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/app/open-play/payment/page.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/app/open-play/payment/page.tsx src/app/open-play/payment/loading.tsx src/app/open-play/payment/page.test.tsx
@@ -254,18 +254,18 @@ git commit -m "feat(open-play): add /open-play/payment route and loading skeleto
 - Consumes: `open_play_entries` with status `'paid'` or `'pending'`
 - Produces: Streamlined receipt UI without manual 13-digit reference number form.
 
-- [ ] **Step 1: Update `src/app/open-play/confirmation/page.tsx`**
+- [x] **Step 1: Update `src/app/open-play/confirmation/page.tsx`**
 
 - Remove `GCashPaymentCard` reference input form.
 - For confirmed entries (`isPaid` or status `paid`), render the green checkmark "Spot Reserved & Paid", reference number tag (`Ref: QRPH-...`), court, date, time, and link to `/open-play`.
 - If an entry is somehow still pending, display a polite "Payment Processing / Present confirmation at counter" notice rather than demanding a 13-digit manual reference input.
 
-- [ ] **Step 2: Run unit test suite to verify no regressions**
+- [x] **Step 2: Run unit test suite to verify no regressions**
 
 Run: `npm test -- --run`
 Expected: All tests pass.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/app/open-play/confirmation/page.tsx
@@ -279,22 +279,22 @@ git commit -m "refactor(open-play): streamline confirmation page to show verifie
 **Files:**
 - All touched files
 
-- [ ] **Step 1: Run mechanical detector**
+- [x] **Step 1: Run mechanical detector**
 
 Run: `.agent/skills/impeccable/scripts/impeccable.cmd detect --json src/app/open-play/payment/page.tsx src/app/open-play/payment/OpenPlayPaymentClient.tsx src/app/open-play/confirmation/page.tsx`
 Expected: `[]` (0 issues).
 
-- [ ] **Step 2: Run full TypeScript check**
+- [x] **Step 2: Run full TypeScript check**
 
 Run: `npx tsc --noEmit`
 Expected: 0 errors.
 
-- [ ] **Step 3: Run full test suite**
+- [x] **Step 3: Run full test suite**
 
 Run: `npm test -- --run`
 Expected: 100% pass across all test files.
 
-- [ ] **Step 4: Push to origin**
+- [x] **Step 4: Push to origin**
 
 ```bash
 git push origin main
