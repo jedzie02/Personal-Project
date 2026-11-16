@@ -14,12 +14,18 @@ function toISO(d: Date) {
     return `${d.getFullYear()}-${m}-${day}`;
 }
 
+export function getBookingDateUrl(iso: string, baseUrl: string = "/book") {
+    return `${baseUrl}?date=${iso}#book-a-court`;
+}
+
 export default function DateSelector({
     selectedDate,
     today,
+    baseUrl = "/book",
 }: {
     selectedDate: string;
     today?: string;
+    baseUrl?: string;
 }) {
     const router = useRouter();
     const [weekOffset, setWeekOffset] = useState(0);
@@ -31,7 +37,7 @@ export default function DateSelector({
         return new Date(tYear, tMonth - 1, tDay + weekOffset * 7 + i);
     });
 
-    const go = (iso: string) => router.push(`/?date=${iso}#book-a-court`);
+    const go = (iso: string) => router.push(getBookingDateUrl(iso, baseUrl));
 
     return (
         <div className="flex w-full items-center gap-1.5 sm:gap-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-2 sm:p-3 shadow-xs">

@@ -204,7 +204,7 @@ export default function ConfirmBookingClient() {
         <div className="w-full max-w-lg">
             <div className="mb-4">
                 <Link
-                    href="/#book-a-court"
+                    href="/book"
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
                 >
                     <ArrowLeft className="w-3.5 h-3.5" /> Back to Schedule
@@ -372,7 +372,7 @@ export default function ConfirmBookingClient() {
                         )}
                     </Button>
 
-                    <Link href="/#book-a-court" className="w-full">
+                    <Link href="/book" className="w-full">
                         <Button
                             type="button"
                             variant="ghost"

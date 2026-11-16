@@ -57,11 +57,11 @@ export default async function MyBookingsPage({
                             </p>
 
                             <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
-                                <a href="/#book-a-court">
+                                <Link href="/book">
                                     <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 shadow-sm cursor-pointer">
                                         Browse Open Courts
                                     </Button>
-                                </a>
+                                </Link>
                             </div>
 
                             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500 dark:text-slate-400 font-medium">

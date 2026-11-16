@@ -39,7 +39,7 @@ export default async function BookPaymentPage({
                         <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                             We couldn&apos;t locate that reservation record. Please start from the court schedule.
                         </p>
-                        <Link href="/#book-a-court" className="mt-5 inline-block">
+                        <Link href="/book" className="mt-5 inline-block">
                             <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6">
                                 Return to Schedule
                             </Button>

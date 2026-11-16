@@ -236,7 +236,7 @@ export function PaymentClient({
                         )}
                     </Button>
 
-                    <Link href="/#book-a-court" className="w-full">
+                    <Link href="/book" className="w-full">
                         <Button
                             type="button"
                             variant="ghost"

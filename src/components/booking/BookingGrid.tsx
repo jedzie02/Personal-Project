@@ -341,7 +341,7 @@ export default function BookingGrid({
                 <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
                     <button
                         type="button"
-                        onClick={() => router.push(`/?date=${nextDayISO}#book-a-court`)}
+                        onClick={() => router.push(`/book?date=${nextDayISO}#book-a-court`)}
                         className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm transition-all shadow-md hover:shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
                     >
                         Check Next Day ({nextDayISO}) →

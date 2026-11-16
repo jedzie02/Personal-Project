@@ -86,7 +86,7 @@ export default function AboutPage() {
                 <p className="text-gray-600 dark:text-slate-400 mb-8 max-w-xl mx-auto">
                     Find an available court near you and get on the court today.
                 </p>
-                <Link href="/#book-a-court">
+                <Link href="/book">
                     <Button className="text-lg px-10 py-6 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 hover:scale-105 hover:shadow-xl transition-all duration-300 cursor-pointer">
                         Book a Court
                     </Button>

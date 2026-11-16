@@ -255,11 +255,11 @@ export default async function LandingPage() {
                         <p className="text-slate-600 dark:text-slate-400">
                             Courts are available now. Grab a slot before it&apos;s gone.
                         </p>
-                        <a href="#book-a-court">
+                        <Link href="/book">
                             <Button className="text-base font-semibold px-8 py-6 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 cursor-pointer">
                                 Book a Court
                             </Button>
-                        </a>
+                        </Link>
                     </div>
                 </section>
             </main>
