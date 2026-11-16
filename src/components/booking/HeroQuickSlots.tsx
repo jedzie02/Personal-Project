@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Zap, ArrowRight, Users } from "lucide-react";
+import { Zap, ArrowRight } from "lucide-react";
 import type { QuickSlotsSummary, QuickSlotCard } from "@/lib/utils/quick-slots";
 
 export function HeroLiveStatusBadge({
@@ -28,13 +28,6 @@ export function HeroLiveStatusBadge({
                 ) : (
                     <span>4 Master Courts · Instant GCash &amp; Card Checkout</span>
                 )}
-            </span>
-            <span className="text-emerald-400 dark:text-emerald-700" aria-hidden="true">
-                ·
-            </span>
-            <span className="inline-flex items-center gap-1 text-blue-700 dark:text-blue-300 tabular-nums">
-                <Users className="size-3.5 shrink-0" />
-                ₱{summary.lowestHourlyRate}/hr (Only ₱{summary.lowestSplitPerPlayer}/player for 4)
             </span>
         </div>
     );
