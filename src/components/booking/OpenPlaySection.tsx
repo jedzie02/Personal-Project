@@ -257,7 +257,7 @@ export default function OpenPlaySection({
                                                                 </span>
                                                             </div>
 
-                                                            <div className="w-36 sm:w-40">
+                                                            <div className="w-32 sm:w-36 shrink-0">
                                                                 <JoinOpenPlayButton
                                                                     sessionId={session.id}
                                                                     spotsLeft={session.spotsLeft}

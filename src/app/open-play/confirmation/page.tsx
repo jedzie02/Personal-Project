@@ -48,7 +48,7 @@ export default async function OpenPlayConfirmationPage({ searchParams }: PagePro
                         <p className="text-sm text-slate-600 dark:text-slate-400">
                             We could not find an active Open Play spot for this link.
                         </p>
-                        <Link href="/#open-play" className="inline-block pt-2">
+                        <Link href="/open-play" className="inline-block pt-2">
                             <Button className="rounded-full bg-blue-600 hover:bg-blue-700 text-white px-6">
                                 Back to Open Play Sessions
                             </Button>

@@ -2,18 +2,18 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, QrCode } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { joinOpenPlayAction } from "@/app/open-play/actions";
 
 export default function JoinOpenPlayButton({
     sessionId,
     spotsLeft,
-    pricePerPlayer,
+    pricePerPlayer: _pricePerPlayer,
 }: {
     sessionId: string;
     spotsLeft: number;
-    pricePerPlayer: number;
+    pricePerPlayer?: number;
 }) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
@@ -40,12 +40,12 @@ export default function JoinOpenPlayButton({
     };
 
     return (
-        <div className="space-y-2.5">
+        <div className="space-y-1.5">
             <Button
                 type="button"
                 disabled={isFull || isPending}
                 onClick={handleJoin}
-                className={`w-full rounded-full text-xs font-semibold py-2.5 transition-all cursor-pointer ${
+                className={`w-full h-9 rounded-full text-xs font-semibold px-4 transition-all cursor-pointer ${
                     isFull
                         ? "bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed"
                         : "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
@@ -54,12 +54,14 @@ export default function JoinOpenPlayButton({
                 {isFull ? (
                     "Session Full"
                 ) : isPending ? (
-                    "Reserving Spot…"
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                        <Loader2 className="size-3.5 animate-spin shrink-0" />
+                        <span>Reserving…</span>
+                    </span>
                 ) : (
-                    <span className="flex items-center justify-center gap-1.5">
-                        <QrCode className="size-3.5" />
-                        <span>Join for ₱{pricePerPlayer} (GCash QR)</span>
-                        <ArrowRight className="size-3.5" />
+                    <span className="inline-flex items-center justify-center gap-1.5">
+                        <span>Join Session</span>
+                        <ArrowRight className="size-3.5 shrink-0" />
                     </span>
                 )}
             </Button>
