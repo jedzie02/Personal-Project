@@ -50,7 +50,7 @@ export default function OpenPlaySection({
                         </p>
                     </div>
                 ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="flex flex-col gap-4 max-w-4xl mx-auto">
                     {sessions.map((session) => {
                         const isFull = session.spotsLeft <= 0;
                         const isLowSpots = session.spotsLeft > 0 && session.spotsLeft <= 2;
@@ -64,13 +64,13 @@ export default function OpenPlaySection({
                         return (
                             <div
                                 key={session.id}
-                                className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/70 p-5 shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md"
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/70 p-5 sm:p-6 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-all"
                             >
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                                             {session.courtName}
-                                        </span>
+                                        </h3>
                                         <span
                                             className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold tabular-nums ${badgeClasses}`}
                                         >
@@ -80,12 +80,13 @@ export default function OpenPlaySection({
                                         </span>
                                     </div>
 
-                                    <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
-                                        <div className="flex items-center gap-2 tabular-nums">
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-300">
+                                        <div className="flex items-center gap-1.5 tabular-nums">
                                             <Calendar className="size-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                                             <span className="font-semibold">{session.date}</span>
                                         </div>
-                                        <div className="flex items-center gap-2 tabular-nums">
+                                        <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">·</span>
+                                        <div className="flex items-center gap-1.5 tabular-nums">
                                             <Clock className="size-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                                             <span>
                                                 {formatTime(session.startTime)} – {formatTime(session.endTime)}
@@ -94,24 +95,26 @@ export default function OpenPlaySection({
                                     </div>
                                 </div>
 
-                                <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800 space-y-3">
-                                    <div className="flex items-baseline justify-between">
-                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                <div className="flex items-center justify-between sm:justify-end gap-5 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800 shrink-0">
+                                    <div className="text-left sm:text-right">
+                                        <span className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                             Entry Fee
                                         </span>
-                                        <span className="text-base font-extrabold text-slate-900 dark:text-white tabular-nums">
+                                        <span className="text-lg font-extrabold text-slate-900 dark:text-white tabular-nums">
                                             ₱{session.pricePerPlayer}
-                                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                            <span className="text-xs font-normal text-slate-500 dark:text-slate-400 ml-0.5">
                                                 /player
                                             </span>
                                         </span>
                                     </div>
 
-                                    <JoinOpenPlayButton
-                                        sessionId={session.id}
-                                        spotsLeft={session.spotsLeft}
-                                        pricePerPlayer={session.pricePerPlayer}
-                                    />
+                                    <div className="w-36 sm:w-40">
+                                        <JoinOpenPlayButton
+                                            sessionId={session.id}
+                                            spotsLeft={session.spotsLeft}
+                                            pricePerPlayer={session.pricePerPlayer}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         );
