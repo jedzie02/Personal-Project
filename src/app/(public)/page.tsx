@@ -56,14 +56,14 @@ export default async function LandingPage() {
                                     className="animate-hero-rise text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-slate-900 dark:text-white leading-[1.12]"
                                     style={{ animationDelay: "0ms" }}
                                 >
-                                    Effortless booking for your next{" "}
-                                    <span className="text-blue-600 dark:text-blue-400">pickleball match</span>
+                                    Dink. Rally.{" "}
+                                    <span className="text-blue-600 dark:text-blue-400">Repeat.</span>
                                 </h1>
                                 <p
                                     className="animate-hero-rise max-w-2xl text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed"
                                     style={{ animationDelay: "120ms" }}
                                 >
-                                    Reserve courts in real time with live hourly rates in Philippine Pesos (₱). Check open slots, pick your schedule, and get right onto the court.
+                                    Reserve your court online and jump straight into the action.
                                 </p>
 
                                 <div className="flex flex-col sm:flex-row gap-3.5 justify-center lg:justify-start items-center pt-1 w-full sm:w-auto">

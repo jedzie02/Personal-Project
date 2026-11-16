@@ -25,13 +25,13 @@ export default function LandingLoading() {
 
                                 {/* Headline */}
                                 <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-slate-900 dark:text-white leading-[1.12]">
-                                    Effortless booking for your next{" "}
-                                    <span className="text-blue-600 dark:text-blue-400">pickleball match</span>
+                                    Dink. Rally.{" "}
+                                    <span className="text-blue-600 dark:text-blue-400">Repeat.</span>
                                 </h1>
 
                                 {/* Subtitle */}
                                 <p className="max-w-2xl text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed">
-                                    Reserve courts in real time with live hourly rates in Philippine Pesos (₱). Check open slots, pick your schedule, and get right onto the court.
+                                    Reserve your court online and jump straight into the action.
                                 </p>
 
                                 {/* Action Buttons */}

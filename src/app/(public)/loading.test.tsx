@@ -40,7 +40,7 @@ describe("LandingLoading", () => {
         expect(html).toContain("lg:grid-cols-12");
 
         // Must contain the static headline
-        expect(html).toContain("Effortless booking for your next");
+        expect(html).toContain("Dink. Rally.");
 
         // Must contain the simulator card container
         expect(html).toContain("rounded-3xl");
