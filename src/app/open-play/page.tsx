@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MapPin, Phone, Mail } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { listUpcomingSessions } from "@/lib/services/open-play.service";
+import { getManilaNow } from "@/lib/utils/date";
 import OpenPlaySection from "@/components/booking/OpenPlaySection";
 
 export const revalidate = 10;
@@ -14,12 +15,14 @@ export default async function OpenPlayPage() {
         console.error("Failed to load sessions for /open-play:", err);
     }
 
+    const { todayISO } = getManilaNow();
+
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col text-slate-900 dark:text-slate-100">
             <Navbar />
 
-            <main className="flex-1 py-4 sm:py-8">
-                <OpenPlaySection sessions={sessions} borderTop={false} />
+            <main className="flex-1 py-6 sm:py-10">
+                <OpenPlaySection sessions={sessions} todayISO={todayISO} borderTop={false} />
             </main>
 
             <footer className="border-t border-slate-200/80 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm text-slate-500 dark:text-slate-400">

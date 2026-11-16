@@ -6,11 +6,23 @@ export default function OpenPlayLoading() {
             <Navbar />
 
             <main className="flex-1 py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
-                {/* Header Skeleton */}
-                <div className="text-center mb-10 space-y-3 flex flex-col items-center">
-                    <div className="h-6 w-36 rounded-full bg-slate-200 dark:bg-slate-800 animate-pulse" />
-                    <div className="h-8 w-72 sm:w-96 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
-                    <div className="h-4 w-60 sm:w-80 rounded-lg bg-slate-200 dark:bg-slate-800/60 animate-pulse" />
+                {/* Header Skeleton without kicker */}
+                <div className="text-center mb-8 sm:mb-10 space-y-3 flex flex-col items-center">
+                    <div className="h-9 w-64 sm:w-80 rounded-xl bg-slate-200 dark:bg-slate-800 animate-pulse" />
+                    <div className="h-4 w-72 sm:w-96 rounded-lg bg-slate-200 dark:bg-slate-800/60 animate-pulse" />
+                </div>
+
+                {/* 3-Step Explainer Skeleton */}
+                <div className="mb-10 max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200/80 dark:divide-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 sm:p-5 shadow-2xs">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-start gap-3 p-2.5 sm:p-3 animate-pulse">
+                            <div className="size-8 rounded-xl bg-slate-200 dark:bg-slate-800 shrink-0" />
+                            <div className="space-y-1.5 flex-1">
+                                <div className="h-3.5 w-24 rounded bg-slate-200 dark:bg-slate-800" />
+                                <div className="h-3 w-36 rounded bg-slate-200 dark:bg-slate-800/60" />
+                            </div>
+                        </div>
+                    ))}
                 </div>
 
                 {/* Session Cards Skeleton - Vertical Wide Rows */}
