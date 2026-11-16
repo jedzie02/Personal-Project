@@ -3,9 +3,7 @@ import { getActiveCourts } from "@/lib/services/court.service";
 import { getManilaNow } from "@/lib/utils/date";
 import { BookingsTable } from "@/components/ui/admin/bookingstable";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { NewBookingButton } from "@/components/ui/admin/NewBookingButton";
 
 export default async function AdminBookingsPage({
   searchParams,
@@ -34,11 +32,7 @@ export default async function AdminBookingsPage({
             Manage all reservations, perform counter actions (collect cash, verify GCash), and handle cancellations.
           </p>
         </div>
-        <Link href="/admin/bookings/new">
-          <Button className="shrink-0 cursor-pointer">
-            <Plus className="w-4 h-4 mr-2" /> New Booking
-          </Button>
-        </Link>
+        <NewBookingButton courts={activeCourts} />
       </div>
 
       <Card className="shadow-sm overflow-hidden">

@@ -35,6 +35,7 @@ import {
 } from "@/lib/utils/date";
 import type { OperatingHours } from "@/lib/types/domain";
 import { updateScheduleAction } from "@/app/admin/schedule/actions";
+import { NewBookingModal } from "@/components/ui/admin/NewBookingModal";
 
 export type SlotStatus = "Available" | "Not Available" | "Maintenance" | "Booked";
 
@@ -129,6 +130,27 @@ export function ScheduleTimeline({
   const [isHoursOpen, setIsHoursOpen] = useState(false);
   const [hoursSubmitting, setHoursSubmitting] = useState(false);
   const [hoursMessage, setHoursMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Floating New Booking Modal
+  const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
+  const [newBookingDefaults, setNewBookingDefaults] = useState<{
+    courtId?: string;
+    date?: string;
+    startTime?: string;
+  }>({});
+
+  const handleOpenNewBooking = (defaults?: {
+    courtId?: string;
+    date?: string;
+    startTime?: string;
+  }) => {
+    setNewBookingDefaults({
+      courtId: defaults?.courtId,
+      date: defaults?.date ?? selectedDate,
+      startTime: defaults?.startTime,
+    });
+    setIsNewBookingOpen(true);
+  };
 
   // Master sorted court list
   const masterCourts = useMemo(() => {
@@ -337,12 +359,14 @@ export function ScheduleTimeline({
             <span>Operating Hours</span>
           </Button>
 
-          <Link href={`/admin/bookings/new?date=${selectedDate}`}>
-            <Button size="sm" className="cursor-pointer gap-1.5 shadow-2xs">
-              <Plus className="size-4" />
-              <span>New Booking</span>
-            </Button>
-          </Link>
+          <Button
+            size="sm"
+            onClick={() => handleOpenNewBooking({ date: selectedDate })}
+            className="cursor-pointer gap-1.5 shadow-2xs"
+          >
+            <Plus className="size-4" />
+            <span>New Booking</span>
+          </Button>
         </div>
       </div>
 
@@ -919,15 +943,18 @@ export function ScheduleTimeline({
                   </Button>
                 </Link>
 
-                <Link
-                  href={`/admin/bookings/new?courtId=${activeBookingSlot.court.id}&date=${selectedDate}`}
-                  className="w-full block"
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const courtId = activeBookingSlot.court.id;
+                    setActiveBookingSlot(null);
+                    handleOpenNewBooking({ courtId, date: selectedDate });
+                  }}
+                  className="w-full cursor-pointer gap-2"
                 >
-                  <Button variant="outline" className="w-full cursor-pointer gap-2">
-                    <Plus className="size-4" />
-                    <span>Book Another Slot on {activeBookingSlot.court.name}</span>
-                  </Button>
-                </Link>
+                  <Plus className="size-4" />
+                  <span>Book Another Slot on {activeBookingSlot.court.name}</span>
+                </Button>
               </div>
             </div>
           )}
@@ -969,15 +996,18 @@ export function ScheduleTimeline({
               </div>
 
               <div className="space-y-2.5 pt-4 mt-auto">
-                <Link
-                  href={`/admin/bookings/new?courtId=${activeAvailableSlot.court.id}&date=${selectedDate}&startTime=${activeAvailableSlot.slotStart}`}
-                  className="w-full block"
+                <Button
+                  onClick={() => {
+                    const courtId = activeAvailableSlot.court.id;
+                    const startTime = activeAvailableSlot.slotStart;
+                    setActiveAvailableSlot(null);
+                    handleOpenNewBooking({ courtId, date: selectedDate, startTime });
+                  }}
+                  className="w-full cursor-pointer gap-2"
                 >
-                  <Button className="w-full cursor-pointer gap-2">
-                    <Plus className="size-4" />
-                    <span>Book This Slot</span>
-                  </Button>
-                </Link>
+                  <Plus className="size-4" />
+                  <span>Book This Slot</span>
+                </Button>
 
                 <Button
                   variant="outline"
@@ -1107,6 +1137,19 @@ export function ScheduleTimeline({
           </form>
         </SheetContent>
       </Sheet>
+
+      {/* 8. Dedicated Floating New Booking Modal */}
+      <NewBookingModal
+        isOpen={isNewBookingOpen}
+        onClose={() => setIsNewBookingOpen(false)}
+        courts={masterCourts}
+        initialCourtId={newBookingDefaults.courtId}
+        initialDate={newBookingDefaults.date}
+        initialStartTime={newBookingDefaults.startTime}
+        onSuccess={() => {
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

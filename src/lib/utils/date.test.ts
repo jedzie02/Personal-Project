@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateTimeSlots, doTimeRangesOverlap, timeToMinutes } from "./date";
+import { generateTimeSlots, doTimeRangesOverlap, timeToMinutes, addHoursToTime } from "./date";
 
 /**
  * A quick primer, since this is the first test file in the project:
@@ -90,5 +90,18 @@ describe("doTimeRangesOverlap", () => {
 
         // Partial overlap with midnight slot
         expect(doTimeRangesOverlap("22:30", "23:30", "23:00", "00:00")).toBe(true);
+    });
+});
+
+describe("addHoursToTime", () => {
+    it("adds whole hours to standard military time", () => {
+        expect(addHoursToTime("09:00", 1)).toBe("10:00");
+        expect(addHoursToTime("09:00", 2)).toBe("11:00");
+        expect(addHoursToTime("18:00", 3)).toBe("21:00");
+    });
+
+    it("wraps around midnight when needed", () => {
+        expect(addHoursToTime("23:00", 1)).toBe("00:00");
+        expect(addHoursToTime("22:00", 3)).toBe("01:00");
     });
 });

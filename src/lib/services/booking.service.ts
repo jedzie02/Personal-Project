@@ -156,13 +156,14 @@ export async function checkOverlap(
 
 export interface CreateBookingInput {
     courtId: string;
-    customerId: string;
+    customerId?: string | null;
     bookingDate: string;
     startTime: string;
     endTime: string;
     totalPrice: number;
     customerName?: string;
     customerEmail?: string;
+    customerPhone?: string;
     /**
      * True only when an admin explicitly confirms payment was handled
      * outside the system (cash, etc.) — per PR-6, this must be a
@@ -172,7 +173,7 @@ export interface CreateBookingInput {
     markAsConfirmed?: boolean;
     paymentStatus?: "pending" | "succeeded" | "failed" | "refunded";
     paymentMethod?: string;
-    paymentReference?: string;
+    paymentReference?: string | null;
 }
 
 export async function createBooking(
@@ -300,7 +301,7 @@ export async function createBooking(
 
     const bookingPayload: Record<string, any> = {
         court_id: input.courtId,
-        customer_id: input.customerId,
+        customer_id: input.customerId || null,
         booking_date: input.bookingDate,
         start_time: input.startTime,
         end_time: input.endTime,

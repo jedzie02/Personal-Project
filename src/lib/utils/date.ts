@@ -15,6 +15,13 @@ export const DAY_LABELS = [
     "Saturday",
 ] as const;
 
+/** Adds a whole number of hours to a "HH:MM" time string, returning "HH:MM". */
+export function addHoursToTime(timeStr: string, hoursToAdd: number): string {
+    const [h] = timeStr.split(":").map(Number);
+    const newHour = (h + hoursToAdd) % 24;
+    return `${newHour.toString().padStart(2, "0")}:00`;
+}
+
 /** Turns "14:30:00" or "14:30" (Postgres time) into "2:30 PM" for display. */
 export function formatTime(time: string | null): string {
     if (!time) return "—";
