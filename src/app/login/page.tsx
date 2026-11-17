@@ -79,10 +79,6 @@ function LoginContent() {
         }
       }
 
-      // Fallback for admin email if role not explicitly in profiles row
-      if (!userRole && data.user.email?.toLowerCase().includes("admin")) {
-        userRole = "admin";
-      }
 
       // Ensure profile exists in Supabase for all users (customers and admins)
       try {

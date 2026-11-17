@@ -31,11 +31,9 @@ export async function getCurrentProfile() {
         }
     }
 
-    // 3. Fallback: if no profile row yet, deduce role from user metadata or admin email
+    // 3. Fallback: if no profile row yet, deduce role from user metadata
     if (!profile) {
-        const isAdmin =
-            user.user_metadata?.role === "admin" ||
-            user.email?.toLowerCase().includes("admin")
+        const isAdmin = user.user_metadata?.role === "admin"
 
         const profileData = {
             id: user.id,
