@@ -1,30 +1,37 @@
 import type { Metadata } from "next";
-import { venueConfig } from "../../venue.config";
+import { Poppins } from "next/font/google";
+import "./globals.css";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+const poppins = Poppins({
+  variable: "--font-poppins",
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+});
 
 export const metadata: Metadata = {
-  title: `${venueConfig.venueName} | Court Booking`,
-  description: venueConfig.tagline,
+  title: "DinkSync — Real-Time Pickleball Court Booking & Venue Management",
+  description: "Reserve courts in real time with live hourly rates in Philippine Pesos (₱). Check open slots and lock in your match instantly.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body style={{ fontFamily: "sans-serif", margin: 0, padding: 0 }}>
-        <header style={{ borderBottom: "1px solid #e2e8f0", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700 }}>{venueConfig.venueName}</h1>
-            <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b" }}>{venueConfig.tagline}</p>
-          </div>
-          <nav style={{ display: "flex", gap: "16px" }}>
-            <a href="/" style={{ textDecoration: "none", color: "#0f172a", fontWeight: 600 }}>Book</a>
-            <a href="/admin" style={{ textDecoration: "none", color: "#0f172a", fontWeight: 600 }}>Admin</a>
-          </nav>
-        </header>
-        <main>{children}</main>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      data-scroll-behavior="smooth"
+      className={`${poppins.variable} dark h-full antialiased scroll-smooth`}
+      style={{ colorScheme: "dark" }}
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{document.documentElement.classList.add('dark');localStorage.setItem('theme','dark');}catch(e){}})()`,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>
   );
