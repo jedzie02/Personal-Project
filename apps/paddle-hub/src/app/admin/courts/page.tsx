@@ -9,7 +9,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, X, AlertCircle } from "lucide-react";
+import { Loader2, Plus, X, AlertCircle, Trash2 } from "lucide-react";
 import { AddCourtModal, CourtStatus, STATUS_OPTIONS } from "@/components/ui/admin/AddCourtModal";
 
 interface Court {
@@ -40,6 +40,10 @@ export default function AdminCourtsPage() {
   const [creating, setCreating] = useState(false);
   const [isAddCourtOpen, setIsAddCourtOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Selection & deletion state
+  const [selectedCourtIds, setSelectedCourtIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   // Edit Rate dialog state
   const [editingCourt, setEditingCourt] = useState<Court | null>(null);
@@ -196,6 +200,66 @@ export default function AdminCourtsPage() {
 
   const countByStatus = (s: CourtStatus) => courts.filter((c) => c.status === s).length;
 
+  const toggleSelectCourt = (courtId: string) => {
+    setSelectedCourtIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(courtId)) {
+        next.delete(courtId);
+      } else {
+        next.add(courtId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedCourtIds.size === courts.length) {
+      setSelectedCourtIds(new Set());
+    } else {
+      setSelectedCourtIds(new Set(courts.map((c) => c.id)));
+    }
+  };
+
+  const handleDeleteCourt = async (courtId: string, courtName: string) => {
+    if (typeof window !== "undefined" && !window.confirm(`Are you sure you want to delete ${courtName}? This cannot be undone.`)) {
+      return;
+    }
+    setDeleting(true);
+    setErrorMessage(null);
+    const { error } = await supabase.from("courts").delete().eq("id", courtId);
+    if (error) {
+      setErrorMessage(`Failed to delete ${courtName}: ${error.message}`);
+    } else {
+      setSelectedCourtIds((prev) => {
+        const next = new Set(prev);
+        next.delete(courtId);
+        return next;
+      });
+      await fetchCourts();
+      router.refresh();
+    }
+    setDeleting(false);
+  };
+
+  const handleDeleteSelected = async () => {
+    const count = selectedCourtIds.size;
+    if (count === 0) return;
+    if (typeof window !== "undefined" && !window.confirm(`Are you sure you want to delete ${count} selected court${count > 1 ? "s" : ""}? This cannot be undone.`)) {
+      return;
+    }
+    setDeleting(true);
+    setErrorMessage(null);
+    const { error } = await supabase.from("courts").delete().in("id", Array.from(selectedCourtIds));
+    if (error) {
+      setErrorMessage(`Failed to delete selected courts: ${error.message}`);
+    } else {
+      setSelectedCourtIds(new Set());
+      await fetchCourts();
+      router.refresh();
+    }
+    setDeleting(false);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -207,6 +271,40 @@ export default function AdminCourtsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {selectedCourtIds.size > 0 && (
+            <div className="flex items-center gap-1.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 rounded-lg px-2.5 py-1">
+              <span className="text-xs font-medium text-red-800 dark:text-red-300">
+                {selectedCourtIds.size} selected
+              </span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteSelected}
+                disabled={deleting}
+                className="h-7 text-xs font-semibold gap-1 bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+              >
+                <Trash2 className="w-3 h-3" /> Delete Selected
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedCourtIds(new Set())}
+                className="h-7 text-xs text-muted-foreground hover:text-foreground px-2 cursor-pointer"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+          {courts.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleSelectAll}
+              className="h-8 text-xs font-semibold cursor-pointer"
+            >
+              {selectedCourtIds.size === courts.length ? "Deselect All" : "Select All"}
+            </Button>
+          )}
           <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300">
             {countByStatus("Available")} Available
           </Badge>
@@ -222,7 +320,7 @@ export default function AdminCourtsPage() {
               setIsAddCourtOpen(true);
             }}
             size="sm"
-            className="h-8 text-xs font-semibold gap-1.5 ml-1"
+            className="h-8 text-xs font-semibold gap-1.5 ml-1 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" /> Add Court
           </Button>
@@ -264,12 +362,21 @@ export default function AdminCourtsPage() {
           {courts.map((court) => (
             <Card key={court.id}>
               <CardContent className="pt-6 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-lg text-slate-900 dark:text-white">{court.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {court.description || "No location notes provided"}
-                    </p>
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={selectedCourtIds.has(court.id)}
+                      onChange={() => toggleSelectCourt(court.id)}
+                      className="mt-1 size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      aria-label={`Select ${court.name}`}
+                    />
+                    <div>
+                      <h3 className="font-semibold text-lg text-slate-900 dark:text-white">{court.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {court.description || "No location notes provided"}
+                      </p>
+                    </div>
                   </div>
                   {statusBadge(court.status)}
                 </div>
@@ -325,6 +432,17 @@ export default function AdminCourtsPage() {
                       aria-label={`Edit hourly rate for ${court.name}`}
                     >
                       Edit Rate
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteCourt(court.id, court.name)}
+                      disabled={deleting}
+                      className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50 h-8 px-2 cursor-pointer"
+                      aria-label={`Delete ${court.name}`}
+                      title={`Delete ${court.name}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>
