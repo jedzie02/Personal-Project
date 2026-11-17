@@ -12,8 +12,8 @@ pickle-wb/
 │   └── core/              # Shared Engine (@pickle/core)
 │                          # Database services, Supabase SSR/Admin, Stripe/GCash, auth & domain types
 └── apps/
-    ├── dinksync/          # Client 1: DinkSync venue web app (production UI)
-    └── venue-template/    # Client 2: Customizable starter template for new clients
+    ├── dinksync/          # Client 1: DinkSync venue web app
+    └── paddle-hub/        # Client 2: Paddle Hub venue web app
 ```
 
 - **Shared Business Engine (`@pickle/core`)**: Booking algorithms, payment processing, slot schedule math, database queries, and email pipelines are written once and shared across all venues.
@@ -36,9 +36,9 @@ npm install
   ```
   Runs at [http://localhost:3000](http://localhost:3000)
 
-* **Client 2 (Venue Template / Custom UI)**:
+* **Client 2 (Paddle Hub)**:
   ```bash
-  npm run dev:venue
+  npm run dev:paddle-hub
   ```
   Runs at [http://localhost:3001](http://localhost:3001)
 
