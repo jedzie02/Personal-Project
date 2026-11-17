@@ -9,6 +9,8 @@
   "scripts": {
     "dev:dinksync": "npm run dev --workspace=dinksync",
     "build:dinksync": "npm run build --workspace=dinksync",
+    "dev:paddle-hub": "npm run dev --workspace=paddle-hub",
+    "build:paddle-hub": "npm run build --workspace=paddle-hub",
     "dev:venue": "npm run dev --workspace=venue-template",
     "build:venue": "npm run build --workspace=venue-template",
     "build": "npm run build:dinksync",
