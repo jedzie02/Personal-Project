@@ -6,5 +6,5 @@ export const venueConfig = resolveVenueConfig({
   tagline: "Book your pickleball court seamlessly",
   contactPhone: "+63 9171234567",
   contactEmail: "support@dinksync.ph",
-  address: "Metro Manila, Philippines",
+  address: "Butuan City, Philippines",
 });
