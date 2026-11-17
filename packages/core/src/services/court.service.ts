@@ -179,3 +179,34 @@ export async function setCourtActiveStatus(
 
     return { success: true };
 }
+
+export async function deleteCourt(id: string): Promise<ServiceResult> {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("courts")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+export async function deleteCourts(ids: string[]): Promise<ServiceResult> {
+    if (!ids || ids.length === 0) return { success: true };
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("courts")
+        .delete()
+        .in("id", ids);
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
