@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
+import { createClient } from "../supabase/server";
+import { createAdminClient } from "../supabase/admin";
+import { OPEN_PLAY_HOLD_LABEL } from "../utils/open-play";
 import type { CustomerSummary, Profile } from "../domain";
 
 async function getDbClient() {

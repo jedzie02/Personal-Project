@@ -1,14 +1,14 @@
-import { stripe } from "@/lib/stripe/client";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getCustomerDisplayName } from "@/lib/services/customer.service";
-import { sendPaymentReceiptEmail, sendBookingRefundEmail } from "@/lib/services/email.service";
-import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
+import { stripe } from "../stripe/client";
+import { createClient } from "../supabase/server";
+import { createAdminClient } from "../supabase/admin";
+import { getCustomerDisplayName } from "./customer.service";
+import { sendPaymentReceiptEmail, sendBookingRefundEmail } from "./email.service";
+import { OPEN_PLAY_HOLD_LABEL } from "../utils/open-play";
 import {
     markOpenPlayEntryPaidByAdmin,
     markOpenPlayEntryRefundedByAdmin,
     parseEntryPaymentMeta,
-} from "@/lib/services/open-play.service";
+} from "./open-play.service";
 import type { CheckoutResult, Payment } from "../domain";
 
 async function getDbClient() {

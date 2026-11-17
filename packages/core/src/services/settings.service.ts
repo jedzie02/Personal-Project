@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "../supabase/server";
+import { createAdminClient } from "../supabase/admin";
 
 export interface GCashSettings {
     gcash_number: string | null;

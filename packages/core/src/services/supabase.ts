@@ -1,1 +1,1 @@
-export { supabase } from "@/lib/supabase";
+export { createBrowserSupabaseClient as supabase } from "../supabase/client";

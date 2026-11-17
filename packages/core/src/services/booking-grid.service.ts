@@ -1,8 +1,8 @@
-import { getActiveCourts } from "@/lib/services/court.service";
-import { createClient } from "@/lib/supabase/server";
-import { getManilaNow } from "@/lib/utils/date";
-import { getOperatingHoursForDate } from "@/lib/services/schedule.service";
-import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
+import { getActiveCourts } from "./court.service";
+import { createClient } from "../supabase/server";
+import { getManilaNow } from "../utils/date";
+import { getOperatingHoursForDate } from "./schedule.service";
+import { OPEN_PLAY_HOLD_LABEL } from "../utils/open-play";
 
 /**
  * A single cell in the booking grid — represents what's happening

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getCurrentProfile, requireAdmin } from "./auth.server";
 
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("../supabase/server", () => ({
   createClient: vi.fn(),
 }));
 
@@ -11,7 +11,7 @@ describe("auth.server security", () => {
   });
 
   it("does not grant admin role based solely on email containing 'admin'", async () => {
-    const { createClient } = await import("@/lib/supabase/server");
+    const { createClient } = await import("../supabase/server");
     (createClient as any).mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -40,7 +40,7 @@ describe("auth.server security", () => {
   });
 
   it("grants admin role when user_metadata explicitly defines role as admin", async () => {
-    const { createClient } = await import("@/lib/supabase/server");
+    const { createClient } = await import("../supabase/server");
     (createClient as any).mockResolvedValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { getBookingGridForDate } from "./booking-grid.service";
-import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
+import { OPEN_PLAY_HOLD_LABEL } from "../utils/open-play";
 
 const mockCourts = [
     { id: "court-1", name: "Court 1", is_active: true, status: "Available", hourly_rate: 300 },
@@ -53,7 +53,7 @@ const mockBookings = [
     },
 ];
 
-vi.mock("@/lib/supabase/server", () => ({
+vi.mock("../supabase/server", () => ({
     createClient: vi.fn().mockResolvedValue({
         from: (table: string) => {
             if (table === "courts") {
@@ -83,7 +83,7 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
-vi.mock("@/lib/services/schedule.service", () => ({
+vi.mock("./schedule.service", () => ({
     getOperatingHoursForDate: vi.fn().mockResolvedValue({
         openTime: "09:00",
         closeTime: "22:00",

@@ -1,9 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getActiveCourts } from "@/lib/services/court.service";
-import { getTodaysBookings } from "@/lib/services/booking.service";
-import { getCustomerDisplayName } from "@/lib/services/customer.service";
-import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
+import { createClient } from "../supabase/server";
+import { createAdminClient } from "../supabase/admin";
+import { getActiveCourts } from "./court.service";
+import { getTodaysBookings } from "./booking.service";
+import { getCustomerDisplayName } from "./customer.service";
+import { OPEN_PLAY_HOLD_LABEL } from "../utils/open-play";
 import type { DashboardStats } from "../domain";
 
 async function getDbClient() {

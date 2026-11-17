@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "../supabase/server";
+import { createAdminClient } from "../supabase/admin";
 import type {
     AvailableSlot,
     Booking,
@@ -7,16 +7,16 @@ import type {
     CreateBookingResult,
     ServiceResult,
 } from "../domain";
-import { getActiveCourts } from "@/lib/services/court.service";
-import { getOperatingHoursForDay, getOperatingHoursForDate } from "@/lib/services/schedule.service";
-import { generateTimeSlots, doTimeRangesOverlap, timeToMinutes } from "@/lib/utils/date";
+import { getActiveCourts } from "./court.service";
+import { getOperatingHoursForDay, getOperatingHoursForDate } from "./schedule.service";
+import { generateTimeSlots, doTimeRangesOverlap, timeToMinutes } from "../utils/date";
 import {
     SLOT_DURATION_MINUTES,
     CANCELLATION_CUTOFF_HOURS,
     canCancelBooking,
-} from "@/lib/config/booking-rules";
-import { getCustomerDisplayName } from "@/lib/services/customer.service";
-import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
+} from "../config/booking-rules";
+import { getCustomerDisplayName } from "./customer.service";
+import { OPEN_PLAY_HOLD_LABEL } from "../utils/open-play";
 
 async function getDbClient() {
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {

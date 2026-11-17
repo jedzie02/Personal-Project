@@ -1,0 +1,23 @@
+{
+  "name": "venue-template",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build --webpack",
+    "start": "next start -p 3001"
+  },
+  "dependencies": {
+    "@pickle/core": "*",
+    "lucide-react": "^1.48.0",
+    "next": "^16.4.4",
+    "react": "^19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}
