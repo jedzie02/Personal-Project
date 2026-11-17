@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Court } from "@/lib/types/domain";
-import { setCourtActiveStatusAction } from "@/app/admin/courts/actions";
+import { setCourtActiveStatusAction, deleteCourtAction } from "@/app/admin/courts/actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -52,6 +52,7 @@ export function CourtsTable({
                         court.id,
                         !court.isActive
                     );
+                    const deleteThisCourt = deleteCourtAction.bind(null, court.id);
 
                     return (
                         <TableRow key={court.id}>
@@ -71,6 +72,11 @@ export function CourtsTable({
                                 <form action={toggleStatus}>
                                     <Button variant="outline" size="sm" type="submit">
                                         {court.isActive ? "Deactivate" : "Activate"}
+                                    </Button>
+                                </form>
+                                <form action={deleteThisCourt}>
+                                    <Button variant="ghost" size="sm" type="submit" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/50">
+                                        Delete
                                     </Button>
                                 </form>
 

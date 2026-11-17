@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
     createCourt,
+    deleteCourt,
     getFutureActiveBookingsCountForCourt,
     setCourtActiveStatus,
     updateCourt,
@@ -77,4 +78,11 @@ export async function setCourtActiveStatusAction(
 
     await setCourtActiveStatus(courtId, isActive);
     revalidatePath("/admin/courts");
+}
+
+export async function deleteCourtAction(courtId: string) {
+    await requireAdmin();
+    await deleteCourt(courtId);
+    revalidatePath("/admin/courts");
+    revalidatePath("/book");
 }

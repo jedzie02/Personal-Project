@@ -158,19 +158,9 @@ export function ScheduleTimeline({
     if (!initialCourts || initialCourts.length === 0) {
       return DEFAULT_MASTER_COURTS;
     }
-    const sorted = [...initialCourts].sort((a, b) =>
+    return [...initialCourts].sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { numeric: true })
     );
-    if (sorted.length < 4) {
-      const existingNames = new Set(sorted.map((c) => c.name.toLowerCase()));
-      for (const defCourt of DEFAULT_MASTER_COURTS) {
-        if (sorted.length >= 4) break;
-        if (!existingNames.has(defCourt.name.toLowerCase())) {
-          sorted.push(defCourt);
-        }
-      }
-    }
-    return sorted;
   }, [initialCourts]);
 
   const visibleCourts = useMemo(() => {

@@ -90,24 +90,14 @@ export default function BookingGrid({
 
     const isAllPassed = passedHoursCount === hours.length && hours.length > 0;
 
-    // Memoize master list of 4 naturally sorted courts
+    // Memoize master list of naturally sorted courts
     const masterCourts = useMemo(() => {
         if (!courts || courts.length === 0) {
             return DEFAULT_MASTER_COURTS;
         }
-        const sorted = [...courts].sort((a, b) =>
+        return [...courts].sort((a, b) =>
             a.name.localeCompare(b.name, undefined, { numeric: true })
         );
-        if (sorted.length < 4) {
-            const existingNames = new Set(sorted.map((c) => c.name.toLowerCase()));
-            for (const defCourt of DEFAULT_MASTER_COURTS) {
-                if (sorted.length >= 4) break;
-                if (!existingNames.has(defCourt.name.toLowerCase())) {
-                    sorted.push(defCourt);
-                }
-            }
-        }
-        return sorted;
     }, [courts]);
 
     const courtMap = useMemo(() => {
