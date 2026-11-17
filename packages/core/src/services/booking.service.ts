@@ -6,7 +6,7 @@ import type {
     BookingFilters,
     CreateBookingResult,
     ServiceResult,
-} from "@/lib/types/domain";
+} from "../domain";
 import { getActiveCourts } from "@/lib/services/court.service";
 import { getOperatingHoursForDay, getOperatingHoursForDate } from "@/lib/services/schedule.service";
 import { generateTimeSlots, doTimeRangesOverlap, timeToMinutes } from "@/lib/utils/date";

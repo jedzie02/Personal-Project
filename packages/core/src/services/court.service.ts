@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Court, CourtStatus, ServiceResult } from "@/lib/types/domain";
+import type { Court, CourtStatus, ServiceResult } from "../domain";
 
 /**
  * court.service.ts

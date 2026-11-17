@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
-import type { CustomerSummary, Profile } from "@/lib/types/domain";
+import type { CustomerSummary, Profile } from "../domain";
 
 async function getDbClient() {
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {

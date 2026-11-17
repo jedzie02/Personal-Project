@@ -1,6 +1,6 @@
 import { createClient } from "../supabase/server";
 import { createAdminClient } from "../supabase/admin";
-import type { OperatingHours, ServiceResult } from "../types/domain";
+import type { OperatingHours, ServiceResult } from "../domain";
 
 /**
  * schedule.service.ts

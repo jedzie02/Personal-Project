@@ -4,7 +4,7 @@ import { getActiveCourts } from "@/lib/services/court.service";
 import { getTodaysBookings } from "@/lib/services/booking.service";
 import { getCustomerDisplayName } from "@/lib/services/customer.service";
 import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
-import type { DashboardStats } from "@/lib/types/domain";
+import type { DashboardStats } from "../domain";
 
 async function getDbClient() {
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {

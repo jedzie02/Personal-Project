@@ -1,13 +1,19 @@
 {
-  "name": "pickle-wb",
+  "name": "pickle-platform",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "test": "vitest"
+    "dev:dinksync": "npm run dev --workspace=dinksync",
+    "build:dinksync": "npm run build --workspace=dinksync",
+    "dev:venue": "npm run dev --workspace=venue-template",
+    "build:venue": "npm run build --workspace=venue-template",
+    "build": "npm run build:dinksync",
+    "test": "vitest",
+    "lint": "npm run lint --workspace=dinksync"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

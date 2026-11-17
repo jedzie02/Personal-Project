@@ -9,7 +9,7 @@ import {
     markOpenPlayEntryRefundedByAdmin,
     parseEntryPaymentMeta,
 } from "@/lib/services/open-play.service";
-import type { CheckoutResult, Payment } from "@/lib/types/domain";
+import type { CheckoutResult, Payment } from "../domain";
 
 async function getDbClient() {
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
