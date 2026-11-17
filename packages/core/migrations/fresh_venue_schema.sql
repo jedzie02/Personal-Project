@@ -38,6 +38,7 @@ create table if not exists public.bookings (
     start_time time not null,
     end_time time not null,
     status text default 'pending' check (status in ('pending', 'confirmed', 'cancelled', 'completed')) not null,
+    payment_status text default 'pending',
     total_price numeric(10, 2) not null,
     payment_method text,
     payment_reference text,
