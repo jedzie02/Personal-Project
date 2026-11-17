@@ -269,7 +269,7 @@ export async function createBooking(
         }
     }
 
-    // Court status gate: only "Available" courts can be booked.
+    // Court status gate: only "Available" or "Active" courts can be booked.
     // This blocks direct-POST attempts for maintenance/disabled courts.
     const { data: courtRow } = await supabase
         .from("courts")
@@ -277,11 +277,15 @@ export async function createBooking(
         .eq("id", input.courtId)
         .single();
 
-    const courtStatus = courtRow?.status || (courtRow?.is_active ? "Available" : "Not Available");
-    if (courtStatus !== "Available") {
+    const isCourtAvailable =
+        courtRow?.is_active !== false &&
+        (courtRow?.status === "Available" || courtRow?.status === "Active" || !courtRow?.status);
+
+    if (!isCourtAvailable) {
+        const displayStatus = courtRow?.status || "Not Available";
         return {
             success: false,
-            error: `This court is currently "${courtStatus}" and cannot be booked.`,
+            error: `This court is currently "${displayStatus}" and cannot be booked.`,
         };
     }
 

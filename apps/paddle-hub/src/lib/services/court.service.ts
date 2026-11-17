@@ -21,13 +21,14 @@ function mapCourt(row: {
     hourly_rate?: number | null;
     created_at: string;
 }): Court {
+    const isAvail = row.is_active !== false && (row.status === "Available" || row.status === "Active" || !row.status);
     return {
         id: row.id,
         name: row.name,
         description: row.description,
         isActive: row.is_active,
-        status: (row.status as CourtStatus) || (row.is_active ? "Available" : "Not Available"),
-        hourlyRate: row.hourly_rate != null ? Number(row.hourly_rate) : 25,
+        status: isAvail ? "Available" : (row.status === "Maintenance" ? "Maintenance" : "Not Available"),
+        hourlyRate: row.hourly_rate != null ? Number(row.hourly_rate) : 300,
         createdAt: row.created_at,
     };
 }
@@ -41,7 +42,7 @@ export async function getActiveCourts(): Promise<Court[]> {
     const { data, error } = await supabase
         .from("courts")
         .select("id, name, description, is_active, status, hourly_rate, created_at")
-        .eq("status", "Available")
+        .eq("is_active", true)
         .order("name", { ascending: true });
 
     if (error || !data) return [];
