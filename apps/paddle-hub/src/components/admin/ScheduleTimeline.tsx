@@ -184,13 +184,15 @@ export function ScheduleTimeline({
 
   // Generate slots for the day
   const timeSlots = useMemo(() => {
-    const open = currentDayHours?.openTime?.slice(0, 5) || "09:00";
+    const open = currentDayHours?.openTime?.slice(0, 5) || "07:00";
     const rawClose = currentDayHours?.closeTime?.slice(0, 5);
-    const close = !rawClose || rawClose === "21:00" || rawClose < "23:00" ? "23:00" : rawClose;
+    const close = rawClose === "00:00" || rawClose === "24:00"
+      ? "00:00"
+      : (!rawClose || rawClose === "21:00" ? "00:00" : rawClose);
     const generated = generateTimeSlots(open, close, 60);
 
     if (generated.length > 0) return generated;
-    return generateTimeSlots("09:00", "23:00", 60);
+    return generateTimeSlots("07:00", "00:00", 60);
   }, [currentDayHours]);
 
   // Current Manila time marker (client-side mounted to prevent SSR hydration mismatch)

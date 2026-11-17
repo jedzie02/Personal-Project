@@ -83,7 +83,7 @@ function hoursBetween(start: string, end: string): number {
  * The final rendered slot is always "[last hour]:00 – [last hour + 1]:00",
  * so the last entry "23:00" represents the START of the 11:00 PM – 12:00 AM block.
  */
-function generateHourSlots(open: string = "09:00", close: string = "00:00"): string[] {
+function generateHourSlots(open: string = "07:00", close: string = "00:00"): string[] {
     const hours: string[] = [];
     const startH = parseInt(open.split(":")[0], 10);
     // Midnight close time arrives as "00:00" — treat it as 24
@@ -184,8 +184,8 @@ export async function getBookingGridForDate(
         };
     }
 
-    const openTime = operatingHours?.openTime || "09:00";
-    const closeTime = operatingHours?.closeTime || "23:00";
+    const openTime = operatingHours?.openTime || "07:00";
+    const closeTime = operatingHours?.closeTime || "00:00";
     const hours = generateHourSlots(openTime, closeTime);
 
     // Figure out which hours are "passed" (in the past) in Philippine Time (UTC+8)

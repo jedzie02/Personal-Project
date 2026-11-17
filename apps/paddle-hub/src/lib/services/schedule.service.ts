@@ -34,15 +34,16 @@ function mapOperatingHours(row: {
     is_closed: boolean;
 }): OperatingHours {
     const rawClose = row.close_time?.slice(0, 5);
-    // Standard facility close is 23:00 (11:00 PM). If database has the legacy 21:00 (9:00 PM) seed,
-    // upgrade it to 23:00 so 9:00 PM - 10:00 PM and 10:00 PM - 11:00 PM are always available.
-    const closeTime = !rawClose || rawClose === "21:00" || rawClose < "23:00"
-        ? "23:00"
-        : rawClose;
+    // Midnight (12:00 AM) is stored as "00:00" or "24:00"
+    const closeTime = rawClose === "00:00" || rawClose === "24:00"
+        ? "00:00"
+        : (!rawClose || rawClose === "21:00"
+            ? "00:00"
+            : rawClose);
 
     return {
         dayOfWeek: row.day_of_week,
-        openTime: row.open_time?.slice(0, 5) || "09:00",
+        openTime: row.open_time?.slice(0, 5) || "07:00",
         closeTime,
         isClosed: Boolean(row.is_closed),
     };
