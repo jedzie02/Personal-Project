@@ -102,12 +102,27 @@ describe("BookingGrid single-court layout", () => {
         expect(html).toContain("grid-cols-[115px_1fr]");
     });
 
-    it("renders 4-column layout when All Courts is selected", () => {
-        const html = renderToStaticMarkup(
+    it("renders dynamic column layout matching active court count when All Courts is selected", () => {
+        // mockGridData has 2 courts -> repeat(2,1fr)
+        const html2 = renderToStaticMarkup(
             <BookingGrid data={mockGridData} initialCourtFilter="all" />
         );
+        expect(html2).toContain("sm:grid-cols-[170px_repeat(2,1fr)]");
 
-        expect(html).toContain("sm:grid-cols-[170px_repeat(4,1fr)]");
+        // With 4 courts -> repeat(4,1fr)
+        const fourCourtsData: BookingGridData = {
+            ...mockGridData,
+            courts: [
+                { id: "court-1", name: "Court 1", status: "Available", hourly_rate: 300 },
+                { id: "court-2", name: "Court 2", status: "Available", hourly_rate: 300 },
+                { id: "court-3", name: "Court 3", status: "Available", hourly_rate: 300 },
+                { id: "court-4", name: "Court 4", status: "Available", hourly_rate: 300 },
+            ],
+        };
+        const html4 = renderToStaticMarkup(
+            <BookingGrid data={fourCourtsData} initialCourtFilter="all" />
+        );
+        expect(html4).toContain("sm:grid-cols-[170px_repeat(4,1fr)]");
     });
 
     it("renders 'Held' for other users or logged out visitors when a slot is pending", () => {

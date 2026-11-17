@@ -48,6 +48,7 @@ export async function getActiveCourts(): Promise<Court[]> {
     if (error || !data) return [];
 
     return data
+        .filter((c: any) => c.status !== "Deactivated" && c.status !== "Not Available")
         .map(mapCourt)
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 }

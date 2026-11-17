@@ -58,9 +58,13 @@ vi.mock("@/lib/supabase/server", () => ({
         from: (table: string) => {
             if (table === "courts") {
                 return {
-                    select: () => ({
-                        order: () => Promise.resolve({ data: mockCourts }),
-                    }),
+                    select: () => {
+                        const courtQuery: any = {
+                            eq: () => courtQuery,
+                            order: () => Promise.resolve({ data: mockCourts }),
+                        };
+                        return courtQuery;
+                    },
                 };
             }
             if (table === "open_play_sessions") {
@@ -122,5 +126,11 @@ describe("booking-grid.service pending holds", () => {
         expect(slot18?.status).toBe("open_play");
         expect(slot18?.openPlay?.pricePerPlayer).toBe(200);
         expect(slot18?.openPlay?.sessionId).toBe("ops-1");
+    });
+
+    it("only includes active courts and excludes deactivated courts", async () => {
+        const gridData = await getBookingGridForDate(futureDate);
+        expect(gridData).not.toBeNull();
+        expect(gridData?.courts.map((c) => c.name)).toEqual(["Court 1"]);
     });
 });

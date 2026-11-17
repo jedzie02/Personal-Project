@@ -14,14 +14,18 @@ vi.mock("@/components/Navbar", () => ({
 vi.mock("@/lib/supabase/server", () => ({
     createClient: vi.fn().mockResolvedValue({
         from: () => ({
-            select: () => ({
-                order: () => Promise.resolve({
-                    data: [
-                        { id: "court-1", name: "Court 1", status: "Available", hourly_rate: 300, is_active: true },
-                        { id: "court-2", name: "Court 2", status: "Available", hourly_rate: 300, is_active: true },
-                    ],
-                }),
-            }),
+            select: () => {
+                const chain: any = {
+                    eq: () => chain,
+                    order: () => Promise.resolve({
+                        data: [
+                            { id: "court-1", name: "Court 1", status: "Available", hourly_rate: 300, is_active: true },
+                            { id: "court-2", name: "Court 2", status: "Available", hourly_rate: 300, is_active: true },
+                        ],
+                    }),
+                };
+                return chain;
+            },
         }),
     }),
 }));

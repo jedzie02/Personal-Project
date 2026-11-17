@@ -58,9 +58,13 @@ vi.mock("../supabase/server", () => ({
         from: (table: string) => {
             if (table === "courts") {
                 return {
-                    select: () => ({
-                        order: () => Promise.resolve({ data: mockCourts }),
-                    }),
+                    select: () => {
+                        const courtQuery: any = {
+                            eq: () => courtQuery,
+                            order: () => Promise.resolve({ data: mockCourts }),
+                        };
+                        return courtQuery;
+                    },
                 };
             }
             if (table === "open_play_sessions") {

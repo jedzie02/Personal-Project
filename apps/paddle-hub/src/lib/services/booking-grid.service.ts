@@ -104,28 +104,27 @@ export async function getBookingGridForDate(
 ): Promise<BookingGridData | null> {
     const supabase = await createClient();
 
-    // Fetch live courts from Supabase
+    // Fetch live courts from Supabase (only active, available courts)
     const { data: dbCourts } = await supabase
         .from("courts")
         .select("id, name, is_active, status, hourly_rate")
+        .eq("is_active", true)
         .order("name", { ascending: true });
 
     let courts: { id: string; name: string; status: string; hourly_rate?: number }[] = [];
     if (dbCourts && dbCourts.length > 0) {
-        courts = dbCourts.map((c: any) => {
-            const rawStatus = c.status || (c.is_active === false ? "Not Available" : "Available");
-            const status = rawStatus === "Maintenance"
-                ? "Maintenance"
-                : rawStatus === "Not Available" || rawStatus === "Deactivated" || c.is_active === false
-                ? "Not Available"
-                : "Available";
-            return {
-                id: c.id,
-                name: c.name,
-                status,
-                hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
-            };
-        });
+        courts = dbCourts
+            .filter((c: any) => c.is_active !== false && c.status !== "Deactivated" && c.status !== "Not Available")
+            .map((c: any) => {
+                const rawStatus = c.status || "Available";
+                const status = rawStatus === "Maintenance" ? "Maintenance" : "Available";
+                return {
+                    id: c.id,
+                    name: c.name,
+                    status,
+                    hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
+                };
+            });
     } else {
         courts = [];
     }

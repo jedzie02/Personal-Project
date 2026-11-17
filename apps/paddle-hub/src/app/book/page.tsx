@@ -7,7 +7,7 @@ import { getBookingGridForDate } from "@/lib/services/booking-grid.service";
 import { createClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
 
-export const revalidate = 10;
+export const dynamic = "force-dynamic";
 
 type PageProps = {
     searchParams?: Promise<{
@@ -35,6 +35,7 @@ export default async function BookPage({ searchParams }: PageProps) {
             supabase
                 .from("courts")
                 .select("id, name, status, is_active, hourly_rate")
+                .eq("is_active", true)
                 .order("name", { ascending: true }),
             getBookingGridForDate(date),
         ]);
@@ -45,15 +46,12 @@ export default async function BookPage({ searchParams }: PageProps) {
     }
 
     const courts = (rawCourts ?? [])
+        .filter((c: any) => c.is_active !== false && c.status !== "Deactivated" && c.status !== "Not Available")
         .map((c: any) => ({
             id: c.id,
             name: c.name,
             hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
-            status: c.status === "Maintenance"
-                ? "Maintenance"
-                : (c.status === "Not Available" || c.status === "Deactivated" || c.is_active === false)
-                    ? "Not Available"
-                    : "Available",
+            status: c.status === "Maintenance" ? "Maintenance" : "Available",
         }))
         .sort((a: { name: string }, b: { name: string }) =>
             a.name.localeCompare(b.name, undefined, { numeric: true })
@@ -81,7 +79,7 @@ export default async function BookPage({ searchParams }: PageProps) {
                             </div>
 
                             {[
-                                { step: "1", title: "Select your slot", body: "Pick your preferred date and tap any open 1-hour slot across our 4 master courts.", pulse: "" },
+                                { step: "1", title: "Select your slot", body: "Pick your preferred date and tap any open 1-hour slot across our master courts.", pulse: "" },
                                 { step: "2", title: "Scan & pay", body: "Scan the venue GCash QR code and input your payment reference to lock the reservation.", pulse: "animate-step-node-2" },
                                 { step: "3", title: "Take the court", body: "Show your confirmation upon arrival. Your net, court, and time are guaranteed.", pulse: "animate-step-node-3" },
                             ].map(({ step, title, body, pulse }) => (
@@ -105,7 +103,7 @@ export default async function BookPage({ searchParams }: PageProps) {
                                 Court Availability &amp; Schedule
                             </h2>
                             <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400 max-w-lg mx-auto">
-                                Select a date to view live hourly rates and open time slots across all 4 master courts.
+                                Select a date to view live hourly rates and open time slots across all courts.
                             </p>
                         </div>
 
