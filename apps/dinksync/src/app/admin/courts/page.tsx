@@ -18,13 +18,10 @@ import {
 } from "@/app/admin/courts/actions";
 import {
   decodeDescriptionAndPricingRules,
+  formatCourtCardRuleSummary,
   formatHourAMPM,
   type CourtPricingRule,
 } from "@/lib/utils/court-pricing";
-
-export function formatCourtCardRuleSummary(rule: CourtPricingRule): string {
-  return `${formatHourAMPM(rule.startTime)} – ${formatHourAMPM(rule.endTime)}: ₱${rule.rate}/hr`;
-}
 
 const START_HOUR_OPTIONS = Array.from({ length: 18 }, (_, i) => {
   const h = i + 6; // 06:00 to 23:00

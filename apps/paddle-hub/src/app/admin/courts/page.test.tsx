@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import AdminCourtsPage, { formatCourtCardRuleSummary } from "./page";
+import AdminCourtsPage from "./page";
+import { formatCourtCardRuleSummary } from "@/lib/utils/court-pricing";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),

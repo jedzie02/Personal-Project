@@ -655,10 +655,12 @@ export function ScheduleTimeline({
                 visibleCourts.length >= 5 ? "[--time-col-w:130px] sm:[--time-col-w:165px]" : "[--time-col-w:130px] sm:[--time-col-w:165px]",
                 getTimelineGridColsClass(visibleCourts.length)
               )}
-              style={visibleCourts.length > 1 ? {
-                gridTemplateColumns: `var(--time-col-w, 130px) repeat(${visibleCourts.length}, minmax(${visibleCourts.length >= 5 ? "130px" : "170px"}, 1fr))`,
-              } : undefined}
               style={{
+                ...(visibleCourts.length > 1
+                  ? {
+                      gridTemplateColumns: `var(--time-col-w, 130px) repeat(${visibleCourts.length}, minmax(${visibleCourts.length >= 5 ? "130px" : "170px"}, 1fr))`,
+                    }
+                  : {}),
                 gridAutoRows: "minmax(68px, auto)",
               }}
             >

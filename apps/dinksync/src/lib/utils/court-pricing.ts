@@ -138,3 +138,7 @@ export function formatHourAMPM(timeStr: string): string {
     h = h ? h : 12;
     return `${h.toString().padStart(2, "0")}:${mStr} ${ampm}`;
 }
+
+export function formatCourtCardRuleSummary(rule: CourtPricingRule): string {
+    return `${formatHourAMPM(rule.startTime)} – ${formatHourAMPM(rule.endTime)}: ₱${rule.rate}/hr`;
+}
