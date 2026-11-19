@@ -28,7 +28,9 @@ function revalidateCourtPaths() {
 }
 
 async function getSupabaseMutationClient() {
-    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    const isValidServiceKey = serviceKey && !serviceKey.includes("your_") && !serviceKey.includes("placeholder") && !serviceKey.includes("copied");
+    if (isValidServiceKey) {
         return createAdminClient();
     }
     try {

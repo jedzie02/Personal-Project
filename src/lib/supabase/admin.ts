@@ -29,7 +29,9 @@ function normalizeUrl(rawUrl?: string): string {
 
 function normalizeKey(rawKey?: string): string {
     if (!rawKey) return "";
-    return rawKey.trim().replace(/^["']|["']$/g, "").trim();
+    const clean = rawKey.trim().replace(/^["']|["']$/g, "").trim();
+    if (clean.includes("your_") || clean.includes("placeholder") || clean.includes("copied")) return "";
+    return clean;
 }
 
 export function createAdminClient() {
