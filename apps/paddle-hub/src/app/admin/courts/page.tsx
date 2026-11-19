@@ -170,7 +170,11 @@ export default function AdminCourtsPage() {
       fetchCourts();
       router.refresh();
     } else {
-      setErrorMessage("Unable to add court. Please verify the court name is unique and try again.");
+      setErrorMessage(
+        result.error
+          ? `Unable to add court: ${result.error}`
+          : "Unable to add court. Please verify the court name is unique and try again."
+      );
     }
   };
 
