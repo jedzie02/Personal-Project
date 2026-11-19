@@ -133,4 +133,50 @@ describe("booking-grid.service pending holds", () => {
         expect(gridData).not.toBeNull();
         expect(gridData?.courts.map((c) => c.name)).toEqual(["Court 1"]);
     });
+
+    it("excludes courts with status 'Not Available' or is_active: false while keeping 'Maintenance' courts visible", async () => {
+        const { createClient } = await import("@/lib/supabase/server");
+        const multiCourts = [
+            { id: "court-1", name: "Court 1", is_active: true, status: "Available", hourly_rate: 300 },
+            { id: "court-2", name: "Court 2", is_active: false, status: "Not Available", hourly_rate: 300 },
+            { id: "court-3", name: "Court 3", is_active: true, status: "Maintenance", hourly_rate: 300 },
+            { id: "court-4", name: "Court 4", is_active: true, status: "Not Available", hourly_rate: 300 },
+        ];
+
+        vi.mocked(createClient).mockResolvedValueOnce({
+            from: (table: string) => {
+                if (table === "courts") {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                order: () => Promise.resolve({ data: multiCourts }),
+                            }),
+                        }),
+                    };
+                }
+                if (table === "open_play_sessions") {
+                    return {
+                        select: () => ({
+                            eq: () => ({
+                                neq: () => Promise.resolve({ data: [] }),
+                            }),
+                        }),
+                    };
+                }
+                return {
+                    select: () => ({
+                        eq: () => ({
+                            in: () => Promise.resolve({ data: [] }),
+                        }),
+                    }),
+                };
+            },
+        } as any);
+
+        const gridData = await getBookingGridForDate(futureDate);
+        expect(gridData).not.toBeNull();
+        // Court 2 and Court 4 (Not Available) must be excluded; Court 1 and Court 3 (Maintenance) must be present
+        expect(gridData?.courts.map((c) => c.id)).toEqual(["court-1", "court-3"]);
+        expect(gridData?.courts.find((c) => c.id === "court-3")?.status).toBe("Maintenance");
+    });
 });
