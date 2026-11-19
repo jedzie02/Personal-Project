@@ -106,4 +106,47 @@ describe("ScheduleTimeline Multi-Hour Spanning", () => {
     // Court 2 must still show Available options at 18:00
     expect(html).toContain("Available");
   });
+
+  it("renders Inactive badge when court status is Not Available", () => {
+    const courtsWithInactive = [
+      { id: "court-1", name: "Court 1", status: "Available" as const, hourlyRate: 300, isActive: true },
+      { id: "court-2", name: "Court 2", status: "Not Available" as const, hourlyRate: 300, isActive: false },
+    ];
+
+    const html = renderToStaticMarkup(
+      <ScheduleTimeline
+        selectedDate="2026-11-16"
+        todayDate="2026-11-16"
+        initialCourts={courtsWithInactive}
+        initialBookings={[]}
+        initialOperatingHours={mockOperatingHours}
+      />
+    );
+
+    expect(html).toContain("Court 2");
+    expect(html).toContain("Inactive");
+  });
+
+  it("dynamically adapts grid columns and minWidth for 7+ courts without auto-fit wrapping", () => {
+    const sevenCourts = Array.from({ length: 7 }, (_, i) => ({
+      id: `court-${i + 1}`,
+      name: `Court ${i + 1}`,
+      status: "Available" as const,
+      hourlyRate: 300,
+      isActive: true,
+    }));
+
+    const html = renderToStaticMarkup(
+      <ScheduleTimeline
+        selectedDate="2026-11-16"
+        todayDate="2026-11-16"
+        initialCourts={sevenCourts}
+        initialBookings={[]}
+        initialOperatingHours={mockOperatingHours}
+      />
+    );
+
+    expect(html).toContain("repeat(7,minmax(130px,1fr))");
+    expect(html).toContain("Court 7");
+  });
 });
