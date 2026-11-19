@@ -126,7 +126,7 @@ export default function AdminCourtsPage() {
     setCourts((prev) =>
       prev.map((c) =>
         c.id === courtId
-          ? { ...c, status, is_active: status === "Available" }
+          ? { ...c, status, is_active: status === "Available" || status === "Maintenance" }
           : c
       )
     );

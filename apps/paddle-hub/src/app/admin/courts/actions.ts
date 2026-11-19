@@ -31,6 +31,7 @@ export async function updateCourtStatusAction(
     status: CourtStatus
 ): Promise<{ success: boolean; error?: string }> {
     try {
+        await requireAdmin();
         const supabase = createAdminClient();
         const isActive = status === "Available" || status === "Maintenance";
         const dbStatus = toDbStatus(status);
@@ -46,14 +47,6 @@ export async function updateCourtStatusAction(
                 .update({ status, is_active: isActive })
                 .eq("id", courtId);
             error = retry.error;
-        }
-
-        if (error) {
-            const fallback = await supabase
-                .from("courts")
-                .update({ is_active: isActive })
-                .eq("id", courtId);
-            error = fallback.error;
         }
 
         if (error) {
@@ -75,6 +68,10 @@ export async function updateCourtRateAction(
     hourlyRate: number
 ): Promise<{ success: boolean; error?: string }> {
     try {
+        await requireAdmin();
+        if (!Number.isFinite(hourlyRate) || hourlyRate < 0) {
+            return { success: false, error: "Invalid hourly rate" };
+        }
         const supabase = createAdminClient();
         const { error } = await supabase
             .from("courts")
@@ -102,6 +99,10 @@ export async function createCourtModalAction(input: {
     status: CourtStatus;
 }): Promise<{ success: boolean; error?: string }> {
     try {
+        await requireAdmin();
+        if (!Number.isFinite(input.hourlyRate) || input.hourlyRate < 0) {
+            return { success: false, error: "Invalid hourly rate" };
+        }
         const supabase = createAdminClient();
         const isActive = input.status === "Available" || input.status === "Maintenance";
         const dbStatus = toDbStatus(input.status);

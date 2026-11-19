@@ -31,10 +31,10 @@ describe("AdminCourtsPage Add Court UI", () => {
     expect(html).not.toContain("sm:grid-cols-5");
   });
 
-  it("defines delete controls on court cards", () => {
-    // When courts exist, each card has delete and checkbox controls
+  it("does not render delete controls on court cards", () => {
     const html = renderToStaticMarkup(<AdminCourtsPage />);
-    expect(html).toContain("Add Court");
+    expect(html).not.toContain("Delete Selected");
+    expect(html).not.toContain("Delete Court");
   });
 });
 

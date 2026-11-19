@@ -98,7 +98,7 @@ export async function createCourt(
         name,
         description,
         status: dbStatus,
-        is_active: status === "Available",
+        is_active: status === "Available" || status === "Maintenance",
     });
 
     if (error) {
@@ -106,7 +106,7 @@ export async function createCourt(
             name,
             description,
             status,
-            is_active: status === "Available",
+            is_active: status === "Available" || status === "Maintenance",
         });
         error = retry.error;
     }
@@ -150,13 +150,13 @@ export async function setCourtStatus(
 
     let { error } = await supabase
         .from("courts")
-        .update({ status: dbStatus, is_active: status === "Available" })
+        .update({ status: dbStatus, is_active: status === "Available" || status === "Maintenance" })
         .eq("id", id);
 
     if (error) {
         const retry = await supabase
             .from("courts")
-            .update({ status, is_active: status === "Available" })
+            .update({ status, is_active: status === "Available" || status === "Maintenance" })
             .eq("id", id);
         error = retry.error;
     }

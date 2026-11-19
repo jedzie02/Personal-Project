@@ -102,12 +102,27 @@ describe("BookingGrid single-court layout", () => {
         expect(html).toContain("grid-cols-[115px_1fr]");
     });
 
-    it("renders 4-column layout when All Courts is selected", () => {
-        const html = renderToStaticMarkup(
+    it("renders dynamic column layout matching active court count when All Courts is selected", () => {
+        // mockGridData has 2 courts -> repeat(2,1fr)
+        const html2 = renderToStaticMarkup(
             <BookingGrid data={mockGridData} initialCourtFilter="all" />
         );
+        expect(html2).toContain("sm:grid-cols-[170px_repeat(2,1fr)]");
 
-        expect(html).toContain("sm:grid-cols-[170px_repeat(4,1fr)]");
+        // With 4 courts -> repeat(4,1fr)
+        const fourCourtsData: BookingGridData = {
+            ...mockGridData,
+            courts: [
+                { id: "court-1", name: "Court 1", status: "Available", hourly_rate: 300 },
+                { id: "court-2", name: "Court 2", status: "Available", hourly_rate: 300 },
+                { id: "court-3", name: "Court 3", status: "Available", hourly_rate: 300 },
+                { id: "court-4", name: "Court 4", status: "Available", hourly_rate: 300 },
+            ],
+        };
+        const html4 = renderToStaticMarkup(
+            <BookingGrid data={fourCourtsData} initialCourtFilter="all" />
+        );
+        expect(html4).toContain("sm:grid-cols-[170px_repeat(4,1fr)]");
     });
 
     it("renders 'Held' for other users or logged out visitors when a slot is pending", () => {
@@ -194,5 +209,51 @@ describe("BookingGrid single-court layout", () => {
         );
         expect(html).toContain("OPEN PLAY");
         expect(html).toContain("₱150/player");
+    });
+
+    it("renders friendly empty state card when 0 courts are active", () => {
+        const zeroCourtsData: BookingGridData = {
+            ...mockGridData,
+            courts: [],
+            grid: [],
+        };
+        const html = renderToStaticMarkup(
+            <BookingGrid data={zeroCourtsData} />
+        );
+        expect(html).toContain("No Courts Available");
+        expect(html).toContain("no courts open for booking");
+    });
+
+    it("shrinks columns to compact widths for 5 or more courts", () => {
+        const sevenCourtsData: BookingGridData = {
+            ...mockGridData,
+            courts: [
+                { id: "c-1", name: "Court 1", status: "Available", hourly_rate: 300 },
+                { id: "c-2", name: "Court 2", status: "Available", hourly_rate: 300 },
+                { id: "c-3", name: "Court 3", status: "Available", hourly_rate: 300 },
+                { id: "c-4", name: "Court 4", status: "Available", hourly_rate: 300 },
+                { id: "c-5", name: "Court 5", status: "Available", hourly_rate: 300 },
+                { id: "c-6", name: "Court 6", status: "Available", hourly_rate: 300 },
+                { id: "c-7", name: "Court 7", status: "Available", hourly_rate: 300 },
+            ],
+            grid: [
+                Array.from({ length: 7 }, (_, i) => ({
+                    courtId: `c-${i + 1}`,
+                    courtName: `Court ${i + 1}`,
+                    hour: "09:00",
+                    status: "available" as const,
+                    isPeak: false,
+                })),
+            ],
+        };
+
+        const html = renderToStaticMarkup(
+            <BookingGrid data={sevenCourtsData} initialCourtFilter="all" />
+        );
+
+        // Header and container must adapt for 7 courts with compact min-width (96px)
+        expect(html).toContain("minmax(96px,1fr)");
+        expect(html).toContain("repeat(7, minmax(96px, 1fr))");
+        expect(html).toContain("Court 7");
     });
 });

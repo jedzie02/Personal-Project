@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, CheckCircle2, Clock, ChevronRight, Check, Trash2, CalendarX, Play, Users } from "lucide-react";
+import { cn } from "cn";
 import type { BookingGridData, GridCell } from "@/lib/services/booking-grid.service";
 import { PRICE_PER_HOUR } from "@/lib/config/booking-rules";
 import { supabase } from "@/lib/supabase";
@@ -46,13 +47,6 @@ function formatDate(dateStr: string) {
         return dateStr;
     }
 }
-
-const DEFAULT_MASTER_COURTS = [
-    { id: "court-1", name: "Court 1", status: "Available", hourly_rate: 300 },
-    { id: "court-2", name: "Court 2", status: "Available", hourly_rate: 300 },
-    { id: "court-3", name: "Court 3", status: "Available", hourly_rate: 300 },
-    { id: "court-4", name: "Court 4", status: "Available", hourly_rate: 300 },
-];
 
 function getGridColsClass(count: number) {
     if (count <= 1) return "grid-cols-[115px_1fr] sm:grid-cols-[180px_1fr]";
@@ -119,6 +113,12 @@ export default function BookingGrid({
         const matched = masterCourts.filter((c) => c.id === mobileCourtFilter);
         return matched.length > 0 ? matched : masterCourts;
     }, [masterCourts, mobileCourtFilter]);
+
+    const isCompact = activeCourts.length >= 5;
+
+    const gridTemplateStyle = activeCourts.length > 1 ? {
+        gridTemplateColumns: `var(--time-col-w, 105px) repeat(${activeCourts.length}, minmax(${isCompact ? "96px" : "140px"}, 1fr))`,
+    } : undefined;
 
     // Check authentication state (localStorage, cookies, or Supabase session)
     useEffect(() => {
@@ -437,15 +437,21 @@ export default function BookingGrid({
             {/* Grid */}
             <div className="relative overflow-x-auto w-full">
                 <div
-                    className={activeCourts.length === 1 ? "w-full min-w-0" : undefined}
+                    className={cn(
+                        activeCourts.length === 1 ? "w-full min-w-0" : undefined,
+                        isCompact ? "[--time-col-w:105px] sm:[--time-col-w:140px]" : "[--time-col-w:105px] sm:[--time-col-w:170px]"
+                    )}
                     style={
                         activeCourts.length > 1
-                            ? { minWidth: `${105 + activeCourts.length * (activeCourts.length >= 5 ? 96 : 140)}px` }
+                            ? { minWidth: `${105 + activeCourts.length * (isCompact ? 96 : 140)}px` }
                             : undefined
                     }
                 >
                     {/* Court headers */}
-                    <div className={`grid ${getGridColsClass(activeCourts.length)} border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900`}>
+                    <div
+                        className={`grid ${getGridColsClass(activeCourts.length)} border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900`}
+                        style={gridTemplateStyle}
+                    >
                         <div className="sticky left-0 z-20 py-3 sm:py-4 px-2 text-center text-xs sm:text-sm font-bold text-gray-500 dark:text-slate-400 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_4px_-1px_rgba(0,0,0,0.3)]">
                             Time
                         </div>
@@ -454,11 +460,13 @@ export default function BookingGrid({
                             return (
                                 <div
                                     key={court.id}
-                                    className={`py-3 sm:py-4 px-2 text-center text-xs sm:text-sm font-bold uppercase tracking-wider border-r last:border-r-0 border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center ${
+                                    className={cn(
+                                        "py-3 sm:py-4 px-2 text-center font-bold uppercase tracking-wider border-r last:border-r-0 border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center",
+                                        isCompact ? "text-xs" : "text-xs sm:text-sm",
                                         isNotAvailable
                                             ? "opacity-60 bg-gray-100 dark:bg-slate-800/80 text-gray-500 dark:text-slate-400"
                                             : "bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
-                                    }`}
+                                    )}
                                 >
                                     <div>{court.name}</div>
                                     {court.hourly_rate != null && (
@@ -516,6 +524,7 @@ export default function BookingGrid({
                                 <div
                                     key={hour}
                                     className={`grid ${getGridColsClass(activeCourts.length)} min-h-[58px]`}
+                                    style={gridTemplateStyle}
                                 >
                                     {/* Sticky Time label */}
                                     <div className="sticky left-0 z-10 px-1 sm:px-2 py-3 sm:py-4 text-center flex flex-col sm:flex-row items-center justify-center border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_4px_-1px_rgba(0,0,0,0.3)]">
@@ -564,6 +573,7 @@ export default function BookingGrid({
                                                     isLoggedIn={isLoggedIn}
                                                     currentUserId={currentUserId}
                                                     router={router}
+                                                    isCompact={isCompact}
                                                 />
                                             </div>
                                         );
@@ -702,6 +712,7 @@ function CellContent({
     isLoggedIn,
     currentUserId,
     router,
+    isCompact = false,
 }: {
     cell: BookingGridData["grid"][0][0];
     courtName: string;
@@ -711,6 +722,7 @@ function CellContent({
     isLoggedIn: boolean;
     currentUserId?: string | null;
     router: ReturnType<typeof useRouter>;
+    isCompact?: boolean;
 }) {
     // Priority: court-level Maintenance / Not Available status takes precedence
     const effectiveStatus =
@@ -724,7 +736,10 @@ function CellContent({
         case "passed":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center py-2"
+                    className={cn(
+                        "w-full h-full min-h-[44px] rounded-[14px] bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center",
+                        isCompact ? "py-1 px-1" : "py-2"
+                    )}
                 >
                     <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">Passed</span>
                 </div>
@@ -738,7 +753,10 @@ function CellContent({
                         <button
                             type="button"
                             onClick={() => router.push(`/book/payment?bookingId=${cell.booking!.id}`)}
-                            className="w-full h-full min-h-[44px] rounded-[14px] py-2 flex items-center justify-center bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-xs gap-1.5 shadow-xs cursor-pointer transition-all animate-in zoom-in-95 duration-150"
+                            className={cn(
+                                "w-full h-full min-h-[44px] rounded-[14px] flex items-center justify-center bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold text-xs shadow-xs cursor-pointer transition-all animate-in zoom-in-95 duration-150",
+                                isCompact ? "py-1 px-1 gap-1" : "py-2 gap-1.5"
+                            )}
                         >
                             <Play className="size-3 fill-current" />
                             <span>Resume</span>
@@ -748,7 +766,10 @@ function CellContent({
 
                 return (
                     <div
-                        className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 dark:bg-slate-800/70 flex flex-col items-center justify-center gap-0.5 py-2 cursor-not-allowed"
+                        className={cn(
+                            "w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 dark:bg-slate-800/70 flex flex-col items-center justify-center cursor-not-allowed",
+                            isCompact ? "py-1 px-1 gap-0" : "py-2 gap-0.5"
+                        )}
                     >
                         <Lock className="size-3.5 text-slate-400 dark:text-slate-500" />
                         <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">
@@ -760,7 +781,10 @@ function CellContent({
 
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 dark:bg-slate-800/70 flex flex-col items-center justify-center gap-0.5 py-2"
+                    className={cn(
+                        "w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 dark:bg-slate-800/70 flex flex-col items-center justify-center",
+                        isCompact ? "py-1 px-1 gap-0" : "py-2 gap-0.5"
+                    )}
                 >
                     <Lock className="size-3.5 text-slate-400 dark:text-slate-500" />
                     <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">
@@ -775,7 +799,10 @@ function CellContent({
                 <button
                     type="button"
                     onClick={() => router.push("/open-play")}
-                    className="w-full h-full min-h-[44px] rounded-[14px] py-1.5 px-2 flex flex-col items-center justify-center bg-emerald-500/15 dark:bg-emerald-950/50 hover:bg-emerald-500/25 dark:hover:bg-emerald-900/60 active:scale-[0.98] border border-emerald-500/40 dark:border-emerald-600/50 text-emerald-800 dark:text-emerald-300 transition-all cursor-pointer group shadow-2xs"
+                    className={cn(
+                        "w-full h-full min-h-[44px] rounded-[14px] flex flex-col items-center justify-center bg-emerald-500/15 dark:bg-emerald-950/50 hover:bg-emerald-500/25 dark:hover:bg-emerald-900/60 active:scale-[0.98] border border-emerald-500/40 dark:border-emerald-600/50 text-emerald-800 dark:text-emerald-300 transition-all cursor-pointer group shadow-2xs",
+                        isCompact ? "py-1 px-1" : "py-1.5 px-2"
+                    )}
                     aria-label={`Open Play session on ${courtName} at ${cell.hour}, ₱${openPlayPrice} per player. Tap to join.`}
                 >
                     <div className="flex items-center gap-1">
@@ -793,7 +820,10 @@ function CellContent({
         case "fulfilled":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 dark:bg-slate-800/70 flex flex-col items-center justify-center gap-0.5 py-2"
+                    className={cn(
+                        "w-full h-full min-h-[44px] rounded-[14px] bg-slate-100 dark:bg-slate-800/70 flex flex-col items-center justify-center",
+                        isCompact ? "py-1 px-1 gap-0" : "py-2 gap-0.5"
+                    )}
                 >
                     <CheckCircle2 className="size-3.5 text-slate-400 dark:text-slate-500" />
                     <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">
@@ -813,19 +843,21 @@ function CellContent({
                             hour: cell.hour,
                         });
                     }}
-                    className={`w-full h-full min-h-[44px] rounded-[14px] py-2 flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                    className={cn(
+                        "w-full h-full min-h-[44px] rounded-[14px] flex items-center justify-center transition-all duration-200 cursor-pointer",
+                        isCompact ? "py-1.5 px-1 sm:px-1.5" : "py-2 px-2",
                         isSelected
                             ? "bg-blue-600 dark:bg-blue-600 text-white border-2 border-blue-600 dark:border-blue-500 shadow-xs"
                             : "bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-500 dark:hover:bg-blue-600 hover:border-blue-500 dark:hover:border-blue-600 group/cell"
-                    }`}
+                    )}
                 >
                     {isSelected ? (
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-white animate-in zoom-in-95 duration-150">
-                            <Check className="size-3.5 stroke-[3]" />
+                        <div className={cn("flex items-center font-bold text-white animate-in zoom-in-95 duration-150", isCompact ? "gap-1 text-[11px]" : "gap-1.5 text-xs")}>
+                            <Check className={cn(isCompact ? "size-3 stroke-[3]" : "size-3.5 stroke-[3]")} />
                             <span>Selected</span>
                         </div>
                     ) : (
-                        <span className="text-sm font-semibold text-blue-600 dark:text-blue-400 capitalize group-hover/cell:text-white transition-colors duration-200">
+                        <span className={cn("font-semibold text-blue-600 dark:text-blue-400 capitalize group-hover/cell:text-white transition-colors duration-200", isCompact ? "text-xs" : "text-sm")}>
                             Available
                         </span>
                     )}
@@ -835,7 +867,10 @@ function CellContent({
         case "closed":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center py-2"
+                    className={cn(
+                        "w-full h-full min-h-[44px] rounded-[14px] bg-slate-50 dark:bg-slate-800/40 flex items-center justify-center",
+                        isCompact ? "py-1 px-1" : "py-2"
+                    )}
                 >
                     <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">Closed</span>
                 </div>
@@ -844,7 +879,10 @@ function CellContent({
         case "maintenance":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex flex-col items-center justify-center cursor-not-allowed py-2 text-center"
+                    className={cn(
+                        "w-full h-full min-h-[44px] rounded-[14px] bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex flex-col items-center justify-center cursor-not-allowed text-center",
+                        isCompact ? "py-1 px-1 text-[11px]" : "py-2"
+                    )}
                 >
                     <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">Maintenance</span>
                 </div>
@@ -853,7 +891,10 @@ function CellContent({
         case "not_available":
             return (
                 <div
-                    className="w-full h-full min-h-[44px] rounded-[14px] opacity-60 bg-gray-200 dark:bg-slate-800/80 border border-gray-300 dark:border-slate-700 flex flex-col items-center justify-center cursor-not-allowed py-2 text-center"
+                    className={cn(
+                        "w-full h-full min-h-[44px] rounded-[14px] opacity-60 bg-gray-200 dark:bg-slate-800/80 border border-gray-300 dark:border-slate-700 flex flex-col items-center justify-center cursor-not-allowed text-center",
+                        isCompact ? "py-1 px-1 text-[11px]" : "py-2"
+                    )}
                 >
                     <span className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase">Not Available</span>
                 </div>

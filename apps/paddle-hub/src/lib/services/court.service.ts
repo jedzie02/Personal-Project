@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Court, CourtStatus, ServiceResult } from "@/lib/types/domain";
 
 /**
@@ -90,14 +91,25 @@ export async function createCourt(
     description: string | null,
     status: CourtStatus = "Available"
 ): Promise<ServiceResult> {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
+    const dbStatus = status === "Maintenance" ? "Maintenance" : status === "Not Available" ? "Deactivated" : "Active";
 
-    const { error } = await supabase.from("courts").insert({
+    let { error } = await supabase.from("courts").insert({
         name,
         description,
-        status,
-        is_active: status === "Available",
+        status: dbStatus,
+        is_active: status === "Available" || status === "Maintenance",
     });
+
+    if (error) {
+        const retry = await supabase.from("courts").insert({
+            name,
+            description,
+            status,
+            is_active: status === "Available" || status === "Maintenance",
+        });
+        error = retry.error;
+    }
 
     if (error) {
         return { success: false, error: error.message };
@@ -111,7 +123,7 @@ export async function updateCourt(
     name: string,
     description: string | null
 ): Promise<ServiceResult> {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { error } = await supabase
         .from("courts")
@@ -133,12 +145,21 @@ export async function setCourtStatus(
     id: string,
     status: CourtStatus
 ): Promise<ServiceResult> {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
+    const dbStatus = status === "Maintenance" ? "Maintenance" : status === "Not Available" ? "Deactivated" : "Active";
 
-    const { error } = await supabase
+    let { error } = await supabase
         .from("courts")
-        .update({ status, is_active: status === "Available" })
+        .update({ status: dbStatus, is_active: status === "Available" || status === "Maintenance" })
         .eq("id", id);
+
+    if (error) {
+        const retry = await supabase
+            .from("courts")
+            .update({ status, is_active: status === "Available" })
+            .eq("id", id);
+        error = retry.error;
+    }
 
     if (error) {
         return { success: false, error: error.message };

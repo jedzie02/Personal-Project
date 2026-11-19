@@ -278,7 +278,7 @@ export async function createBooking(
         .single();
 
     const courtStatus = courtRow?.status || (courtRow?.is_active ? "Available" : "Not Available");
-    if (courtStatus !== "Available") {
+    if (courtStatus !== "Available" && courtStatus !== "Active") {
         return {
             success: false,
             error: `This court is currently "${courtStatus}" and cannot be booked.`,

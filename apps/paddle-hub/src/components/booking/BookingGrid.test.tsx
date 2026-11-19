@@ -253,6 +253,7 @@ describe("BookingGrid single-court layout", () => {
 
         // Header and container must adapt for 7 courts with compact min-width (96px)
         expect(html).toContain("minmax(96px,1fr)");
+        expect(html).toContain("repeat(7, minmax(96px, 1fr))");
         expect(html).toContain("Court 7");
     });
 });
