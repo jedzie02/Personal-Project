@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Court, CourtStatus, ServiceResult } from "@/lib/types/domain";
 
 /**
@@ -21,13 +22,14 @@ function mapCourt(row: {
     hourly_rate?: number | null;
     created_at: string;
 }): Court {
+    const isAvail = row.is_active !== false && (row.status === "Available" || row.status === "Active" || !row.status);
     return {
         id: row.id,
         name: row.name,
         description: row.description,
         isActive: row.is_active,
-        status: (row.status as CourtStatus) || (row.is_active ? "Available" : "Not Available"),
-        hourlyRate: row.hourly_rate != null ? Number(row.hourly_rate) : 25,
+        status: isAvail ? "Available" : (row.status === "Maintenance" ? "Maintenance" : "Not Available"),
+        hourlyRate: row.hourly_rate != null ? Number(row.hourly_rate) : 300,
         createdAt: row.created_at,
     };
 }
@@ -41,12 +43,13 @@ export async function getActiveCourts(): Promise<Court[]> {
     const { data, error } = await supabase
         .from("courts")
         .select("id, name, description, is_active, status, hourly_rate, created_at")
-        .eq("status", "Available")
+        .eq("is_active", true)
         .order("name", { ascending: true });
 
     if (error || !data) return [];
 
     return data
+        .filter((c: any) => c.status !== "Deactivated" && c.status !== "Not Available")
         .map(mapCourt)
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
 }
@@ -88,14 +91,25 @@ export async function createCourt(
     description: string | null,
     status: CourtStatus = "Available"
 ): Promise<ServiceResult> {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
+    const dbStatus = status === "Maintenance" ? "Maintenance" : status === "Not Available" ? "Deactivated" : "Active";
 
-    const { error } = await supabase.from("courts").insert({
+    let { error } = await supabase.from("courts").insert({
         name,
         description,
-        status,
-        is_active: status === "Available",
+        status: dbStatus,
+        is_active: status === "Available" || status === "Maintenance",
     });
+
+    if (error) {
+        const retry = await supabase.from("courts").insert({
+            name,
+            description,
+            status,
+            is_active: status === "Available" || status === "Maintenance",
+        });
+        error = retry.error;
+    }
 
     if (error) {
         return { success: false, error: error.message };
@@ -109,7 +123,7 @@ export async function updateCourt(
     name: string,
     description: string | null
 ): Promise<ServiceResult> {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { error } = await supabase
         .from("courts")
@@ -131,12 +145,21 @@ export async function setCourtStatus(
     id: string,
     status: CourtStatus
 ): Promise<ServiceResult> {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
+    const dbStatus = status === "Maintenance" ? "Maintenance" : status === "Not Available" ? "Deactivated" : "Active";
 
-    const { error } = await supabase
+    let { error } = await supabase
         .from("courts")
-        .update({ status, is_active: status === "Available" })
+        .update({ status: dbStatus, is_active: status === "Available" || status === "Maintenance" })
         .eq("id", id);
+
+    if (error) {
+        const retry = await supabase
+            .from("courts")
+            .update({ status, is_active: status === "Available" || status === "Maintenance" })
+            .eq("id", id);
+        error = retry.error;
+    }
 
     if (error) {
         return { success: false, error: error.message };
@@ -171,6 +194,37 @@ export async function setCourtActiveStatus(
         .from("courts")
         .update({ is_active: isActive })
         .eq("id", id);
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+export async function deleteCourt(id: string): Promise<ServiceResult> {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("courts")
+        .delete()
+        .eq("id", id);
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true };
+}
+
+export async function deleteCourts(ids: string[]): Promise<ServiceResult> {
+    if (!ids || ids.length === 0) return { success: true };
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("courts")
+        .delete()
+        .in("id", ids);
 
     if (error) {
         return { success: false, error: error.message };

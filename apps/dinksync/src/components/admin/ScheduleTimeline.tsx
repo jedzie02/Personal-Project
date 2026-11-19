@@ -72,6 +72,16 @@ export const DEFAULT_MASTER_COURTS: CourtItem[] = [
   { id: "c4", name: "Court 4", status: "Available", hourlyRate: 300 },
 ];
 
+function getTimelineGridColsClass(count: number) {
+  if (count <= 1) return "grid-cols-[130px_1fr] sm:grid-cols-[165px_1fr]";
+  if (count === 2) return "grid-cols-[130px_repeat(2,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(2,1fr)]";
+  if (count === 3) return "grid-cols-[130px_repeat(3,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(3,1fr)]";
+  if (count === 4) return "grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)]";
+  if (count === 5) return "grid-cols-[130px_repeat(5,minmax(130px,1fr))] sm:grid-cols-[165px_repeat(5,minmax(130px,1fr))]";
+  if (count === 6) return "grid-cols-[130px_repeat(6,minmax(130px,1fr))] sm:grid-cols-[165px_repeat(6,minmax(130px,1fr))]";
+  return `grid-cols-[130px_repeat(${count},minmax(130px,1fr))] sm:grid-cols-[165px_repeat(${count},minmax(130px,1fr))]`;
+}
+
 const HOUR_OPTIONS = [
   "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00",
   "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00",
@@ -156,21 +166,11 @@ export function ScheduleTimeline({
   // Master sorted court list
   const masterCourts = useMemo(() => {
     if (!initialCourts || initialCourts.length === 0) {
-      return DEFAULT_MASTER_COURTS;
+      return [];
     }
-    const sorted = [...initialCourts].sort((a, b) =>
+    return [...initialCourts].sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { numeric: true })
     );
-    if (sorted.length < 4) {
-      const existingNames = new Set(sorted.map((c) => c.name.toLowerCase()));
-      for (const defCourt of DEFAULT_MASTER_COURTS) {
-        if (sorted.length >= 4) break;
-        if (!existingNames.has(defCourt.name.toLowerCase())) {
-          sorted.push(defCourt);
-        }
-      }
-    }
-    return sorted;
   }, [initialCourts]);
 
   const visibleCourts = useMemo(() => {
@@ -194,13 +194,15 @@ export function ScheduleTimeline({
 
   // Generate slots for the day
   const timeSlots = useMemo(() => {
-    const open = currentDayHours?.openTime?.slice(0, 5) || "09:00";
+    const open = currentDayHours?.openTime?.slice(0, 5) || "07:00";
     const rawClose = currentDayHours?.closeTime?.slice(0, 5);
-    const close = !rawClose || rawClose === "21:00" || rawClose < "23:00" ? "23:00" : rawClose;
+    const close = rawClose === "00:00" || rawClose === "24:00"
+      ? "00:00"
+      : (!rawClose || rawClose === "21:00" ? "00:00" : rawClose);
     const generated = generateTimeSlots(open, close, 60);
 
     if (generated.length > 0) return generated;
-    return generateTimeSlots("09:00", "23:00", 60);
+    return generateTimeSlots("07:00", "00:00", 60);
   }, [currentDayHours]);
 
   // Current Manila time marker (client-side mounted to prevent SSR hydration mismatch)
@@ -583,17 +585,35 @@ export function ScheduleTimeline({
       </div>
 
       {/* 4. Timeline Schedule Grid Matrix */}
+      {visibleCourts.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center shadow-2xs">
+          <Clock className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white">No Courts Configured</h3>
+          <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+            There are currently no courts configured in this venue. Add courts in Court Management to view the timeline.
+          </p>
+        </div>
+      ) : (
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden">
         <div className="relative overflow-auto max-h-[720px] w-full">
-          <div className={visibleCourts.length === 1 ? "w-full min-w-0" : "min-w-[820px]"}>
+          <div
+            className={visibleCourts.length === 1 ? "w-full min-w-0" : undefined}
+            style={
+              visibleCourts.length > 1
+                ? { minWidth: `${(visibleCourts.length >= 5 ? 130 : 165) + visibleCourts.length * (visibleCourts.length >= 5 ? 130 : 170)}px` }
+                : undefined
+            }
+          >
             {/* Sticky Court Header Row */}
             <div
               className={cn(
                 "grid sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800",
-                visibleCourts.length === 1
-                  ? "grid-cols-[130px_1fr] sm:grid-cols-[165px_1fr]"
-                  : "grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)]"
+                visibleCourts.length >= 5 ? "[--time-col-w:130px] sm:[--time-col-w:165px]" : "[--time-col-w:130px] sm:[--time-col-w:165px]",
+                getTimelineGridColsClass(visibleCourts.length)
               )}
+              style={visibleCourts.length > 1 ? {
+                gridTemplateColumns: `var(--time-col-w, 130px) repeat(${visibleCourts.length}, minmax(${visibleCourts.length >= 5 ? "130px" : "170px"}, 1fr))`,
+              } : undefined}
             >
               <div className="sticky left-0 z-30 p-3.5 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center bg-slate-50 dark:bg-slate-950 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.05)]">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
@@ -632,10 +652,12 @@ export function ScheduleTimeline({
             <div
               className={cn(
                 "grid",
-                visibleCourts.length === 1
-                  ? "grid-cols-[130px_1fr] sm:grid-cols-[165px_1fr]"
-                  : "grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)]"
+                visibleCourts.length >= 5 ? "[--time-col-w:130px] sm:[--time-col-w:165px]" : "[--time-col-w:130px] sm:[--time-col-w:165px]",
+                getTimelineGridColsClass(visibleCourts.length)
               )}
+              style={visibleCourts.length > 1 ? {
+                gridTemplateColumns: `var(--time-col-w, 130px) repeat(${visibleCourts.length}, minmax(${visibleCourts.length >= 5 ? "130px" : "170px"}, 1fr))`,
+              } : undefined}
               style={{
                 gridAutoRows: "minmax(68px, auto)",
               }}
@@ -698,51 +720,6 @@ export function ScheduleTimeline({
 
                     // If this slot is covered by an earlier multi-hour booking, skip!
                     if (occupiedSlotMap.has(courtSlotKey)) {
-                      return;
-                    }
-
-                    if (court.status === "Maintenance") {
-                      cells.push(
-                        <div
-                          key={`maint-${court.id}-${slot.start}`}
-                          style={{
-                            gridColumn: col,
-                            gridRow: `${slotIndex + 1} / span 1`,
-                          }}
-                          className={cn(
-                            "border-r border-b border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center",
-                            isLastCol && "border-r-0",
-                            isLastRow && "border-b-0"
-                          )}
-                        >
-                          <div className="w-full h-full min-h-[54px] rounded-xl px-2.5 py-1.5 flex items-center justify-center gap-1.5 text-center select-none bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 text-amber-800 dark:text-amber-300">
-                            <Wrench className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                            <span className="font-semibold text-xs">Maintenance</span>
-                          </div>
-                        </div>
-                      );
-                      return;
-                    }
-
-                    if (court.status === "Not Available") {
-                      cells.push(
-                        <div
-                          key={`notavail-${court.id}-${slot.start}`}
-                          style={{
-                            gridColumn: col,
-                            gridRow: `${slotIndex + 1} / span 1`,
-                          }}
-                          className={cn(
-                            "border-r border-b border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center",
-                            isLastCol && "border-r-0",
-                            isLastRow && "border-b-0"
-                          )}
-                        >
-                          <div className="w-full h-full min-h-[54px] rounded-xl px-2.5 py-1.5 flex items-center justify-center text-center select-none bg-slate-100/60 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500">
-                            <span className="font-semibold text-xs">Not Available</span>
-                          </div>
-                        </div>
-                      );
                       return;
                     }
 
@@ -841,6 +818,51 @@ export function ScheduleTimeline({
                       return;
                     }
 
+                    if (court.status === "Maintenance") {
+                      cells.push(
+                        <div
+                          key={`maint-${court.id}-${slot.start}`}
+                          style={{
+                            gridColumn: col,
+                            gridRow: `${slotIndex + 1} / span 1`,
+                          }}
+                          className={cn(
+                            "border-r border-b border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center",
+                            isLastCol && "border-r-0",
+                            isLastRow && "border-b-0"
+                          )}
+                        >
+                          <div className="w-full h-full min-h-[54px] rounded-xl px-2.5 py-1.5 flex items-center justify-center gap-1.5 text-center select-none bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 text-amber-800 dark:text-amber-300">
+                            <Wrench className="size-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <span className="font-semibold text-xs">Maintenance</span>
+                          </div>
+                        </div>
+                      );
+                      return;
+                    }
+
+                    if (court.status === "Not Available") {
+                      cells.push(
+                        <div
+                          key={`notavail-${court.id}-${slot.start}`}
+                          style={{
+                            gridColumn: col,
+                            gridRow: `${slotIndex + 1} / span 1`,
+                          }}
+                          className={cn(
+                            "border-r border-b border-slate-100 dark:border-slate-800/80 p-1.5 flex items-center justify-center",
+                            isLastCol && "border-r-0",
+                            isLastRow && "border-b-0"
+                          )}
+                        >
+                          <div className="w-full h-full min-h-[54px] rounded-xl px-2.5 py-1.5 flex items-center justify-center text-center select-none bg-slate-100/60 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500">
+                            <span className="font-semibold text-xs">Not Available</span>
+                          </div>
+                        </div>
+                      );
+                      return;
+                    }
+
                     if (isVenueClosedToday) {
                       cells.push(
                         <div
@@ -934,6 +956,7 @@ export function ScheduleTimeline({
           </div>
         </div>
       </div>
+      )}
 
       {/* 5. Booking Details Drawer / Sheet */}
       <Sheet

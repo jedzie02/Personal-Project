@@ -30,5 +30,11 @@ describe("AdminCourtsPage Add Court UI", () => {
     // The previous inline form grid class sm:grid-cols-5 is removed
     expect(html).not.toContain("sm:grid-cols-5");
   });
+
+  it("does not render delete controls on court cards", () => {
+    const html = renderToStaticMarkup(<AdminCourtsPage />);
+    expect(html).not.toContain("Delete Selected");
+    expect(html).not.toContain("Delete Court");
+  });
 });
 
