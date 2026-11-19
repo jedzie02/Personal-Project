@@ -11,7 +11,9 @@
     "build:dinksync": "npm run build --workspace=dinksync",
     "dev:paddle-hub": "npm run dev --workspace=paddle-hub",
     "build:paddle-hub": "npm run build --workspace=paddle-hub",
-    "build": "npm run build:dinksync",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "test": "vitest",
     "lint": "npm run lint --workspace=dinksync"
   },

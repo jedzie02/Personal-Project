@@ -106,4 +106,101 @@ describe("ScheduleTimeline Multi-Hour Spanning", () => {
     // Court 2 must still show Available options at 18:00
     expect(html).toContain("Available");
   });
+
+  it("renders Inactive badge when court status is Not Available", () => {
+    const courtsWithInactive = [
+      { id: "court-1", name: "Court 1", status: "Available" as const, hourlyRate: 300, isActive: true },
+      { id: "court-2", name: "Court 2", status: "Not Available" as const, hourlyRate: 300, isActive: false },
+    ];
+
+    const html = renderToStaticMarkup(
+      <ScheduleTimeline
+        selectedDate="2026-11-16"
+        todayDate="2026-11-16"
+        initialCourts={courtsWithInactive}
+        initialBookings={[]}
+        initialOperatingHours={mockOperatingHours}
+      />
+    );
+
+    expect(html).toContain("Court 2");
+    expect(html).toContain("Inactive");
+  });
+
+  it("dynamically adapts grid columns and minWidth for 7+ courts without auto-fit wrapping", () => {
+    const sevenCourts = Array.from({ length: 7 }, (_, i) => ({
+      id: `court-${i + 1}`,
+      name: `Court ${i + 1}`,
+      status: "Available" as const,
+      hourlyRate: 300,
+      isActive: true,
+    }));
+
+    const html = renderToStaticMarkup(
+      <ScheduleTimeline
+        selectedDate="2026-11-16"
+        todayDate="2026-11-16"
+        initialCourts={sevenCourts}
+        initialBookings={[]}
+        initialOperatingHours={mockOperatingHours}
+      />
+    );
+
+    expect(html).toContain("repeat(7,minmax(130px,1fr))");
+    expect(html).toContain("Court 7");
+  });
+
+  it("renders existing live booking even when court status is Not Available or Maintenance", () => {
+    const offlineCourts = [
+      { id: "court-inactive", name: "Court Offline", status: "Not Available" as const, hourlyRate: 300, isActive: false },
+    ];
+
+    const existingBooking = [
+      {
+        id: "b-offline-1",
+        courtId: "court-inactive",
+        courtName: "Court Offline",
+        customerId: "cust-offline",
+        customerName: "Prior Reserved Player",
+        customerEmail: "player@example.com",
+        bookingDate: "2026-11-16",
+        startTime: "10:00:00",
+        endTime: "11:00:00",
+        status: "confirmed" as const,
+        paymentStatus: "succeeded" as const,
+        paymentMethod: "Cash walk in",
+        paymentReference: null,
+        totalPrice: 300,
+        cancelledReason: null,
+        createdAt: "2026-11-16T08:00:00Z",
+      },
+    ];
+
+    const html = renderToStaticMarkup(
+      <ScheduleTimeline
+        selectedDate="2026-11-16"
+        todayDate="2026-11-16"
+        initialCourts={offlineCourts}
+        initialBookings={existingBooking}
+        initialOperatingHours={mockOperatingHours}
+      />
+    );
+
+    expect(html).toContain("Prior Reserved Player");
+    expect(html).toContain("Court Offline");
+  });
+
+  it("renders friendly empty-state card when 0 courts exist in timeline", () => {
+    const html = renderToStaticMarkup(
+      <ScheduleTimeline
+        selectedDate="2026-11-16"
+        todayDate="2026-11-16"
+        initialCourts={[]}
+        initialBookings={[]}
+        initialOperatingHours={mockOperatingHours}
+      />
+    );
+
+    expect(html).toContain("No Courts Configured");
+  });
 });
