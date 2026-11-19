@@ -53,9 +53,9 @@ function getGridColsClass(count: number) {
     if (count === 2) return "grid-cols-[105px_repeat(2,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(2,1fr)]";
     if (count === 3) return "grid-cols-[105px_repeat(3,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(3,1fr)]";
     if (count === 4) return "grid-cols-[105px_repeat(4,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(4,1fr)]";
-    if (count === 5) return "grid-cols-[105px_repeat(5,minmax(96px,1fr))] sm:grid-cols-[140px_repeat(5,minmax(96px,1fr))]";
-    if (count === 6) return "grid-cols-[105px_repeat(6,minmax(96px,1fr))] sm:grid-cols-[140px_repeat(6,minmax(96px,1fr))]";
-    return `grid-cols-[105px_repeat(${count},minmax(96px,1fr))] sm:grid-cols-[140px_repeat(${count},minmax(96px,1fr))]`;
+    if (count === 5) return "grid-cols-[105px_repeat(5,minmax(96px,1fr))] sm:grid-cols-[150px_repeat(5,minmax(96px,1fr))]";
+    if (count === 6) return "grid-cols-[105px_repeat(6,minmax(96px,1fr))] sm:grid-cols-[150px_repeat(6,minmax(96px,1fr))]";
+    return `grid-cols-[105px_repeat(${count},minmax(96px,1fr))] sm:grid-cols-[150px_repeat(${count},minmax(96px,1fr))]`;
 }
 
 export default function BookingGrid({
@@ -439,7 +439,7 @@ export default function BookingGrid({
                 <div
                     className={cn(
                         activeCourts.length === 1 ? "w-full min-w-0" : undefined,
-                        isCompact ? "[--time-col-w:105px] sm:[--time-col-w:140px]" : "[--time-col-w:105px] sm:[--time-col-w:170px]"
+                        isCompact ? "[--time-col-w:105px] sm:[--time-col-w:150px]" : "[--time-col-w:105px] sm:[--time-col-w:170px]"
                     )}
                     style={
                         activeCourts.length > 1
@@ -527,14 +527,14 @@ export default function BookingGrid({
                                     style={gridTemplateStyle}
                                 >
                                     {/* Sticky Time label */}
-                                    <div className="sticky left-0 z-10 px-1 sm:px-2 py-3 sm:py-4 text-center flex flex-col sm:flex-row items-center justify-center border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_4px_-1px_rgba(0,0,0,0.3)]">
-                                        <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap tabular-nums">
+                                    <div className="sticky left-0 z-10 px-1 sm:px-2 py-3 sm:py-4 text-center flex flex-col sm:flex-row items-center justify-center overflow-hidden border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_4px_-1px_rgba(0,0,0,0.3)]">
+                                        <span className={cn("font-bold text-gray-900 dark:text-white whitespace-nowrap tabular-nums", isCompact ? "text-xs" : "text-xs sm:text-sm")}>
                                             {formatAMPM(hour)}
                                         </span>
-                                        <span className="text-xs text-slate-400 sm:text-gray-900 dark:text-slate-500 sm:dark:text-white sm:mx-1 leading-none sm:leading-normal my-0.5 sm:my-0">
+                                        <span className={cn("text-xs text-slate-400 sm:text-gray-900 dark:text-slate-500 sm:dark:text-white leading-none sm:leading-normal my-0.5 sm:my-0", isCompact ? "sm:mx-0.5" : "sm:mx-1")}>
                                             –
                                         </span>
-                                        <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white whitespace-nowrap tabular-nums">
+                                        <span className={cn("font-bold text-gray-900 dark:text-white whitespace-nowrap tabular-nums", isCompact ? "text-xs" : "text-xs sm:text-sm")}>
                                             {formatAMPM(nextHour)}
                                         </span>
                                     </div>

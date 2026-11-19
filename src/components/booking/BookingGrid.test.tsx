@@ -251,7 +251,8 @@ describe("BookingGrid single-court layout", () => {
             <BookingGrid data={sevenCourtsData} initialCourtFilter="all" />
         );
 
-        // Header and container must adapt for 7 courts with compact min-width (96px)
+        // Header and container must adapt for 7 courts with 150px compact time col & compact text-xs time labels
+        expect(html).toContain("sm:[--time-col-w:150px]");
         expect(html).toContain("minmax(96px,1fr)");
         expect(html).toContain("repeat(7, minmax(96px, 1fr))");
         expect(html).toContain("Court 7");
