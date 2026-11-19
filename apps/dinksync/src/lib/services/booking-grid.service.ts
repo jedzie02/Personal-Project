@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
 import { getOperatingHoursForDate } from "@/lib/services/schedule.service";
 import { OPEN_PLAY_HOLD_LABEL } from "@/lib/utils/open-play";
+import { decodeDescriptionAndPricingRules, type CourtPricingRule } from "@/lib/utils/court-pricing";
 
 /**
  * A single cell in the booking grid — represents what's happening
@@ -48,7 +49,7 @@ export interface GridCell {
 
 export interface BookingGridData {
     date: string;
-    courts: { id: string; name: string; status: string; hourly_rate?: number }[];
+    courts: { id: string; name: string; status: string; hourly_rate?: number; pricing_rules?: CourtPricingRule[] }[];
     hours: string[]; // All hours in the operating window, e.g. ["05:00", "06:00", ...]
     grid: GridCell[][]; // grid[hourIndex][courtIndex]
     operatingOpen: string;
@@ -107,22 +108,24 @@ export async function getBookingGridForDate(
     // Fetch live courts from Supabase (only active, available courts)
     const { data: dbCourts } = await supabase
         .from("courts")
-        .select("id, name, is_active, status, hourly_rate")
+        .select("id, name, description, is_active, status, hourly_rate")
         .eq("is_active", true)
         .order("name", { ascending: true });
 
-    let courts: { id: string; name: string; status: string; hourly_rate?: number }[] = [];
+    let courts: { id: string; name: string; status: string; hourly_rate?: number; pricing_rules?: CourtPricingRule[] }[] = [];
     if (dbCourts && dbCourts.length > 0) {
         courts = dbCourts
             .filter((c: any) => c.is_active !== false && c.status !== "Deactivated" && c.status !== "Not Available")
             .map((c: any) => {
                 const rawStatus = c.status || "Available";
                 const status = rawStatus === "Maintenance" ? "Maintenance" : "Available";
+                const { pricingRules } = decodeDescriptionAndPricingRules(c.description);
                 return {
                     id: c.id,
                     name: c.name,
                     status,
                     hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
+                    pricing_rules: pricingRules,
                 };
             });
     } else {
@@ -174,7 +177,7 @@ export async function getBookingGridForDate(
     if (operatingHours?.isClosed) {
         return {
             date,
-            courts: courts.map((c) => ({ id: c.id, name: c.name, status: c.status, hourly_rate: c.hourly_rate })),
+            courts: courts.map((c) => ({ id: c.id, name: c.name, status: c.status, hourly_rate: c.hourly_rate, pricing_rules: c.pricing_rules })),
             hours: [],
             grid: [],
             operatingOpen: operatingHours.openTime || "09:00",
@@ -346,7 +349,7 @@ export async function getBookingGridForDate(
 
     return {
         date,
-        courts: courts.map((c) => ({ id: c.id, name: c.name, status: c.status, hourly_rate: c.hourly_rate })),
+        courts: courts.map((c) => ({ id: c.id, name: c.name, status: c.status, hourly_rate: c.hourly_rate, pricing_rules: c.pricing_rules })),
         hours,
         grid,
         operatingOpen: openTime,

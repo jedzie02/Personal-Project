@@ -257,4 +257,33 @@ describe("BookingGrid single-court layout", () => {
         expect(html).toContain("repeat(7, minmax(96px, 1fr))");
         expect(html).toContain("Court 7");
     });
+
+    it("removes hourly rate from court headers and displays resolved slot prices inside Available buttons", () => {
+        const dynamicPriceGridData: BookingGridData = {
+            ...mockGridData,
+            courts: [
+                {
+                    id: "court-1",
+                    name: "Court 1",
+                    status: "Available",
+                    hourly_rate: 200,
+                    pricing_rules: [{ startTime: "10:00", endTime: "11:00", rate: 350 }],
+                },
+            ],
+            grid: [
+                [{ courtId: "court-1", courtName: "Court 1", hour: "09:00", status: "available", isPeak: false }],
+                [{ courtId: "court-1", courtName: "Court 1", hour: "10:00", status: "available", isPeak: false }],
+            ],
+        };
+
+        const html = renderToStaticMarkup(
+            <BookingGrid data={dynamicPriceGridData} initialCourtFilter="all" />
+        );
+
+        // Court header should NOT display "/hr"
+        expect(html).not.toContain("/hr");
+        // Available buttons must display the resolved price for each hour slot
+        expect(html).toContain("₱200");
+        expect(html).toContain("₱350");
+    });
 });

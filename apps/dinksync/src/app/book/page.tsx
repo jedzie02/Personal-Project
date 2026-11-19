@@ -136,9 +136,6 @@ export default async function BookPage({ searchParams }: PageProps) {
                                                     }`}
                                                 />
                                                 <span className="font-semibold">{court.name}</span>
-                                                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-                                                    ₱{court.hourly_rate}/hr
-                                                </span>
                                                 <span className="text-xs opacity-90">
                                                     {isMaintenance
                                                         ? "Maintenance"

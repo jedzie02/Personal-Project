@@ -70,9 +70,9 @@ describe("BookPage", () => {
         expect(html).toContain("Scan &amp; pay");
         expect(html).toContain("Take the court");
 
-        // Court status overview
+        // Court status overview & slot prices inside Available buttons
         expect(html).toContain("Court 1");
-        expect(html).toContain("₱300/hr");
+        expect(html).toContain("₱300");
 
         // Available Times
         expect(html).toContain("Available Times");

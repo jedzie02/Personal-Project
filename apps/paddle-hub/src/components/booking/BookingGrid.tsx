@@ -6,6 +6,7 @@ import { Lock, CheckCircle2, Clock, ChevronRight, Check, Trash2, CalendarX, Play
 import { cn } from "cn";
 import type { BookingGridData, GridCell } from "@/lib/services/booking-grid.service";
 import { PRICE_PER_HOUR } from "@/lib/config/booking-rules";
+import { resolveCourtHourRate } from "@/lib/utils/court-pricing";
 import { supabase } from "@/lib/supabase";
 import {
     toggleCartSlot,
@@ -211,8 +212,9 @@ export default function BookingGrid({
     // Toggle slot in cart directly on grid
     const handleToggleSlot = (slot: SelectedSlot) => {
         const selectedCourt = masterCourts.find((c) => c.id === slot.courtId);
-        const hourlyRate =
+        const baseRate =
             selectedCourt?.hourly_rate != null ? Number(selectedCourt.hourly_rate) : PRICE_PER_HOUR;
+        const hourlyRate = resolveCourtHourRate(baseRate, selectedCourt?.pricing_rules, slot.hour);
         const endHour = addHours(slot.hour, 1);
 
         setSelectedSlots((prev) =>
@@ -238,8 +240,9 @@ export default function BookingGrid({
             const cell = grid[hourIdx]?.find((c) => c.courtId === courtId);
             if (cell && cell.status !== "available") return;
 
-            const hourlyRate =
+            const baseRate =
                 selectedCourt.hourly_rate != null ? Number(selectedCourt.hourly_rate) : PRICE_PER_HOUR;
+            const hourlyRate = resolveCourtHourRate(baseRate, selectedCourt.pricing_rules, hour);
             const endHour = addHours(hour, 1);
 
             setMobileCourtFilter((prevFilter) =>
@@ -469,11 +472,6 @@ export default function BookingGrid({
                                     )}
                                 >
                                     <div>{court.name}</div>
-                                    {court.hourly_rate != null && (
-                                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 normal-case tabular-nums">
-                                            ₱{court.hourly_rate}/hr
-                                        </span>
-                                    )}
                                     {court.status === "Maintenance" && (
                                         <span className="inline-block mt-1 text-xs font-semibold tracking-normal normal-case text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full">
                                             Maintenance
@@ -558,6 +556,9 @@ export default function BookingGrid({
                                         const isSelected = selectedSlots.some(
                                             (s) => s.courtId === court.id && s.hour === hour
                                         );
+                                        const baseRate =
+                                            court.hourly_rate != null ? Number(court.hourly_rate) : PRICE_PER_HOUR;
+                                        const slotRate = resolveCourtHourRate(baseRate, court.pricing_rules, hour);
 
                                         return (
                                             <div
@@ -568,6 +569,7 @@ export default function BookingGrid({
                                                     cell={cell}
                                                     courtName={court.name}
                                                     courtStatus={court.status}
+                                                    slotRate={slotRate}
                                                     isSelected={isSelected}
                                                     onSelectSlot={handleToggleSlot}
                                                     isLoggedIn={isLoggedIn}
@@ -707,6 +709,7 @@ function CellContent({
     cell,
     courtName,
     courtStatus,
+    slotRate = PRICE_PER_HOUR,
     isSelected = false,
     onSelectSlot,
     isLoggedIn,
@@ -717,6 +720,7 @@ function CellContent({
     cell: BookingGridData["grid"][0][0];
     courtName: string;
     courtStatus?: string;
+    slotRate?: number;
     isSelected?: boolean;
     onSelectSlot: (slot: SelectedSlot) => void;
     isLoggedIn: boolean;
@@ -844,22 +848,32 @@ function CellContent({
                         });
                     }}
                     className={cn(
-                        "w-full h-full min-h-[44px] rounded-[14px] flex items-center justify-center transition-all duration-200 cursor-pointer",
-                        isCompact ? "py-1.5 px-1 sm:px-1.5" : "py-2 px-2",
+                        "w-full h-full min-h-[44px] rounded-[14px] flex flex-col items-center justify-center transition-all duration-200 cursor-pointer",
+                        isCompact ? "py-1 px-1 sm:px-1.5" : "py-1.5 px-2",
                         isSelected
                             ? "bg-blue-600 dark:bg-blue-600 text-white border-2 border-blue-600 dark:border-blue-500 shadow-xs"
                             : "bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 hover:bg-blue-500 dark:hover:bg-blue-600 hover:border-blue-500 dark:hover:border-blue-600 group/cell"
                     )}
                 >
                     {isSelected ? (
-                        <div className={cn("flex items-center font-bold text-white animate-in zoom-in-95 duration-150", isCompact ? "gap-1 text-[11px]" : "gap-1.5 text-xs")}>
-                            <Check className={cn(isCompact ? "size-3 stroke-[3]" : "size-3.5 stroke-[3]")} />
-                            <span>Selected</span>
+                        <div className="flex flex-col items-center justify-center font-bold text-white animate-in zoom-in-95 duration-150 leading-tight">
+                            <div className={cn("flex items-center", isCompact ? "gap-0.5 text-[11px]" : "gap-1 text-xs")}>
+                                <Check className={cn(isCompact ? "size-3 stroke-[3]" : "size-3.5 stroke-[3]")} />
+                                <span>Selected</span>
+                            </div>
+                            <span className={cn("font-semibold text-blue-100 tabular-nums mt-0.5", isCompact ? "text-[10px]" : "text-[11px]")}>
+                                ₱{slotRate}
+                            </span>
                         </div>
                     ) : (
-                        <span className={cn("font-semibold text-blue-600 dark:text-blue-400 capitalize group-hover/cell:text-white transition-colors duration-200", isCompact ? "text-xs" : "text-sm")}>
-                            Available
-                        </span>
+                        <div className="flex flex-col items-center justify-center leading-tight">
+                            <span className={cn("font-semibold text-blue-600 dark:text-blue-400 capitalize group-hover/cell:text-white transition-colors duration-200", isCompact ? "text-xs" : "text-sm")}>
+                                Available
+                            </span>
+                            <span className={cn("font-semibold text-blue-500/80 dark:text-blue-300/90 group-hover/cell:text-blue-100 tabular-nums mt-0.5 transition-colors duration-200", isCompact ? "text-[10px]" : "text-[11px]")}>
+                                ₱{slotRate}
+                            </span>
+                        </div>
                     )}
                 </button>
             );
