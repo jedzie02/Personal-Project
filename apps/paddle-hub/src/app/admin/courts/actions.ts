@@ -11,6 +11,7 @@ import {
 } from "@/lib/services/court.service";
 import { requireAdmin } from "@/lib/services/auth.server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import type { CourtStatus } from "@/lib/types/domain";
 
 function toDbStatus(status: CourtStatus): "Active" | "Maintenance" | "Deactivated" {
@@ -26,31 +27,57 @@ function revalidateCourtPaths() {
     revalidatePath("/");
 }
 
+async function getSupabaseMutationClient() {
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        return createAdminClient();
+    }
+    try {
+        return await createServerClient();
+    } catch {
+        return createAdminClient();
+    }
+}
+
 export async function updateCourtStatusAction(
     courtId: string,
     status: CourtStatus
 ): Promise<{ success: boolean; error?: string }> {
     try {
         await requireAdmin();
-        const supabase = createAdminClient();
+        const supabase = await getSupabaseMutationClient();
         const isActive = status === "Available" || status === "Maintenance";
         const dbStatus = toDbStatus(status);
 
-        let { error } = await supabase
+        const updateQuery = supabase
             .from("courts")
             .update({ status: dbStatus, is_active: isActive })
             .eq("id", courtId);
 
+        let { data, error } = typeof (updateQuery as any).select === "function"
+            ? await (updateQuery as any).select()
+            : await updateQuery;
+
         if (error) {
-            const retry = await supabase
+            const retryQuery = supabase
                 .from("courts")
                 .update({ status, is_active: isActive })
                 .eq("id", courtId);
-            error = retry.error;
+            const retryRes = typeof (retryQuery as any).select === "function"
+                ? await (retryQuery as any).select()
+                : await retryQuery;
+            error = retryRes.error;
+            data = retryRes.data;
         }
 
         if (error) {
             return { success: false, error: error.message };
+        }
+
+        if (data !== undefined && Array.isArray(data) && data.length === 0) {
+            return {
+                success: false,
+                error: "Database blocked update (0 rows changed). Row-Level Security (RLS) is blocking edits because SUPABASE_SERVICE_ROLE_KEY is missing from .env.local, or RLS update policy is missing.",
+            };
         }
 
         revalidateCourtPaths();
@@ -72,14 +99,25 @@ export async function updateCourtRateAction(
         if (!Number.isFinite(hourlyRate) || hourlyRate < 0) {
             return { success: false, error: "Invalid hourly rate" };
         }
-        const supabase = createAdminClient();
-        const { error } = await supabase
+        const supabase = await getSupabaseMutationClient();
+        const updateQuery = supabase
             .from("courts")
             .update({ hourly_rate: hourlyRate })
             .eq("id", courtId);
 
+        const { data, error } = typeof (updateQuery as any).select === "function"
+            ? await (updateQuery as any).select()
+            : await updateQuery;
+
         if (error) {
             return { success: false, error: error.message };
+        }
+
+        if (data !== undefined && Array.isArray(data) && data.length === 0) {
+            return {
+                success: false,
+                error: "Database blocked rate update (0 rows changed). Row-Level Security (RLS) is blocking edits.",
+            };
         }
 
         revalidateCourtPaths();
@@ -103,11 +141,11 @@ export async function createCourtModalAction(input: {
         if (!Number.isFinite(input.hourlyRate) || input.hourlyRate < 0) {
             return { success: false, error: "Invalid hourly rate" };
         }
-        const supabase = createAdminClient();
+        const supabase = await getSupabaseMutationClient();
         const isActive = input.status === "Available" || input.status === "Maintenance";
         const dbStatus = toDbStatus(input.status);
 
-        let { error } = await supabase.from("courts").insert({
+        const insertQuery = supabase.from("courts").insert({
             name: input.name,
             description: input.description,
             status: dbStatus,
@@ -115,19 +153,34 @@ export async function createCourtModalAction(input: {
             hourly_rate: input.hourlyRate,
         });
 
+        let { data, error } = typeof (insertQuery as any).select === "function"
+            ? await (insertQuery as any).select()
+            : await insertQuery;
+
         if (error) {
-            const retry = await supabase.from("courts").insert({
+            const retryQuery = supabase.from("courts").insert({
                 name: input.name,
                 description: input.description,
                 status: input.status,
                 is_active: isActive,
                 hourly_rate: input.hourlyRate,
             });
-            error = retry.error;
+            const retryRes = typeof (retryQuery as any).select === "function"
+                ? await (retryQuery as any).select()
+                : await retryQuery;
+            error = retryRes.error;
+            data = retryRes.data;
         }
 
         if (error) {
             return { success: false, error: error.message };
+        }
+
+        if (data !== undefined && Array.isArray(data) && data.length === 0) {
+            return {
+                success: false,
+                error: "Database blocked court creation. Row-Level Security (RLS) is blocking inserts because SUPABASE_SERVICE_ROLE_KEY is missing from .env.local, or RLS insert policy is missing.",
+            };
         }
 
         revalidateCourtPaths();

@@ -192,7 +192,11 @@ export default function AdminCourtsPage() {
     setSavingRate(false);
 
     if (!result.success) {
-      setErrorMessage(`Unable to update hourly rate for ${editingCourt.name}. Please try again.`);
+      setErrorMessage(
+        result.error
+          ? `Unable to update hourly rate: ${result.error}`
+          : `Unable to update hourly rate for ${editingCourt.name}. Please try again.`
+      );
       return;
     }
 
