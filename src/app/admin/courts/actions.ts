@@ -4,11 +4,140 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
     createCourt,
+    deleteCourt,
     getFutureActiveBookingsCountForCourt,
     setCourtActiveStatus,
     updateCourt,
 } from "@/lib/services/court.service";
 import { requireAdmin } from "@/lib/services/auth.server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { CourtStatus } from "@/lib/types/domain";
+
+function toDbStatus(status: CourtStatus): "Active" | "Maintenance" | "Deactivated" {
+    if (status === "Maintenance") return "Maintenance";
+    if (status === "Not Available") return "Deactivated";
+    return "Active";
+}
+
+function revalidateCourtPaths() {
+    revalidatePath("/admin/courts");
+    revalidatePath("/admin/schedule");
+    revalidatePath("/book");
+    revalidatePath("/");
+}
+
+export async function updateCourtStatusAction(
+    courtId: string,
+    status: CourtStatus
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const supabase = createAdminClient();
+        const isActive = status === "Available";
+        const dbStatus = toDbStatus(status);
+
+        let { error } = await supabase
+            .from("courts")
+            .update({ status: dbStatus, is_active: isActive })
+            .eq("id", courtId);
+
+        if (error) {
+            const retry = await supabase
+                .from("courts")
+                .update({ status, is_active: isActive })
+                .eq("id", courtId);
+            error = retry.error;
+        }
+
+        if (error) {
+            const fallback = await supabase
+                .from("courts")
+                .update({ is_active: isActive })
+                .eq("id", courtId);
+            error = fallback.error;
+        }
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        revalidateCourtPaths();
+        return { success: true };
+    } catch (err: unknown) {
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Failed to update court status",
+        };
+    }
+}
+
+export async function updateCourtRateAction(
+    courtId: string,
+    hourlyRate: number
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const supabase = createAdminClient();
+        const { error } = await supabase
+            .from("courts")
+            .update({ hourly_rate: hourlyRate })
+            .eq("id", courtId);
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        revalidateCourtPaths();
+        return { success: true };
+    } catch (err: unknown) {
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Failed to update court rate",
+        };
+    }
+}
+
+export async function createCourtModalAction(input: {
+    name: string;
+    description: string | null;
+    hourlyRate: number;
+    status: CourtStatus;
+}): Promise<{ success: boolean; error?: string }> {
+    try {
+        const supabase = createAdminClient();
+        const isActive = input.status === "Available";
+        const dbStatus = toDbStatus(input.status);
+
+        let { error } = await supabase.from("courts").insert({
+            name: input.name,
+            description: input.description,
+            status: dbStatus,
+            is_active: isActive,
+            hourly_rate: input.hourlyRate,
+        });
+
+        if (error) {
+            const retry = await supabase.from("courts").insert({
+                name: input.name,
+                description: input.description,
+                status: input.status,
+                is_active: isActive,
+                hourly_rate: input.hourlyRate,
+            });
+            error = retry.error;
+        }
+
+        if (error) {
+            return { success: false, error: error.message };
+        }
+
+        revalidateCourtPaths();
+        return { success: true };
+    } catch (err: unknown) {
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Failed to create court",
+        };
+    }
+}
 
 /**
  * revalidatePath() tells Next.js "the cached data behind this URL
@@ -77,4 +206,11 @@ export async function setCourtActiveStatusAction(
 
     await setCourtActiveStatus(courtId, isActive);
     revalidatePath("/admin/courts");
+}
+
+export async function deleteCourtAction(courtId: string) {
+    await requireAdmin();
+    await deleteCourt(courtId);
+    revalidatePath("/admin/courts");
+    revalidatePath("/book");
 }

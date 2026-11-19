@@ -7,7 +7,7 @@ import { getBookingGridForDate } from "@/lib/services/booking-grid.service";
 import { createClient } from "@/lib/supabase/server";
 import { getManilaNow } from "@/lib/utils/date";
 
-export const revalidate = 10;
+export const dynamic = "force-dynamic";
 
 type PageProps = {
     searchParams?: Promise<{
@@ -35,6 +35,7 @@ export default async function BookPage({ searchParams }: PageProps) {
             supabase
                 .from("courts")
                 .select("id, name, status, is_active, hourly_rate")
+                .eq("is_active", true)
                 .order("name", { ascending: true }),
             getBookingGridForDate(date),
         ]);
@@ -45,15 +46,12 @@ export default async function BookPage({ searchParams }: PageProps) {
     }
 
     const courts = (rawCourts ?? [])
+        .filter((c: any) => c.is_active !== false && c.status !== "Deactivated" && c.status !== "Not Available")
         .map((c: any) => ({
             id: c.id,
             name: c.name,
             hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
-            status: c.status === "Maintenance"
-                ? "Maintenance"
-                : (c.status === "Not Available" || c.status === "Deactivated" || c.is_active === false)
-                    ? "Not Available"
-                    : "Available",
+            status: c.status === "Maintenance" ? "Maintenance" : "Available",
         }))
         .sort((a: { name: string }, b: { name: string }) =>
             a.name.localeCompare(b.name, undefined, { numeric: true })
@@ -81,7 +79,7 @@ export default async function BookPage({ searchParams }: PageProps) {
                             </div>
 
                             {[
-                                { step: "1", title: "Select your slot", body: "Pick your preferred date and tap any open 1-hour slot across our 4 master courts.", pulse: "" },
+                                { step: "1", title: "Select your slot", body: "Pick your preferred date and tap any open 1-hour slot across our master courts.", pulse: "" },
                                 { step: "2", title: "Scan & pay", body: "Scan the venue GCash QR code and input your payment reference to lock the reservation.", pulse: "animate-step-node-2" },
                                 { step: "3", title: "Take the court", body: "Show your confirmation upon arrival. Your net, court, and time are guaranteed.", pulse: "animate-step-node-3" },
                             ].map(({ step, title, body, pulse }) => (
@@ -105,7 +103,7 @@ export default async function BookPage({ searchParams }: PageProps) {
                                 Court Availability &amp; Schedule
                             </h2>
                             <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400 max-w-lg mx-auto">
-                                Select a date to view live hourly rates and open time slots across all 4 master courts.
+                                Select a date to view live hourly rates and open time slots across all courts.
                             </p>
                         </div>
 
@@ -184,25 +182,25 @@ export default async function BookPage({ searchParams }: PageProps) {
             <footer className="border-t border-slate-200/80 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm text-slate-500 dark:text-slate-400">
                 <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
                     <div className="flex flex-col items-center sm:items-start gap-2">
-                        <span className="font-bold text-slate-900 dark:text-white text-base">DinkSync</span>
+                        <span className="font-bold text-slate-900 dark:text-white text-base">Paddle Hub</span>
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1.5 text-xs text-slate-600 dark:text-slate-400">
                             <span className="flex items-center gap-1.5">
                                 <MapPin className="size-3.5 text-slate-400 shrink-0" />
-                                J.C. Aquino Ave, Butuan City
+                                Philippines
                             </span>
                             <span className="hidden sm:inline text-slate-300 dark:text-slate-700">·</span>
                             <span className="flex items-center gap-1.5">
                                 <Phone className="size-3.5 text-slate-400 shrink-0" />
-                                +63 9171234567
+                                +63 900 000 0000
                             </span>
                             <span className="hidden sm:inline text-slate-300 dark:text-slate-700">·</span>
-                            <a href="mailto:play@dinksync.com" className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                            <a href="mailto:support@paddlehub.ph" className="flex items-center gap-1.5 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                                 <Mail className="size-3.5 text-slate-400 shrink-0" />
-                                play@dinksync.com
+                                support@paddlehub.ph
                             </a>
                         </div>
                         <span className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                            &copy; {new Date().getFullYear()} DinkSync. All rights reserved.
+                            &copy; {new Date().getFullYear()} Paddle Hub. All rights reserved.
                         </span>
                     </div>
                     <nav className="flex gap-6 text-xs sm:text-sm font-medium" aria-label="Footer">

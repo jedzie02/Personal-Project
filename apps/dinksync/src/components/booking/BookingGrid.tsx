@@ -54,6 +54,16 @@ const DEFAULT_MASTER_COURTS = [
     { id: "court-4", name: "Court 4", status: "Available", hourly_rate: 300 },
 ];
 
+function getGridColsClass(count: number) {
+    if (count <= 1) return "grid-cols-[115px_1fr] sm:grid-cols-[180px_1fr]";
+    if (count === 2) return "grid-cols-[105px_repeat(2,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(2,1fr)]";
+    if (count === 3) return "grid-cols-[105px_repeat(3,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(3,1fr)]";
+    if (count === 4) return "grid-cols-[105px_repeat(4,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(4,1fr)]";
+    if (count === 5) return "grid-cols-[105px_repeat(5,minmax(96px,1fr))] sm:grid-cols-[140px_repeat(5,minmax(96px,1fr))]";
+    if (count === 6) return "grid-cols-[105px_repeat(6,minmax(96px,1fr))] sm:grid-cols-[140px_repeat(6,minmax(96px,1fr))]";
+    return `grid-cols-[105px_repeat(${count},minmax(96px,1fr))] sm:grid-cols-[140px_repeat(${count},minmax(96px,1fr))]`;
+}
+
 export default function BookingGrid({
     data,
     initialSelectCourt,
@@ -351,6 +361,18 @@ export default function BookingGrid({
         );
     }
 
+    if (masterCourts.length === 0) {
+        return (
+            <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <CalendarX className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white">No Courts Available</h3>
+                <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                    There are currently no courts open for booking on this date. Please select another date or check back later.
+                </p>
+            </div>
+        );
+    }
+
     return (
         <div className={`w-full space-y-3 ${selectedSlots.length > 0 ? "pb-28" : ""}`}>
             {/* First-time player quick onboarding guide */}
@@ -424,9 +446,16 @@ export default function BookingGrid({
 
             {/* Grid */}
             <div className="relative overflow-x-auto w-full">
-                <div className={activeCourts.length === 1 ? "w-full min-w-0" : "min-w-[665px] sm:min-w-[700px]"}>
+                <div
+                    className={activeCourts.length === 1 ? "w-full min-w-0" : undefined}
+                    style={
+                        activeCourts.length > 1
+                            ? { minWidth: `${105 + activeCourts.length * (activeCourts.length >= 5 ? 96 : 140)}px` }
+                            : undefined
+                    }
+                >
                     {/* Court headers */}
-                    <div className={`grid ${activeCourts.length === 1 ? "grid-cols-[115px_1fr] sm:grid-cols-[180px_1fr]" : "grid-cols-[105px_repeat(4,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(4,1fr)]"} border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900`}>
+                    <div className={`grid ${getGridColsClass(activeCourts.length)} border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900`}>
                         <div className="sticky left-0 z-20 py-3 sm:py-4 px-2 text-center text-xs sm:text-sm font-bold text-gray-500 dark:text-slate-400 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_4px_-1px_rgba(0,0,0,0.3)]">
                             Time
                         </div>
@@ -496,7 +525,7 @@ export default function BookingGrid({
                             return (
                                 <div
                                     key={hour}
-                                    className={`grid ${activeCourts.length === 1 ? "grid-cols-[115px_1fr] sm:grid-cols-[180px_1fr]" : "grid-cols-[105px_repeat(4,minmax(140px,1fr))] sm:grid-cols-[170px_repeat(4,1fr)]"} min-h-[58px]`}
+                                    className={`grid ${getGridColsClass(activeCourts.length)} min-h-[58px]`}
                                 >
                                     {/* Sticky Time label */}
                                     <div className="sticky left-0 z-10 px-1 sm:px-2 py-3 sm:py-4 text-center flex flex-col sm:flex-row items-center justify-center border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] dark:shadow-[2px_0_4px_-1px_rgba(0,0,0,0.3)]">

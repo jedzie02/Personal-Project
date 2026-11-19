@@ -115,8 +115,8 @@ function NewBookingForm() {
         const [{ data: courtData }, { data: profileData }] = await Promise.all([
           supabase
             .from("courts")
-            .select("id, name, hourly_rate, status")
-            .eq("status", "Available")
+            .select("id, name, hourly_rate, status, is_active")
+            .eq("is_active", true)
             .order("name", { ascending: true }),
           supabase
             .from("profiles")
@@ -125,13 +125,15 @@ function NewBookingForm() {
         ]);
 
         if (courtData && courtData.length > 0) {
-          const sortedCourts = [...courtData].sort((a, b) =>
-            a.name.localeCompare(b.name, undefined, { numeric: true })
-          );
+          const sortedCourts = courtData
+            .filter((c: any) => c.status !== "Deactivated" && c.status !== "Not Available" && c.status !== "Maintenance")
+            .sort((a, b) =>
+              a.name.localeCompare(b.name, undefined, { numeric: true })
+            );
           setCourts(sortedCourts);
           if (paramCourt && sortedCourts.some((c) => c.id === paramCourt)) {
             setSelectedCourtId(paramCourt);
-          } else {
+          } else if (sortedCourts.length > 0) {
             setSelectedCourtId(sortedCourts[0].id);
           }
         }

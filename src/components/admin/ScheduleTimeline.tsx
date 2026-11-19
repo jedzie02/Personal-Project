@@ -72,6 +72,16 @@ export const DEFAULT_MASTER_COURTS: CourtItem[] = [
   { id: "c4", name: "Court 4", status: "Available", hourlyRate: 300 },
 ];
 
+function getTimelineGridColsClass(count: number) {
+  if (count <= 1) return "grid-cols-[130px_1fr] sm:grid-cols-[165px_1fr]";
+  if (count === 2) return "grid-cols-[130px_repeat(2,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(2,1fr)]";
+  if (count === 3) return "grid-cols-[130px_repeat(3,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(3,1fr)]";
+  if (count === 4) return "grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)]";
+  if (count === 5) return "grid-cols-[130px_repeat(5,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(5,1fr)]";
+  if (count === 6) return "grid-cols-[130px_repeat(6,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(6,1fr)]";
+  return "grid-cols-[130px_repeat(auto-fit,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(auto-fit,1fr)]";
+}
+
 const HOUR_OPTIONS = [
   "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00",
   "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00",
@@ -156,21 +166,11 @@ export function ScheduleTimeline({
   // Master sorted court list
   const masterCourts = useMemo(() => {
     if (!initialCourts || initialCourts.length === 0) {
-      return DEFAULT_MASTER_COURTS;
+      return [];
     }
-    const sorted = [...initialCourts].sort((a, b) =>
+    return [...initialCourts].sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { numeric: true })
     );
-    if (sorted.length < 4) {
-      const existingNames = new Set(sorted.map((c) => c.name.toLowerCase()));
-      for (const defCourt of DEFAULT_MASTER_COURTS) {
-        if (sorted.length >= 4) break;
-        if (!existingNames.has(defCourt.name.toLowerCase())) {
-          sorted.push(defCourt);
-        }
-      }
-    }
-    return sorted;
   }, [initialCourts]);
 
   const visibleCourts = useMemo(() => {
@@ -194,13 +194,15 @@ export function ScheduleTimeline({
 
   // Generate slots for the day
   const timeSlots = useMemo(() => {
-    const open = currentDayHours?.openTime?.slice(0, 5) || "09:00";
+    const open = currentDayHours?.openTime?.slice(0, 5) || "07:00";
     const rawClose = currentDayHours?.closeTime?.slice(0, 5);
-    const close = !rawClose || rawClose === "21:00" || rawClose < "23:00" ? "23:00" : rawClose;
+    const close = rawClose === "00:00" || rawClose === "24:00"
+      ? "00:00"
+      : (!rawClose || rawClose === "21:00" ? "00:00" : rawClose);
     const generated = generateTimeSlots(open, close, 60);
 
     if (generated.length > 0) return generated;
-    return generateTimeSlots("09:00", "23:00", 60);
+    return generateTimeSlots("07:00", "00:00", 60);
   }, [currentDayHours]);
 
   // Current Manila time marker (client-side mounted to prevent SSR hydration mismatch)
@@ -585,14 +587,15 @@ export function ScheduleTimeline({
       {/* 4. Timeline Schedule Grid Matrix */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden">
         <div className="relative overflow-auto max-h-[720px] w-full">
-          <div className={visibleCourts.length === 1 ? "w-full min-w-0" : "min-w-[820px]"}>
+          <div
+            className={visibleCourts.length === 1 ? "w-full min-w-0" : undefined}
+            style={visibleCourts.length > 1 ? { minWidth: `${130 + visibleCourts.length * 170}px` } : undefined}
+          >
             {/* Sticky Court Header Row */}
             <div
               className={cn(
                 "grid sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800",
-                visibleCourts.length === 1
-                  ? "grid-cols-[130px_1fr] sm:grid-cols-[165px_1fr]"
-                  : "grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)]"
+                getTimelineGridColsClass(visibleCourts.length)
               )}
             >
               <div className="sticky left-0 z-30 p-3.5 border-r border-slate-200 dark:border-slate-800 flex items-center justify-center bg-slate-50 dark:bg-slate-950 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.05)]">
@@ -632,9 +635,7 @@ export function ScheduleTimeline({
             <div
               className={cn(
                 "grid",
-                visibleCourts.length === 1
-                  ? "grid-cols-[130px_1fr] sm:grid-cols-[165px_1fr]"
-                  : "grid-cols-[130px_repeat(4,minmax(170px,1fr))] sm:grid-cols-[165px_repeat(4,1fr)]"
+                getTimelineGridColsClass(visibleCourts.length)
               )}
               style={{
                 gridAutoRows: "minmax(68px, auto)",

@@ -11,6 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, X, AlertCircle } from "lucide-react";
 import { AddCourtModal, CourtStatus, STATUS_OPTIONS } from "@/components/ui/admin/AddCourtModal";
+import {
+  updateCourtStatusAction,
+  updateCourtRateAction,
+  createCourtModalAction,
+} from "@/app/admin/courts/actions";
 
 interface Court {
   id: string;
@@ -20,6 +25,12 @@ interface Court {
   status: CourtStatus;
   hourly_rate?: number | null;
   created_at?: string;
+}
+
+function fromDbStatus(status?: string | null, isActive?: boolean): CourtStatus {
+  if (status === "Maintenance") return "Maintenance";
+  if (isActive === false || status === "Deactivated" || status === "Not Available") return "Not Available";
+  return "Available";
 }
 
 function statusBadge(status: CourtStatus) {
@@ -61,8 +72,8 @@ export default function AdminCourtsPage() {
             name: c.name ?? "",
             description: c.description ?? null,
             is_active: c.is_active ?? true,
-            hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 25,
-            status: c.status || (c.is_active ? "Available" : "Not Available"),
+            hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
+            status: fromDbStatus(c.status, c.is_active),
           }))
           .sort((a: Court, b: Court) => a.name.localeCompare(b.name, undefined, { numeric: true }))
       );
@@ -90,8 +101,8 @@ export default function AdminCourtsPage() {
               name: c.name ?? "",
               description: c.description ?? null,
               is_active: c.is_active ?? true,
-              hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 25,
-              status: c.status || (c.is_active ? "Available" : "Not Available"),
+              hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
+              status: fromDbStatus(c.status, c.is_active),
             }))
             .sort((a: Court, b: Court) => a.name.localeCompare(b.name, undefined, { numeric: true }))
         );
@@ -120,17 +131,16 @@ export default function AdminCourtsPage() {
       )
     );
 
-    const { error } = await supabase
-      .from("courts")
-      .update({ status, is_active: status === "Available" })
-      .eq("id", courtId);
+    const result = await updateCourtStatusAction(courtId, status);
 
-    if (error) {
-      console.error("Failed to update court status:", error);
+    if (!result.success) {
+      console.error("Failed to update court status:", result.error);
       fetchCourts(); // Rollback
       setErrorMessage(
-        `Unable to update status for ${court?.name ?? "this court"}. Please check your connection and try again.`
+        `Unable to update status for ${court?.name ?? "this court"}. ${result.error ?? "Please try again."}`
       );
+    } else {
+      router.refresh();
     }
   };
 
@@ -146,19 +156,19 @@ export default function AdminCourtsPage() {
     setErrorMessage(null);
 
     const parsedRate = parseFloat(courtData.hourlyRate);
-    const { error } = await supabase.from("courts").insert({
+    const result = await createCourtModalAction({
       name: courtData.name.trim(),
       description: courtData.description.trim() || null,
       status: courtData.status,
-      is_active: courtData.status === "Available",
-      hourly_rate: Number.isNaN(parsedRate) ? 200 : parsedRate,
+      hourlyRate: Number.isNaN(parsedRate) ? 300 : parsedRate,
     });
 
     setCreating(false);
 
-    if (!error) {
+    if (result.success) {
       setIsAddCourtOpen(false);
       fetchCourts();
+      router.refresh();
     } else {
       setErrorMessage("Unable to add court. Please verify the court name is unique and try again.");
     }
@@ -173,14 +183,11 @@ export default function AdminCourtsPage() {
     setSavingRate(true);
     setErrorMessage(null);
 
-    const { error } = await supabase
-      .from("courts")
-      .update({ hourly_rate: rateVal })
-      .eq("id", editingCourt.id);
+    const result = await updateCourtRateAction(editingCourt.id, rateVal);
 
     setSavingRate(false);
 
-    if (error) {
+    if (!result.success) {
       setErrorMessage(`Unable to update hourly rate for ${editingCourt.name}. Please try again.`);
       return;
     }
@@ -222,7 +229,7 @@ export default function AdminCourtsPage() {
               setIsAddCourtOpen(true);
             }}
             size="sm"
-            className="h-8 text-xs font-semibold gap-1.5 ml-1"
+            className="h-8 text-xs font-semibold gap-1.5 ml-1 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" /> Add Court
           </Button>
@@ -264,7 +271,7 @@ export default function AdminCourtsPage() {
           {courts.map((court) => (
             <Card key={court.id}>
               <CardContent className="pt-6 space-y-4">
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-3">
                   <div>
                     <h3 className="font-semibold text-lg text-slate-900 dark:text-white">{court.name}</h3>
                     <p className="text-sm text-muted-foreground">
