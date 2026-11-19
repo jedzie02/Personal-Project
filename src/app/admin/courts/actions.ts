@@ -13,6 +13,10 @@ import { requireAdmin } from "@/lib/services/auth.server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import type { CourtStatus } from "@/lib/types/domain";
+import {
+    encodeDescriptionWithPricingRules,
+    type CourtPricingRule,
+} from "@/lib/utils/court-pricing";
 
 function toDbStatus(status: CourtStatus): "Active" | "Maintenance" | "Deactivated" {
     if (status === "Maintenance") return "Maintenance";
@@ -94,17 +98,82 @@ export async function updateCourtStatusAction(
 
 export async function updateCourtRateAction(
     courtId: string,
-    hourlyRate: number
+    hourlyRate: number,
+    options?: {
+        pricingRules?: CourtPricingRule[];
+        applyToAll?: boolean;
+    }
 ): Promise<{ success: boolean; error?: string }> {
     try {
         await requireAdmin();
         if (!Number.isFinite(hourlyRate) || hourlyRate < 0) {
             return { success: false, error: "Invalid hourly rate" };
         }
+
+        const rules = options?.pricingRules;
+        if (rules && Array.isArray(rules)) {
+            for (const rule of rules) {
+                const rate = Number(rule?.rate);
+                if (!Number.isFinite(rate) || rate < 0) {
+                    return { success: false, error: "Invalid rate in custom time range" };
+                }
+                const startH = parseInt((rule?.startTime || "").split(":")[0], 10);
+                const rawEndH = parseInt((rule?.endTime || "").split(":")[0], 10);
+                const endH = rawEndH === 0 ? 24 : rawEndH;
+                if (Number.isNaN(startH) || Number.isNaN(endH) || startH >= endH) {
+                    return { success: false, error: "End time must be after start time in custom time range" };
+                }
+            }
+        }
+
         const supabase = await getSupabaseMutationClient();
+
+        if (options?.applyToAll) {
+            const selectCall = (supabase.from("courts") as any).select;
+            if (typeof selectCall === "function") {
+                const { data: allCourts } = await supabase.from("courts").select("id, description");
+                if (Array.isArray(allCourts) && allCourts.length > 0) {
+                    for (const c of allCourts) {
+                        const encodedDescription = rules !== undefined
+                            ? encodeDescriptionWithPricingRules(c.description, rules)
+                            : c.description;
+                        const q = supabase
+                            .from("courts")
+                            .update({ hourly_rate: hourlyRate, description: encodedDescription })
+                            .eq("id", c.id);
+                        const res = typeof (q as any).select === "function" ? await (q as any).select() : await q;
+                        if (res.error) {
+                            return { success: false, error: res.error.message };
+                        }
+                    }
+                    revalidateCourtPaths();
+                    return { success: true };
+                }
+            }
+        }
+
+        const updatePayload: Record<string, any> = { hourly_rate: hourlyRate };
+        if (rules !== undefined) {
+            let currentDescription: string | null = null;
+            try {
+                const selectFn = (supabase.from("courts") as any).select;
+                if (typeof selectFn === "function") {
+                    const { data: courtRow } = await supabase
+                        .from("courts")
+                        .select("description")
+                        .eq("id", courtId)
+                        .maybeSingle();
+                    currentDescription = courtRow?.description ?? null;
+                }
+            } catch {
+                // fallback to null if select not mocked
+            }
+            updatePayload.description = encodeDescriptionWithPricingRules(currentDescription, rules);
+        }
+
         const updateQuery = supabase
             .from("courts")
-            .update({ hourly_rate: hourlyRate })
+            .update(updatePayload)
             .eq("id", courtId);
 
         const { data, error } = typeof (updateQuery as any).select === "function"

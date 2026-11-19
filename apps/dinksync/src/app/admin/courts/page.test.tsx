@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import AdminCourtsPage from "./page";
+import AdminCourtsPage, { formatCourtCardRuleSummary } from "./page";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
@@ -35,6 +35,12 @@ describe("AdminCourtsPage Add Court UI", () => {
     const html = renderToStaticMarkup(<AdminCourtsPage />);
     expect(html).not.toContain("Delete Selected");
     expect(html).not.toContain("Delete Court");
+  });
+
+  it("formats time-range pricing rules cleanly for court cards", () => {
+    expect(formatCourtCardRuleSummary({ startTime: "17:00", endTime: "23:00", rate: 350 })).toBe(
+      "05:00 PM – 11:00 PM: ₱350/hr"
+    );
   });
 });
 

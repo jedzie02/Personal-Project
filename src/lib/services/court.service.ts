@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Court, CourtStatus, ServiceResult } from "@/lib/types/domain";
+import {
+    decodeDescriptionAndPricingRules,
+    encodeDescriptionWithPricingRules,
+} from "@/lib/utils/court-pricing";
 
 /**
  * court.service.ts
@@ -23,10 +27,11 @@ function mapCourt(row: {
     created_at: string;
 }): Court {
     const isAvail = row.is_active !== false && (row.status === "Available" || row.status === "Active" || !row.status);
+    const { description } = decodeDescriptionAndPricingRules(row.description);
     return {
         id: row.id,
         name: row.name,
-        description: row.description,
+        description,
         isActive: row.is_active,
         status: isAvail ? "Available" : (row.status === "Maintenance" ? "Maintenance" : "Not Available"),
         hourlyRate: row.hourly_rate != null ? Number(row.hourly_rate) : 300,
@@ -125,9 +130,22 @@ export async function updateCourt(
 ): Promise<ServiceResult> {
     const supabase = createAdminClient();
 
+    let encodedDescription = description;
+    try {
+        const { data: existing } = await supabase
+            .from("courts")
+            .select("description")
+            .eq("id", id)
+            .maybeSingle();
+        const { pricingRules } = decodeDescriptionAndPricingRules(existing?.description);
+        encodedDescription = encodeDescriptionWithPricingRules(description, pricingRules);
+    } catch {
+        // fallback to plain description
+    }
+
     const { error } = await supabase
         .from("courts")
-        .update({ name, description })
+        .update({ name, description: encodedDescription })
         .eq("id", id);
 
     if (error) {

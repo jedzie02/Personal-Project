@@ -16,6 +16,30 @@ import {
   updateCourtRateAction,
   createCourtModalAction,
 } from "@/app/admin/courts/actions";
+import {
+  decodeDescriptionAndPricingRules,
+  formatHourAMPM,
+  type CourtPricingRule,
+} from "@/lib/utils/court-pricing";
+
+export function formatCourtCardRuleSummary(rule: CourtPricingRule): string {
+  return `${formatHourAMPM(rule.startTime)} – ${formatHourAMPM(rule.endTime)}: ₱${rule.rate}/hr`;
+}
+
+const START_HOUR_OPTIONS = Array.from({ length: 18 }, (_, i) => {
+  const h = i + 6; // 06:00 to 23:00
+  const val = `${h.toString().padStart(2, "0")}:00`;
+  return { value: val, label: formatHourAMPM(val) };
+});
+
+const END_HOUR_OPTIONS = [
+  ...Array.from({ length: 17 }, (_, i) => {
+    const h = i + 7; // 07:00 to 23:00
+    const val = `${h.toString().padStart(2, "0")}:00`;
+    return { value: val, label: formatHourAMPM(val) };
+  }),
+  { value: "00:00", label: "12:00 AM" },
+];
 
 interface Court {
   id: string;
@@ -24,6 +48,7 @@ interface Court {
   is_active: boolean;
   status: CourtStatus;
   hourly_rate?: number | null;
+  pricing_rules?: CourtPricingRule[];
   created_at?: string;
 }
 
@@ -55,6 +80,8 @@ export default function AdminCourtsPage() {
   // Edit Rate dialog state
   const [editingCourt, setEditingCourt] = useState<Court | null>(null);
   const [newRate, setNewRate] = useState("");
+  const [editingRules, setEditingRules] = useState<Array<{ startTime: string; endTime: string; rate: string }>>([]);
+  const [applyRateToAll, setApplyRateToAll] = useState(false);
   const [savingRate, setSavingRate] = useState(false);
 
   const fetchCourts = useCallback(async () => {
@@ -67,14 +94,18 @@ export default function AdminCourtsPage() {
     if (!error && data) {
       setCourts(
         (data as Partial<Court>[])
-          .map((c) => ({
-            id: c.id ?? "",
-            name: c.name ?? "",
-            description: c.description ?? null,
-            is_active: c.is_active ?? true,
-            hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
-            status: fromDbStatus(c.status, c.is_active),
-          }))
+          .map((c) => {
+            const { description, pricingRules } = decodeDescriptionAndPricingRules(c.description);
+            return {
+              id: c.id ?? "",
+              name: c.name ?? "",
+              description,
+              is_active: c.is_active ?? true,
+              hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
+              pricing_rules: pricingRules,
+              status: fromDbStatus(c.status, c.is_active),
+            };
+          })
           .sort((a: Court, b: Court) => a.name.localeCompare(b.name, undefined, { numeric: true }))
       );
     } else if (error) {
@@ -96,14 +127,18 @@ export default function AdminCourtsPage() {
       if (!error && data) {
         setCourts(
           (data as Partial<Court>[])
-            .map((c) => ({
-              id: c.id ?? "",
-              name: c.name ?? "",
-              description: c.description ?? null,
-              is_active: c.is_active ?? true,
-              hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
-              status: fromDbStatus(c.status, c.is_active),
-            }))
+            .map((c) => {
+              const { description, pricingRules } = decodeDescriptionAndPricingRules(c.description);
+              return {
+                id: c.id ?? "",
+                name: c.name ?? "",
+                description,
+                is_active: c.is_active ?? true,
+                hourly_rate: c.hourly_rate != null ? Number(c.hourly_rate) : 300,
+                pricing_rules: pricingRules,
+                status: fromDbStatus(c.status, c.is_active),
+              };
+            })
             .sort((a: Court, b: Court) => a.name.localeCompare(b.name, undefined, { numeric: true }))
         );
       } else if (error) {
@@ -184,10 +219,34 @@ export default function AdminCourtsPage() {
     const rateVal = parseFloat(newRate);
     if (isNaN(rateVal) || rateVal < 0) return;
 
+    const parsedRules: CourtPricingRule[] = [];
+    for (const r of editingRules) {
+      const rVal = parseFloat(r.rate);
+      if (isNaN(rVal) || rVal < 0) {
+        setErrorMessage("Please enter a valid positive rate for every custom time range.");
+        return;
+      }
+      const startH = parseInt(r.startTime.split(":")[0], 10);
+      const rawEndH = parseInt(r.endTime.split(":")[0], 10);
+      const endH = rawEndH === 0 ? 24 : rawEndH;
+      if (startH >= endH) {
+        setErrorMessage(`End time (${formatHourAMPM(r.endTime)}) must be after start time (${formatHourAMPM(r.startTime)}).`);
+        return;
+      }
+      parsedRules.push({
+        startTime: r.startTime,
+        endTime: r.endTime,
+        rate: rVal,
+      });
+    }
+
     setSavingRate(true);
     setErrorMessage(null);
 
-    const result = await updateCourtRateAction(editingCourt.id, rateVal);
+    const result = await updateCourtRateAction(editingCourt.id, rateVal, {
+      pricingRules: parsedRules,
+      applyToAll: applyRateToAll,
+    });
 
     setSavingRate(false);
 
@@ -202,7 +261,9 @@ export default function AdminCourtsPage() {
 
     setCourts((prev) =>
       prev.map((c) =>
-        c.id === editingCourt.id ? { ...c, hourly_rate: rateVal } : c
+        applyRateToAll || c.id === editingCourt.id
+          ? { ...c, hourly_rate: rateVal, pricing_rules: parsedRules }
+          : c
       )
     );
     setEditingCourt(null);
@@ -310,38 +371,61 @@ export default function AdminCourtsPage() {
                 </div>
 
                 {/* Hourly Rate & Actions */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
-                  <div>
-                    <span className="text-xs text-muted-foreground block">Hourly Rate</span>
-                    <span className="text-base font-bold text-slate-900 dark:text-white">
-                      ₱{court.hourly_rate ?? 25}
-                      <span className="text-xs font-normal text-muted-foreground">/hr</span>
-                    </span>
+                <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs text-muted-foreground block">Default Hourly Rate</span>
+                      <span className="text-base font-bold text-slate-900 dark:text-white">
+                        ₱{court.hourly_rate ?? 300}
+                        <span className="text-xs font-normal text-muted-foreground">/hr</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/admin/courts/${court.id}/edit`}
+                        className={buttonVariants({
+                          variant: "ghost",
+                          size: "sm",
+                          className: "text-xs text-muted-foreground hover:text-foreground h-8 px-2.5",
+                        })}
+                      >
+                        Edit Details
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setErrorMessage(null);
+                          setEditingCourt(court);
+                          setNewRate(String(court.hourly_rate ?? 300));
+                          setEditingRules(
+                            (court.pricing_rules ?? []).map((r) => ({
+                              startTime: r.startTime,
+                              endTime: r.endTime,
+                              rate: String(r.rate),
+                            }))
+                          );
+                          setApplyRateToAll(false);
+                        }}
+                        className="text-xs h-8 px-2.5 cursor-pointer"
+                        aria-label={`Edit hourly rate for ${court.name}`}
+                      >
+                        Edit Rate
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Link
-                      href={`/admin/courts/${court.id}/edit`}
-                      className={buttonVariants({
-                        variant: "ghost",
-                        size: "sm",
-                        className: "text-xs text-muted-foreground hover:text-foreground h-8 px-2.5",
-                      })}
-                    >
-                      Edit Details
-                    </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingCourt(court);
-                        setNewRate(String(court.hourly_rate ?? 25));
-                      }}
-                      className="text-xs h-8 px-2.5"
-                      aria-label={`Edit hourly rate for ${court.name}`}
-                    >
-                      Edit Rate
-                    </Button>
-                  </div>
+                  {court.pricing_rules && court.pricing_rules.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {court.pricing_rules.map((rule, idx) => (
+                        <span
+                          key={`${rule.startTime}-${rule.endTime}-${idx}`}
+                          className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/70"
+                        >
+                          {formatCourtCardRuleSummary(rule)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -359,16 +443,16 @@ export default function AdminCourtsPage() {
           aria-labelledby="edit-rate-title"
         >
           <div
-            className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-6 space-y-4"
+            className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center">
               <div>
                 <h3 id="edit-rate-title" className="font-semibold text-lg text-slate-900 dark:text-white">
-                  Edit Hourly Rate
+                  Edit Hourly Rate &amp; Time Prices
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Updating rate for {editingCourt.name}
+                  Configure default and time-window pricing for {editingCourt.name}
                 </p>
               </div>
               <button
@@ -384,7 +468,7 @@ export default function AdminCourtsPage() {
             <form onSubmit={handleUpdateRate} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="court-hourly-rate" className="text-sm font-medium">
-                  Hourly Rate (₱)
+                  Default / Base Hourly Rate (₱)
                 </Label>
                 <div className="relative flex items-center">
                   <span className="absolute left-3 text-sm font-semibold text-slate-500 dark:text-slate-400">₱</span>
@@ -396,15 +480,125 @@ export default function AdminCourtsPage() {
                     value={newRate}
                     onChange={(e) => setNewRate(e.target.value)}
                     className="pl-8"
-                    placeholder="25"
+                    placeholder="300"
                     required
                     autoFocus
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  New rate applies to upcoming bookings created on this court.
+                  Used for any hour that is not covered by a custom time range below.
                 </p>
               </div>
+
+              {/* Custom Time-Range Pricing Rules (Option A) */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Custom Time Ranges
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingRules((prev) => [
+                        ...prev,
+                        { startTime: "17:00", endTime: "23:00", rate: newRate || "350" },
+                      ])
+                    }
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Time Range
+                  </button>
+                </div>
+
+                {editingRules.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic py-1">
+                    No custom time ranges set — all hours use the default rate (₱{newRate || "300"}/hr).
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {editingRules.map((rule, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-1.5 p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50"
+                      >
+                        <select
+                          aria-label={`Start time for range ${idx + 1}`}
+                          value={rule.startTime}
+                          onChange={(e) =>
+                            setEditingRules((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, startTime: e.target.value } : item))
+                            )
+                          }
+                          className="border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium"
+                        >
+                          {START_HOUR_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-xs text-muted-foreground">to</span>
+                        <select
+                          aria-label={`End time for range ${idx + 1}`}
+                          value={rule.endTime}
+                          onChange={(e) =>
+                            setEditingRules((prev) =>
+                              prev.map((item, i) => (i === idx ? { ...item, endTime: e.target.value } : item))
+                            )
+                          }
+                          className="border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-medium"
+                        >
+                          {END_HOUR_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="relative flex items-center flex-1 min-w-[78px]">
+                          <span className="absolute left-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            ₱
+                          </span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="any"
+                            aria-label={`Rate for range ${idx + 1}`}
+                            value={rule.rate}
+                            onChange={(e) =>
+                              setEditingRules((prev) =>
+                                prev.map((item, i) => (i === idx ? { ...item, rate: e.target.value } : item))
+                              )
+                            }
+                            className="h-7 pl-5 pr-2 text-xs font-semibold"
+                            required
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEditingRules((prev) => prev.filter((_, i) => i !== idx))}
+                          aria-label={`Remove time range ${idx + 1}`}
+                          className="p-1 text-slate-400 hover:text-red-500 rounded cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Optional bulk apply toggle */}
+              {courts.length > 1 && (
+                <label className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={applyRateToAll}
+                    onChange={(e) => setApplyRateToAll(e.target.checked)}
+                    className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>Apply these rates to all {courts.length} courts</span>
+                </label>
+              )}
 
               <div className="flex justify-end gap-2 pt-2">
                 <Button

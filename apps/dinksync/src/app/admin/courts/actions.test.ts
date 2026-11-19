@@ -53,6 +53,20 @@ describe("admin/courts/actions security & validation", () => {
         expect(resultNaN.error).toContain("Invalid hourly rate");
     });
 
+    it("rejects invalid time-range pricing rules in updateCourtRateAction", async () => {
+        const resultBadRange = await updateCourtRateAction("court-1", 300, {
+            pricingRules: [{ startTime: "18:00", endTime: "16:00", rate: 350 }],
+        });
+        expect(resultBadRange.success).toBe(false);
+        expect(resultBadRange.error).toContain("End time must be after start time");
+
+        const resultNegativeRuleRate = await updateCourtRateAction("court-1", 300, {
+            pricingRules: [{ startTime: "09:00", endTime: "16:00", rate: -100 }],
+        });
+        expect(resultNegativeRuleRate.success).toBe(false);
+        expect(resultNegativeRuleRate.error).toContain("Invalid rate in custom time range");
+    });
+
     it("requires admin privileges for createCourtModalAction", async () => {
         const { requireAdmin } = await import("@/lib/services/auth.server");
         vi.mocked(requireAdmin).mockRejectedValueOnce(new Error("Unauthorized: Admin privileges required."));
